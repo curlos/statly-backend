@@ -39,7 +39,7 @@ app.use(
 );
 
 // This is for the TickTick 1.0 Data that I'm currently using until I finish TickTick 2.0 and migrate all my data into the DB
-app.use('/focus-data', focusDataRouter);
+app.use('/ticktick-1.0/focus-records', focusDataRouter);
 
 app.use('/tasks', tasksRouter);
 app.use('/projects', projectsRouter);
