@@ -8,11 +8,13 @@ dotenv.config();
 import { sortedAllFocusData } from '../../focus-data/allFocusData';
 import { allTasks } from '../../focus-data/allTasks';
 import { sortArrayByProperty } from '../../utils/helpers.utils';
+import { allProjects } from '../../focus-data/allProjects';
 
 const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
 const localFocusData = sortedAllFocusData;
 const localTasks = allTasks;
+const localProjects = allProjects;
 
 // router.get('/', async (req, res) => {
 // 	try {
@@ -89,6 +91,31 @@ router.get('/tasks', async (req, res) => {
 		);
 
 		const allTasks = [...tasksToBeUpdated, ...completedTasks.data];
+		res.status(200).json(allTasks);
+	} catch (error) {
+		res.status(500).json({
+			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
+		});
+	}
+});
+
+router.get('/projects', async (req, res) => {
+	try {
+		const useLocalData = true;
+
+		if (useLocalData) {
+			res.status(200).json(localProjects);
+			return;
+		}
+
+		const cookie = TICKTICK_API_COOKIE;
+		const projects = await axios.get('https://api.ticktick.com/api/v2/projects', {
+			headers: {
+				Cookie: cookie,
+			},
+		});
+
+		const allTasks = projects.data;
 		res.status(200).json(allTasks);
 	} catch (error) {
 		res.status(500).json({
