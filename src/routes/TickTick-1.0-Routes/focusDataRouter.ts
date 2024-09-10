@@ -5,11 +5,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const router = express.Router();
 import { sortedAllFocusData } from '../../focus-data/allFocusData';
+import { allTasks } from '../../focus-data/allTasks';
 import { sortArrayByProperty } from '../../utils/helpers.utils';
 
+const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
+const localFocusData = sortedAllFocusData;
+const localTasks = allTasks;
 
 // router.get('/', async (req, res) => {
 // 	try {
@@ -24,6 +27,13 @@ const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
 
 router.get('/focus-records', async (req, res) => {
 	try {
+		const useLocalData = true;
+
+		if (useLocalData) {
+			res.status(200).json(localFocusData);
+			return;
+		}
+
 		const cookie = TICKTICK_API_COOKIE;
 		const focusDataPomos = await axios.get('https://api.ticktick.com/api/v2/pomodoros?from=0&to=2705792451783', {
 			headers: {
@@ -56,7 +66,8 @@ router.get('/tasks', async (req, res) => {
 		const useLocalData = true;
 
 		if (useLocalData) {
-			res.status(200).json(allTasks);
+			res.status(200).json(localTasks);
+			return;
 		}
 
 		const cookie = TICKTICK_API_COOKIE;
