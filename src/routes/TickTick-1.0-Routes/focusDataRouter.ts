@@ -6,28 +6,27 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { sortedAllFocusData } from '../../focus-data/sortedAllFocusData';
-import { allTasks } from '../../focus-data/allTasks';
+import { allTasksFromActiveProjects } from '../../focus-data/allTasksFromActiveProjects';
 import { sortArrayByProperty } from '../../utils/helpers.utils';
 import { allProjects } from '../../focus-data/allProjects';
+import { completedTasksFromArchivedProjects } from '../../focus-data/archivedTasks/completedTasksFromArchivedProjects';
+import { notCompletedTasksFromArchivedProjects } from '../../focus-data/archivedTasks/notCompletedTasksFromArchivedProjects';
+import { getDayAfterToday } from '../../utils/helpers.utils';
 
 const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
 const cookie = TICKTICK_API_COOKIE;
 const SERVER_URL = process.env.SERVER_URL;
 const localFocusData = sortedAllFocusData;
-const localTasks = allTasks;
+const localTasks = [
+	...allTasksFromActiveProjects,
+	...completedTasksFromArchivedProjects,
+	...notCompletedTasksFromArchivedProjects,
+];
 const localProjects = allProjects;
 
-// router.get('/', async (req, res) => {
-// 	try {
-// 		const focusRecords = sortedAllFocusData;
-// 		res.status(200).json(focusRecords);
-// 	} catch (error) {
-// 		res.status(500).json({
-// 			message: error instanceof Error ? error.message : 'An error occurred fetching the focus data.',
-// 		});
-// 	}
-// });
+// new Date(2705792451783) = September 28, 2055. This is to make sure all my tasks are fetched properly. I doubt I'll have to worry about this expiring since I'll be long past TickTick and humans coding anything will be a thing of the past by then with GPT-20 out by then.
+const farAwayDateInMs = 2705792451783;
 
 const useLocalData = true;
 
@@ -38,14 +37,17 @@ router.get('/focus-records', async (req, res) => {
 			return;
 		}
 
-		const focusDataPomos = await axios.get('https://api.ticktick.com/api/v2/pomodoros?from=0&to=2705792451783', {
-			headers: {
-				Cookie: cookie,
-			},
-		});
+		const focusDataPomos = await axios.get(
+			`https://api.ticktick.com/api/v2/pomodoros?from=0&to=${farAwayDateInMs}`,
+			{
+				headers: {
+					Cookie: cookie,
+				},
+			}
+		);
 
 		const focusDataStopwatch = await axios.get(
-			'https://api.ticktick.com/api/v2/pomodoros/timing?from=0&to=2705792451783',
+			`https://api.ticktick.com/api/v2/pomodoros/timing?from=0&to=${farAwayDateInMs}`,
 			{
 				headers: {
 					Cookie: cookie,
@@ -66,6 +68,8 @@ router.get('/focus-records', async (req, res) => {
 
 router.get('/tasks', async (req, res) => {
 	try {
+		const dayAfterTodayStr = getDayAfterToday();
+
 		if (useLocalData) {
 			res.status(200).json(localTasks);
 			return;
@@ -81,7 +85,7 @@ router.get('/tasks', async (req, res) => {
 
 		// TODO: Update this so it gets tasks from latest date no matter what.
 		const completedTasks = await axios.get(
-			'https://api.ticktick.com/api/v2/project/all/completedInAll/?from=&to=2024-09-14%2010:50:58&limit=20000&=',
+			`https://api.ticktick.com/api/v2/project/all/completedInAll/?from=&to=${dayAfterTodayStr}%2010:50:58&limit=20000&=`,
 			{
 				headers: {
 					Cookie: cookie,
@@ -123,13 +127,27 @@ router.get('/projects', async (req, res) => {
 	}
 });
 
+/**
+ * @description On TickTick 1.0, tasks that are under Archived Projects do not appear in the "/api/v2/project/all/completedInAll" OR "/api/v2/batch/check/0" API endpoints unfortunately. The only way to manually get the task objects is to call two separate endpoints per archived project "/api/v2/project/${projectId}/tasks" AND "/api/v2/project/${id}/completed". I currently have 46 archived projects as of September 15, 2024 so this will make 92 API calls.
+ *
+ * @IMPORTANT This should only be called manually from POSTMAN. NEVER CALL this from anywhere else automatically like on the Frontend. This will make up to 80-90+ API calls on average to TickTick 1.0. Calling so many API calls at once seems quite dangerous and would look unusual on their servers I'm sure so do not call this unless I absoltuely need the latest data about my archived projects. I already have the cached data about my archived projects so I will typically not really need this UNTIL I archive a project which will hide previous tasks.
+ *
+ * @Tutorial Steps to get updated tasks data from ARCHIVED projects:
+ * 1. On Postman, manually make the call to "/tasks-from-archived-projects".
+ * 2. Get the Completed and Non-Completed tasks from the API calls of all of the projects.
+ * 3. Store them in local data in the "focus-data" folder and then set "doNotMakeApiCalls" variable to true to prevent accidentally making the API calls in the future.
+ */
 router.get('/tasks-from-archived-projects', async (req, res) => {
-	try {
-		if (false && useLocalData) {
-			res.status(200).json(localTasks);
-			return;
-		}
+	const doNotMakeApiCalls = true;
 
+	// Most of the time, just return the local tasks data instead of making all the API calls to TickTick 1.0.
+	if (doNotMakeApiCalls) {
+		res.status(200).send("You're safe from dangerous calls here friend.");
+		return;
+	}
+
+	try {
+		const dayAfterTodayStr = getDayAfterToday();
 		const getTasksFromArchivedProjects = true;
 
 		if (getTasksFromArchivedProjects) {
@@ -164,7 +182,7 @@ router.get('/tasks-from-archived-projects', async (req, res) => {
 				);
 
 				const completedTasksForProjectResponse = await axios.get(
-					`https://api.ticktick.com/api/v2/project/${id}/completed/?from=&to=2024-09-15%2016:59:12&limit=2000`,
+					`https://api.ticktick.com/api/v2/project/${id}/completed/?from=&to=${dayAfterTodayStr}%2016:59:12&limit=9999`,
 					{
 						headers: {
 							Cookie: cookie,

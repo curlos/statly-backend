@@ -15,6 +15,23 @@ export const sortArrayByProperty = (array: any[], property: string, type = 'desc
 	);
 };
 
+// Function to format date as YYYY-MM-DD
+export const formatDate = (date: Date) => {
+	const year = date.getFullYear();
+	const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Add 1 because months are zero-indexed
+	const day = date.getDate().toString().padStart(2, '0');
+	return `${year}-${month}-${day}`;
+};
+
+// Function to get today and the next day
+export const getDayAfterToday = () => {
+	const today = new Date(); // Today's date
+	const dayAfterToday = new Date(today); // Copy today's date
+	dayAfterToday.setDate(today.getDate() + 1); // Increment the day by one
+
+	return formatDate(dayAfterToday);
+};
+
 /**
  * @description Chunks the passed in array into N arrays. This is very useful for splitting up the large local data I have stored into smaller arrays. This is necessary because TypeScript can't infer types on large data sets with thousands lines of code (the tasks array has 125,000 lines of code by itself).
  */
