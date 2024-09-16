@@ -6,11 +6,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { sortedAllFocusData } from '../../focus-data/sortedAllFocusData';
-import { allTasksFromActiveProjects } from '../../focus-data/allTasksFromActiveProjects';
+import { allTasks } from '../../focus-data/allTasks';
 import { sortArrayByProperty } from '../../utils/helpers.utils';
 import { allProjects } from '../../focus-data/allProjects';
+// Do not delete the local files for these as they are necessary for when we making live API calls to fetch data in "/tasks". They aren't needed for local data as they're already stored there but needed for real-time calls.
 import { completedTasksFromArchivedProjects } from '../../focus-data/archivedTasks/completedTasksFromArchivedProjects';
 import { notCompletedTasksFromArchivedProjects } from '../../focus-data/archivedTasks/notCompletedTasksFromArchivedProjects';
+import { allTags } from '../../focus-data/allTags';
 import { getDayAfterToday } from '../../utils/helpers.utils';
 
 const router = express.Router();
@@ -18,12 +20,9 @@ const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
 const cookie = TICKTICK_API_COOKIE;
 const SERVER_URL = process.env.SERVER_URL;
 const localFocusData = sortedAllFocusData;
-const localTasks = [
-	...allTasksFromActiveProjects,
-	...completedTasksFromArchivedProjects,
-	...notCompletedTasksFromArchivedProjects,
-];
+const localTasks = allTasks;
 const localProjects = allProjects;
+const localTags = allTags;
 
 // new Date(2705792451783) = September 28, 2055. This is to make sure all my tasks are fetched properly. I doubt I'll have to worry about this expiring since I'll be long past TickTick and humans coding anything will be a thing of the past by then with GPT-20 out by then.
 const farAwayDateInMs = 2705792451783;
@@ -75,16 +74,14 @@ router.get('/tasks', async (req, res) => {
 			return;
 		}
 
-		const notCompletedTasks = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
+		const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
 			headers: {
 				Cookie: cookie,
 			},
 		});
 
-		const tasksToBeUpdated = notCompletedTasks.data.syncTaskBean.update;
-
 		// TODO: Update this so it gets tasks from latest date no matter what.
-		const completedTasks = await axios.get(
+		const completedTasksResponse = await axios.get(
 			`https://api.ticktick.com/api/v2/project/all/completedInAll/?from=&to=${dayAfterTodayStr}%2010:50:58&limit=20000&=`,
 			{
 				headers: {
@@ -93,10 +90,37 @@ router.get('/tasks', async (req, res) => {
 			}
 		);
 
-		// Up to this point, the only tasks (both non-completed and completed) are tasks from projects that HAVE NOT been archived. To get tasks that are from archived projects (both non-completed and completed), two additional endpoints will have to be called per archived project to fetch all of the tasks from that archived project (for both the array of non-completed and completed tasks).
-		// TODO: Move tasks from archived projects code to here when finished core testing up there!
+		const willNotDoTasksResponse = await axios.get(
+			`https://api.ticktick.com/api/v2/project/all/closed/?from=&to=${dayAfterTodayStr}%2010:50:58&limit=20000&=&status=Abandoned`,
+			{
+				headers: {
+					Cookie: cookie,
+				},
+			}
+		);
 
-		const allTasks = [...tasksToBeUpdated, ...completedTasks.data];
+		const trashTasksResponse = await axios.get(
+			`https://api.ticktick.com/api/v2/project/all/trash/page?limit=9999999`,
+			{
+				headers: {
+					Cookie: cookie,
+				},
+			}
+		);
+
+		const tasksToBeUpdated = batchCheckResponse.data.syncTaskBean.update;
+		const completedTasks = completedTasksResponse.data;
+		const willNotDoTasks = willNotDoTasksResponse.data;
+		const { tasks: trashTasks } = trashTasksResponse.data;
+
+		const allTasks = [
+			...tasksToBeUpdated,
+			...completedTasks,
+			...completedTasksFromArchivedProjects,
+			...notCompletedTasksFromArchivedProjects,
+			...willNotDoTasks,
+			...trashTasks,
+		];
 		res.status(200).json(allTasks);
 	} catch (error) {
 		res.status(500).json({
@@ -120,6 +144,29 @@ router.get('/projects', async (req, res) => {
 
 		const allTasks = projects.data;
 		res.status(200).json(allTasks);
+	} catch (error) {
+		res.status(500).json({
+			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
+		});
+	}
+});
+
+router.get('/tags', async (req, res) => {
+	try {
+		if (useLocalData) {
+			res.status(200).json(localTags);
+			return;
+		}
+
+		const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
+			headers: {
+				Cookie: cookie,
+			},
+		});
+
+		const tags = batchCheckResponse.data.tags;
+
+		res.status(200).json(tags);
 	} catch (error) {
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
