@@ -1,6 +1,6 @@
 import express from 'express';
-import Project from '../models/projectModel';
-import Task from '../models/TaskModel';
+import Project from '../models/ProjectModel';
+import Task from '../models/taskModel';
 
 const router = express.Router();
 

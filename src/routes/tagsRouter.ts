@@ -1,7 +1,7 @@
 // src/routes/taskRouter.ts
 import express from 'express';
 import Tag from '../models/TagModel';
-import Task from '../models/TaskModel';
+import Task from '../models/taskModel';
 const router = express.Router();
 
 router.get('/', async (req, res) => {
