@@ -32,6 +32,7 @@ const useLocalData = false;
 router.get('/focus-records', async (req, res) => {
 	try {
 		const todayOnly = req.query.today === 'true';
+		const last30DaysOnly = req.query.last30Days === 'true';
 
 		if (useLocalData) {
 			res.status(200).json(localFocusData);
@@ -45,6 +46,10 @@ router.get('/focus-records', async (req, res) => {
 			const { startMs, endMs } = getTodayTimeBounds();
             fromMs = startMs;
             toMs = endMs;
+		} else if (last30DaysOnly) {
+			const today = new Date();
+            const thirtyDaysAgo = new Date(today.setDate(today.getDate() - 30));
+            fromMs = thirtyDaysAgo.getTime();
 		}
 
 		const focusDataPomos = await axios.get(
