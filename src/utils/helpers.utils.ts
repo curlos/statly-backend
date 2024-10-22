@@ -41,3 +41,11 @@ const chunkIntoN = (arr: any, n: any) => {
 };
 
 // const chunkedArrays = chunkIntoN(allTasks, 20);
+
+// Helper function to get start and end of the day in ms
+export const getTodayTimeBounds = () => {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, -1);
+    return { startMs: startOfDay.getTime(), endMs: endOfDay.getTime() };
+}

@@ -7,7 +7,7 @@ dotenv.config();
 
 import { sortedAllFocusData } from '../../focus-data/sortedAllFocusData';
 import { allTasks } from '../../focus-data/allTasks';
-import { sortArrayByProperty } from '../../utils/helpers.utils';
+import { getTodayTimeBounds, sortArrayByProperty } from '../../utils/helpers.utils';
 import { allProjects } from '../../focus-data/allProjects';
 // Do not delete the local files for these as they are necessary for when we making live API calls to fetch data in "/tasks". They aren't needed for local data as they're already stored there but needed for real-time calls.
 import { completedTasksFromArchivedProjects } from '../../focus-data/archivedTasks/completedTasksFromArchivedProjects';
@@ -27,17 +27,28 @@ const localTags = allTags;
 // new Date(2705792451783) = September 28, 2055. This is to make sure all my tasks are fetched properly. I doubt I'll have to worry about this expiring since I'll be long past TickTick and humans coding anything will be a thing of the past by then with GPT-20 out by then.
 const farAwayDateInMs = 2705792451783;
 
-const useLocalData = true;
+const useLocalData = false;
 
 router.get('/focus-records', async (req, res) => {
 	try {
+		const todayOnly = req.query.today === 'true';
+
 		if (useLocalData) {
 			res.status(200).json(localFocusData);
 			return;
 		}
 
+		let fromMs = 0
+		let toMs = farAwayDateInMs
+
+		if (todayOnly) {
+			const { startMs, endMs } = getTodayTimeBounds();
+            fromMs = startMs;
+            toMs = endMs;
+		}
+
 		const focusDataPomos = await axios.get(
-			`https://api.ticktick.com/api/v2/pomodoros?from=0&to=${farAwayDateInMs}`,
+			`https://api.ticktick.com/api/v2/pomodoros?from=${fromMs}&to=${toMs}`,
 			{
 				headers: {
 					Cookie: cookie,
@@ -46,7 +57,7 @@ router.get('/focus-records', async (req, res) => {
 		);
 
 		const focusDataStopwatch = await axios.get(
-			`https://api.ticktick.com/api/v2/pomodoros/timing?from=0&to=${farAwayDateInMs}`,
+			`https://api.ticktick.com/api/v2/pomodoros/timing?from=${fromMs}&to=${toMs}`,
 			{
 				headers: {
 					Cookie: cookie,
