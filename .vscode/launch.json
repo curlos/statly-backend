@@ -11,7 +11,7 @@
             "port": 9229,
             "restart": true,
             "protocol": "inspector",
-            "timeout": 20000,
+            "timeout": 5000,
             "sourceMaps": true,
             "cwd": "${workspaceFolder}",
             "skipFiles": [

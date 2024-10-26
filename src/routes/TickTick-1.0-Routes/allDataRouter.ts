@@ -59,7 +59,7 @@ router.get('/focus-records', async (req, res) => {
 					Cookie: cookie,
 				},
 			}
-		);
+	);
 
 		const focusDataStopwatch = await axios.get(
 			`https://api.ticktick.com/api/v2/pomodoros/timing?from=${fromMs}&to=${toMs}`,
@@ -70,7 +70,15 @@ router.get('/focus-records', async (req, res) => {
 			}
 		);
 
-		const allFocusData = [...focusDataPomos.data, ...focusDataStopwatch.data];
+		let allFocusData = [...focusDataPomos.data, ...focusDataStopwatch.data];
+
+		if (last30DaysOnly) {
+			const fromMsDate = new Date(fromMs)
+			// Get the local focus records that have occurred after "fromMs"
+			const localFocusDataBefore30Days = localFocusData.filter((focusRecord) => new Date(focusRecord.startTime) <= fromMsDate)
+			allFocusData.push(...localFocusDataBefore30Days)
+		}
+
 		const sortedAllFocusData = sortArrayByProperty(allFocusData, 'startTime');
 
 		res.status(200).json(sortedAllFocusData);
