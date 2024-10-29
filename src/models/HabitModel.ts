@@ -39,6 +39,14 @@ const CheckedInDaySchema = new Schema({
 		},
 	},
 	habitLogId: { type: Schema.Types.ObjectId, ref: 'HabitLog', default: null },
+	// When a user does a habit for X days in a row, they will earn 1 free day off. This will allow the habit's streak to be saved so the user can take the day off. Most days should have a value of "null" for this free day.
+	usedFreeDayOff: { type: Date || null, default: null },
+	// Only for the special "Focus X Hours" habit
+	forFocusHoursHabit: {
+		// This is the goal hours for the day. Typically, this wil just be the default
+		goalHours: { type: Number },
+		focusedHours: { type: Number },
+	},
 });
 
 const HabitSchema = new Schema(
