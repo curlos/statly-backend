@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { getTodayTimeBounds, sortArrayByProperty, getDayAfterToday } from '../../utils/helpers.utils';
+import { getLocalJsonData } from '../../utils/mongoose.utils';
 
 const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
@@ -184,6 +185,20 @@ router.get('/tags', async (req, res) => {
 		res.status(200).json(tags);
 	} catch (error) {
 		res.status(500).json({
+			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
+		});
+	}
+});
+
+// Route to get data by name
+router.get('/json-data/:name', async (req, res) => {
+	try {
+		const dataName = req.params.name;
+		const data = await getLocalJsonData(dataName);
+		res.json({ success: true, data: data });
+	} catch (error) {
+		res.status(404).json({
+			success: false,
 			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
 		});
 	}
