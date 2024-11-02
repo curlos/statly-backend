@@ -7,6 +7,7 @@ import connectDB from './db/database'; // Import the connectDB function
 
 // Routes
 import allDataRouter from './routes/TickTick-1.0-Routes/allDataRouter';
+import tempRouter from './routes/TickTick-1.0-Routes/tempRouter';
 
 import tasksRouter from './routes/tasksRouter';
 import projectsRouter from './routes/projectsRouter';
@@ -40,6 +41,7 @@ app.use(
 
 // This is for the TickTick 1.0 Data that I'm currently using until I finish TickTick 2.0 and migrate all my data into the DB
 app.use('/ticktick-1.0', allDataRouter);
+app.use('/ticktick-1.0', tempRouter);
 
 app.use('/tasks', tasksRouter);
 app.use('/projects', projectsRouter);
