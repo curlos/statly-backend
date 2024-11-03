@@ -17,10 +17,6 @@ const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
 const cookie = TICKTICK_API_COOKIE;
 
-const localTasks = [{}];
-const localProjects = [{}];
-const localTags = [{}];
-
 // new Date(2705792451783) = September 28, 2055. This is to make sure all my tasks are fetched properly. I doubt I'll have to worry about this expiring since I'll be long past TickTick and humans coding anything will be a thing of the past by then with GPT-20 out by then.
 const farAwayDateInMs = 2705792451783;
 
@@ -104,7 +100,11 @@ router.get('/tasks', async (req, res) => {
 	try {
 		const dayAfterTodayStr = getDayAfterToday();
 
+		const completedTasksFromArchivedProjects = await getJsonData('completed-tasks-from-archived-projects');
+		const notCompletedTasksFromArchivedProjects = await getJsonData('not-completed-tasks-from-archived-projects');
+
 		if (useLocalData) {
+			const localTasks = await getJsonData('all-tasks');
 			res.status(200).json(localTasks);
 			return;
 		}
@@ -151,8 +151,8 @@ router.get('/tasks', async (req, res) => {
 		const allTasks = [
 			...tasksToBeUpdated,
 			...completedTasks,
-			// ...completedTasksFromArchivedProjects,
-			// ...notCompletedTasksFromArchivedProjects,
+			...completedTasksFromArchivedProjects,
+			...notCompletedTasksFromArchivedProjects,
 			...willNotDoTasks,
 			...trashTasks,
 		];
@@ -167,6 +167,7 @@ router.get('/tasks', async (req, res) => {
 router.get('/projects', async (req, res) => {
 	try {
 		if (useLocalData) {
+			const localProjects = await getJsonData('all-projects');
 			res.status(200).json(localProjects);
 			return;
 		}
@@ -189,6 +190,7 @@ router.get('/projects', async (req, res) => {
 router.get('/tags', async (req, res) => {
 	try {
 		if (useLocalData) {
+			const localTags = await getJsonData('all-tags');
 			res.status(200).json(localTags);
 			return;
 		}

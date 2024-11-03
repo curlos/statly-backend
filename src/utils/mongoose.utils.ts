@@ -1,18 +1,18 @@
 import JsonData from '../models/JsonData';
-import { LOCAL_DATASETS } from './LOCAL_DATASETS';
+// import { LOCAL_DATASETS } from './LOCAL_DATASETS';
 
-export const updateLocalData = async () => {
-	// Create an array of promises using map
-	const updatePromises = LOCAL_DATASETS.map((dataset) => updateLocalJsonData(dataset));
+// export const updateLocalData = async () => {
+// 	// Create an array of promises using map
+// 	const updatePromises = LOCAL_DATASETS.map((dataset) => updateLocalJsonData(dataset));
 
-	// Wait for all promises to resolve using Promise.all
-	try {
-		const results = await Promise.all(updatePromises);
-		console.log('All datasets updated successfully:', results);
-	} catch (error) {
-		console.error('Failed to update one or more datasets:', error);
-	}
-};
+// 	// Wait for all promises to resolve using Promise.all
+// 	try {
+// 		const results = await Promise.all(updatePromises);
+// 		console.log('All datasets updated successfully:', results);
+// 	} catch (error) {
+// 		console.error('Failed to update one or more datasets:', error);
+// 	}
+// };
 
 // Function to update or create a new document
 export const updateLocalJsonData = async (dataset: { name: any; data: any }) => {

@@ -2,7 +2,7 @@ import express from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { getDayAfterToday } from '../../utils/helpers.utils';
-import { updateLocalData } from '../../utils/mongoose.utils';
+// import { updateLocalData } from '../../utils/mongoose.utils';
 
 const router = express.Router();
 
@@ -101,7 +101,7 @@ router.get('/tasks-from-archived-projects', async (req, res) => {
  */
 router.put('/update-local-data', async (req, res) => {
 	try {
-		await updateLocalData();
+		// await updateLocalData();
 		res.status(200).json('Updated all local data!');
 	} catch (error) {
 		res.status(500).json({
