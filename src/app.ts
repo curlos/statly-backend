@@ -64,6 +64,8 @@ app.listen(PORT, () => {
 	console.log(`Server running at http://localhost:${PORT}`);
 });
 
+module.exports = app;
+
 // TODO: Maybe come back to this later. I think I was using this to debug node.js code but was having problems with this killing my ports when the server started so was useless. For the far future.
 
 // killPort(PORT, 'tcp').then(() => {
