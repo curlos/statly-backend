@@ -60,9 +60,14 @@ app.get('/', (req, res) => {
 	res.send('Hello World!');
 });
 
-app.listen(PORT, () => {
-	console.log(`Server running at http://localhost:${PORT}`);
-});
+// Only listen on a port if the script is run locally
+if (!process.env.VERCEL) {
+	// Vercel sets process.env.VERCEL = 1 during runtime
+	const port = process.env.PORT || 8888;
+	app.listen(port, () => {
+		console.log(`Listening on port ${port}`);
+	});
+}
 
 module.exports = app;
 
