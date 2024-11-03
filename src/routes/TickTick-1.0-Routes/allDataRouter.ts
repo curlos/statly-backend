@@ -5,14 +5,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { getTodayTimeBounds, sortArrayByProperty, getDayAfterToday } from '../../utils/helpers.utils';
-import { getLocalJsonData } from '../../utils/mongoose.utils';
+import {
+	getTodayTimeBounds,
+	sortArrayByProperty,
+	getDayAfterToday,
+	arrayToObjectByKey,
+} from '../../utils/helpers.utils';
+import { getJsonData } from '../../utils/mongoose.utils';
 
 const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
 const cookie = TICKTICK_API_COOKIE;
 
-const localFocusData = [{}];
 const localTasks = [{}];
 const localProjects = [{}];
 const localTags = [{}];
@@ -25,7 +29,7 @@ const useLocalData = false;
 router.get('/focus-records', async (req, res) => {
 	try {
 		const todayOnly = req.query.today === 'true';
-		const last30DaysOnly = req.query.last30Days === 'true';
+		const localFocusData = await getJsonData('sorted-all-focus-data');
 
 		if (useLocalData) {
 			res.status(200).json(localFocusData);
@@ -39,10 +43,17 @@ router.get('/focus-records', async (req, res) => {
 			const { startMs, endMs } = getTodayTimeBounds();
 			fromMs = startMs;
 			toMs = endMs;
-		} else if (last30DaysOnly) {
-			const today = new Date();
-			const thirtyDaysAgo = new Date(today.setDate(today.getDate() - 30));
-			fromMs = thirtyDaysAgo.getTime();
+		} else {
+			// Get the local focus data from MongoDB and since the focus records are already sorted by startTime, get the very first focus record in the array and get it's startTime and set the "toMs" variable to that startTime in MS - 1 ms.
+			const mostRecentFocusRecord = localFocusData[0];
+			const mostRecentStartTimeDate = new Date(mostRecentFocusRecord.startTime);
+			const mostRecentStartTimeInMs = mostRecentStartTimeDate.getTime();
+
+			const todayMs = new Date().getTime();
+
+			// Subtract 1 MS to not include latest focus record in our search.
+			fromMs = mostRecentStartTimeInMs;
+			toMs = todayMs;
 		}
 
 		const focusDataPomos = await axios.get(`https://api.ticktick.com/api/v2/pomodoros?from=${fromMs}&to=${toMs}`, {
@@ -60,16 +71,22 @@ router.get('/focus-records', async (req, res) => {
 			}
 		);
 
-		let allFocusData = [...focusDataPomos.data, ...focusDataStopwatch.data];
+		const tickTickOneApiFocusData = [...focusDataPomos.data, ...focusDataStopwatch.data];
+		const localFocusDataById = arrayToObjectByKey(localFocusData, 'id');
 
-		if (last30DaysOnly) {
-			const fromMsDate = new Date(fromMs);
-			// Get the local focus records that have occurred after "fromMs"
-			const localFocusDataBefore30Days = localFocusData.filter(
-				(focusRecord: any) => new Date(focusRecord.startTime) <= fromMsDate
-			);
-			allFocusData.push(...localFocusDataBefore30Days);
-		}
+		// Filter out any focus records that are already stored in the database from the API's returned focus records.
+		const tickTickOneApiFocusDataNoDupes = tickTickOneApiFocusData.filter((focusData) => {
+			const isNotAlreadyInDatabase = localFocusDataById[focusData.id];
+			return !isNotAlreadyInDatabase;
+		});
+
+		const allFocusData = [...tickTickOneApiFocusDataNoDupes, ...localFocusData];
+
+		/**
+		 * Here are my options:
+		 * 1. Go through BOTH arrays and store the focus records by ID. this way I can go through the first array, "tickTickOneApiFocusData" and very quickly check if the id of that focus record already appears in the localFocusData array. O(N + M) Time
+		 * 2. Sort both arrays and use two pointers: One for the tickTickOneApiArray and the second for localFocusData. First pointer will start at the last element. Second pointer will start at the first element. While tickTickOneApiArray element in the arr has a startTime that is earlier than the last element's startTime, remove that element from the array as it can be safely assumed that it has already appeared earlier in the second array and we don't need duplicate objects. O(N logN + M logM) Time
+		 */
 
 		const sortedAllFocusData = sortArrayByProperty(allFocusData, 'startTime');
 
@@ -194,7 +211,7 @@ router.get('/tags', async (req, res) => {
 router.get('/json-data/:name', async (req, res) => {
 	try {
 		const dataName = req.params.name;
-		const data = await getLocalJsonData(dataName);
+		const data = await getJsonData(dataName);
 		res.json({ success: true, data: data });
 	} catch (error) {
 		res.status(404).json({

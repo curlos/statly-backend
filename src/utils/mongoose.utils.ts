@@ -31,7 +31,7 @@ export const updateLocalJsonData = async (dataset: { name: any; data: any }) => 
 };
 
 // Function to retrieve data by name from MongoDB
-export const getLocalJsonData = async (name: any) => {
+export const getJsonData = async (name: any) => {
 	try {
 		const result = await JsonData.findOne({ name: name });
 		if (!result) {

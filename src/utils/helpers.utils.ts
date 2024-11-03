@@ -44,8 +44,24 @@ const chunkIntoN = (arr: any, n: any) => {
 
 // Helper function to get start and end of the day in ms
 export const getTodayTimeBounds = () => {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, -1);
-    return { startMs: startOfDay.getTime(), endMs: endOfDay.getTime() };
+	const now = new Date();
+	const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, -1);
+	return { startMs: startOfDay.getTime(), endMs: endOfDay.getTime() };
+};
+
+/**
+ * Transforms an array of objects into an object with keys based on a specified property.
+ * @param {Object[]} array - The array of objects to transform.
+ * @param {string} keyProperty - The property of the objects to use as keys in the resulting object.
+ * @returns {Object} An object with keys derived from each object's specified property and values as the objects themselves.
+ */
+export function arrayToObjectByKey(array: any[], keyProperty: string) {
+	return array.reduce((acc, obj) => {
+		// Use the value of the specified property as the key
+		const key = keyProperty ? obj[keyProperty] : obj;
+		// Assign the entire object as the value for this key
+		acc[key] = obj;
+		return acc;
+	}, {});
 }
