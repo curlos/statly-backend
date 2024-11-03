@@ -81,13 +81,6 @@ router.get('/focus-records', async (req, res) => {
 		});
 
 		const allFocusData = [...tickTickOneApiFocusDataNoDupes, ...localFocusData];
-
-		/**
-		 * Here are my options:
-		 * 1. Go through BOTH arrays and store the focus records by ID. this way I can go through the first array, "tickTickOneApiFocusData" and very quickly check if the id of that focus record already appears in the localFocusData array. O(N + M) Time
-		 * 2. Sort both arrays and use two pointers: One for the tickTickOneApiArray and the second for localFocusData. First pointer will start at the last element. Second pointer will start at the first element. While tickTickOneApiArray element in the arr has a startTime that is earlier than the last element's startTime, remove that element from the array as it can be safely assumed that it has already appeared earlier in the second array and we don't need duplicate objects. O(N logN + M logM) Time
-		 */
-
 		const sortedAllFocusData = sortArrayByProperty(allFocusData, 'startTime');
 
 		res.status(200).json(sortedAllFocusData);
