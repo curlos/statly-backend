@@ -41,14 +41,14 @@ router.get('/focus-records', async (req, res) => {
 			toMs = endMs;
 		} else {
 			// Get the local focus data from MongoDB and since the focus records are already sorted by startTime, get the very first focus record in the array and get it's startTime and set the "toMs" variable to that startTime in MS - 1 ms.
-			const mostRecentFocusRecord = localFocusData[0];
-			const mostRecentStartTimeDate = new Date(mostRecentFocusRecord.startTime);
-			const mostRecentStartTimeInMs = mostRecentStartTimeDate.getTime();
+			const semiRecentFocusRecord = localFocusData[20];
+			const semiRecentStartTimeDate = new Date(semiRecentFocusRecord.startTime);
+			const semiRecentStartTimeInMs = semiRecentStartTimeDate.getTime();
 
 			const todayMs = new Date().getTime();
 
 			// Subtract 1 MS to not include latest focus record in our search.
-			fromMs = mostRecentStartTimeInMs;
+			fromMs = semiRecentStartTimeInMs;
 			toMs = todayMs;
 		}
 
@@ -68,7 +68,19 @@ router.get('/focus-records', async (req, res) => {
 		);
 
 		const tickTickOneApiFocusData = [...focusDataPomos.data, ...focusDataStopwatch.data];
+		const tickTickOneApiFocusDataById = arrayToObjectByKey(tickTickOneApiFocusData, 'id');
 		const localFocusDataById = arrayToObjectByKey(localFocusData, 'id');
+
+		// This is necessary and I can't just check to add focus records that are already in the DB like I did before because I often times edit my focus record after it's been created by updating the focus note. So, if I don't have this logic, then I won't have the latest focus note logic. I'm probably re-writing through around 20 focus records.
+		const localFocusDataWithLatestInfo = localFocusData.map((focusRecord: any) => {
+			const focusRecordFromApi = tickTickOneApiFocusDataById[focusRecord.id];
+
+			if (focusRecordFromApi) {
+				return focusRecordFromApi;
+			}
+
+			return focusRecord;
+		});
 
 		// Filter out any focus records that are already stored in the database from the API's returned focus records.
 		const tickTickOneApiFocusDataNoDupes = tickTickOneApiFocusData.filter((focusData) => {
@@ -76,17 +88,13 @@ router.get('/focus-records', async (req, res) => {
 			return !isNotAlreadyInDatabase;
 		});
 
-		const allFocusData = [...tickTickOneApiFocusDataNoDupes, ...localFocusData];
+		const allFocusData = [...tickTickOneApiFocusDataNoDupes, ...localFocusDataWithLatestInfo];
 		const sortedAllFocusData = sortArrayByProperty(allFocusData, 'startTime');
 
-		const thereIsARecordToAdd = tickTickOneApiFocusDataNoDupes.length > 0;
-
-		if (thereIsARecordToAdd) {
-			await updateLocalJsonData({
-				name: 'sorted-all-focus-data',
-				data: sortedAllFocusData,
-			});
-		}
+		await updateLocalJsonData({
+			name: 'sorted-all-focus-data',
+			data: sortedAllFocusData,
+		});
 
 		res.status(200).json(sortedAllFocusData);
 	} catch (error) {
