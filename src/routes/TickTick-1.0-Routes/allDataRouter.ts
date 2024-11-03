@@ -11,7 +11,7 @@ import {
 	getDayAfterToday,
 	arrayToObjectByKey,
 } from '../../utils/helpers.utils';
-import { getJsonData } from '../../utils/mongoose.utils';
+import { getJsonData, updateLocalJsonData } from '../../utils/mongoose.utils';
 
 const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
@@ -82,6 +82,15 @@ router.get('/focus-records', async (req, res) => {
 
 		const allFocusData = [...tickTickOneApiFocusDataNoDupes, ...localFocusData];
 		const sortedAllFocusData = sortArrayByProperty(allFocusData, 'startTime');
+
+		const thereIsARecordToAdd = tickTickOneApiFocusDataNoDupes.length > 0;
+
+		if (thereIsARecordToAdd) {
+			await updateLocalJsonData({
+				name: 'sorted-all-focus-data',
+				data: sortedAllFocusData,
+			});
+		}
 
 		res.status(200).json(sortedAllFocusData);
 	} catch (error) {
