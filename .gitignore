@@ -4,3 +4,4 @@ package-lock.json
 src/focus-data
 dist
 .vercel
+.DS_Store
