@@ -21,6 +21,9 @@ const UserSettingsSchema = new Schema(
 				showWeekends: { type: Boolean, default: true },
 			},
 		},
+		theme: {
+			color: { type: String },
+		},
 	},
 	{
 		timestamps: true,
