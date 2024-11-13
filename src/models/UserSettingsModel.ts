@@ -24,6 +24,13 @@ const UserSettingsSchema = new Schema(
 		theme: {
 			color: { type: String },
 		},
+		tickTickOne: {
+			pages: {
+				focusRecords: {
+					showCompletedTasks: { type: Boolean },
+				},
+			},
+		},
 	},
 	{
 		timestamps: true,
