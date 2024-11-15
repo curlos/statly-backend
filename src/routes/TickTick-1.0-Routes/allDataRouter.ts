@@ -195,6 +195,30 @@ router.get('/projects', async (req, res) => {
 	}
 });
 
+router.get('/project-groups', async (req, res) => {
+	try {
+		if (useLocalData) {
+			const localTasks = await getJsonData('project-groups');
+			res.status(200).json(localTasks);
+			return;
+		}
+
+		const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
+			headers: {
+				Cookie: cookie,
+			},
+		});
+
+		const projectGroups = batchCheckResponse.data.projectGroups;
+
+		res.status(200).json(projectGroups);
+	} catch (error) {
+		res.status(500).json({
+			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
+		});
+	}
+});
+
 router.get('/tags', async (req, res) => {
 	try {
 		if (useLocalData) {
