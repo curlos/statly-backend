@@ -28,6 +28,7 @@ const UserSettingsSchema = new Schema(
 			pages: {
 				focusRecords: {
 					showCompletedTasks: { type: Boolean },
+					showFocusNotes: { type: Boolean },
 					showTotalFocusDuration: { type: Boolean },
 				},
 			},
