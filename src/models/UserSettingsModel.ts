@@ -27,9 +27,10 @@ const UserSettingsSchema = new Schema(
 		tickTickOne: {
 			pages: {
 				focusRecords: {
-					showCompletedTasks: { type: Boolean },
-					showFocusNotes: { type: Boolean },
-					showTotalFocusDuration: { type: Boolean },
+					showCompletedTasks: { type: Boolean, default: true },
+					showFocusNotes: { type: Boolean, default: true },
+					showTotalFocusDuration: { type: Boolean, default: true },
+					maxFocusRecordsPerPage: { type: Number, default: 50 },
 				},
 			},
 		},
