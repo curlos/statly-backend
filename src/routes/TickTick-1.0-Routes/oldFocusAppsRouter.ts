@@ -2,6 +2,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { getJsonData } from '../../utils/mongoose.utils';
+// import { TODOIST_ALL_TASKS_BY_ID } from '../../focus-data/Todoist/TODOIST_ALL_TASKS_BY_ID';
 
 dotenv.config();
 
@@ -75,6 +76,15 @@ router.get('/todoist-all-completed-tasks', async (req, res) => {
 	try {
 		const todoistAllCompletedTasks = await getJsonData('todoist-all-completed-tasks');
 		res.status(200).json(todoistAllCompletedTasks);
+	} catch (error) {
+		res.status(500).json({ message: 'Error fetching data', error });
+	}
+});
+
+router.get('/todoist-all-tasks-by-id', async (req, res) => {
+	try {
+		const todoistAllTasksById = await getJsonData('todoist-all-tasks-by-id');
+		res.status(200).json(todoistAllTasksById);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
 	}
