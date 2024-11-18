@@ -3,7 +3,7 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import { getDayAfterToday } from '../../utils/helpers.utils';
 // import { updateLocalData } from '../../utils/mongoose.utils';
-// import { LOCAL_DATASETS, OLD_FOCUS_APPS_DATASETS } from '../../utils/LOCAL_DATASETS';
+// import { LOCAL_DATASETS, OLD_FOCUS_APPS_DATASETS, TODOIST_COMPLETED_TASKS_DATASETS } from '../../utils/LOCAL_DATASETS';
 
 const router = express.Router();
 
@@ -104,9 +104,6 @@ router.put('/update-local-data', async (req, res) => {
 	try {
 		const dataType = req.query['data-type'];
 
-		if (dataType === 'ticktick-1.0') {
-		}
-
 		switch (dataType) {
 			case 'ticktick-1.0':
 				// await updateLocalData(LOCAL_DATASETS);
@@ -114,10 +111,11 @@ router.put('/update-local-data', async (req, res) => {
 			case 'old-focus-apps':
 				// await updateLocalData(OLD_FOCUS_APPS_DATASETS);
 				break;
+			case 'todoist-all-completed-tasks':
+				// await updateLocalData(TODOIST_COMPLETED_TASKS_DATASETS);
+				break;
 			default:
-				throw new Error(
-					"Must pass in a valid 'data-type' query parameter of either 'ticktick-1.0' or 'old-focus-apps'!"
-				);
+				throw new Error("Must pass in a valid 'data-type' query parameter!");
 				break;
 		}
 

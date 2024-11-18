@@ -71,4 +71,13 @@ router.get('/be-focused', async (req, res) => {
 	}
 });
 
+router.get('/todoist-all-completed-tasks', async (req, res) => {
+	try {
+		const todoistAllCompletedTasks = await getJsonData('todoist-all-completed-tasks');
+		res.status(200).json(todoistAllCompletedTasks);
+	} catch (error) {
+		res.status(500).json({ message: 'Error fetching data', error });
+	}
+});
+
 export default router;
