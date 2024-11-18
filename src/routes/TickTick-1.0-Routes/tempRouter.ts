@@ -3,6 +3,7 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import { getDayAfterToday } from '../../utils/helpers.utils';
 // import { updateLocalData } from '../../utils/mongoose.utils';
+// import { LOCAL_DATASETS, OLD_FOCUS_APPS_DATASETS } from '../../utils/LOCAL_DATASETS';
 
 const router = express.Router();
 
@@ -97,11 +98,29 @@ router.get('/tasks-from-archived-projects', async (req, res) => {
 });
 
 /**
- * @description Temporary function that was only used once to update MongoDB with the JSON data I manually copied and pasted from TickTick 1.0. This won't be necessary anymore - or at least it shouldn't be since the data will be stored on the DB from now on BUT just in case, will keep this here.
+ * @description Temporary function that was only used once to update MongoDB with the JSON data I manually copied and pasted from TickTick 1.0. This won't be necessary anymore - or at least it shouldn't be since the data will be stored on the DB from now on BUT just in case, will keep this here. Also used to store old focus apps data from Session, Forest, BeFocused, and Tide.
  */
 router.put('/update-local-data', async (req, res) => {
 	try {
-		// await updateLocalData();
+		const dataType = req.query['data-type'];
+
+		if (dataType === 'ticktick-1.0') {
+		}
+
+		switch (dataType) {
+			case 'ticktick-1.0':
+				// await updateLocalData(LOCAL_DATASETS);
+				break;
+			case 'old-focus-apps':
+				// await updateLocalData(OLD_FOCUS_APPS_DATASETS);
+				break;
+			default:
+				throw new Error(
+					"Must pass in a valid 'data-type' query parameter of either 'ticktick-1.0' or 'old-focus-apps'!"
+				);
+				break;
+		}
+
 		res.status(200).json('Updated all local data!');
 	} catch (error) {
 		res.status(500).json({

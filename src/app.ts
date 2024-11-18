@@ -21,6 +21,7 @@ import habitsRouter from './routes/habitsRouter';
 import habitSectionsRouter from './routes/habitSectionsRouter';
 import habitLogsRouter from './routes/habitLogsRouter';
 import settingsRouter from './routes/userSettingsRouter';
+import oldFocusAppsRouter from './routes/TickTick-1.0-Routes/oldFocusAppsRouter';
 
 dotenv.config();
 
@@ -42,6 +43,9 @@ app.use(
 // This is for the TickTick 1.0 Data that I'm currently using until I finish TickTick 2.0 and migrate all my data into the DB
 app.use('/ticktick-1.0', allDataRouter);
 app.use('/ticktick-1.0', tempRouter);
+
+// Old Focus Apps Data (Session, Forest, BeFocused, possibly Tide)
+app.use('/old-focus-apps', oldFocusAppsRouter);
 
 app.use('/tasks', tasksRouter);
 app.use('/projects', projectsRouter);
