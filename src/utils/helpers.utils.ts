@@ -96,3 +96,25 @@ export const parseTideFocusRecordsString = (input: String) => {
 
 	return records;
 };
+
+// For the "BeFocused" app focus records and their "Start date" property which is not JS friendly with the "  at " portion of it.
+export const getBeFocusedFocusRecordsWithValidDate = (array: any) => {
+	return array.map((item: any) => {
+		// Check if 'Start date' exists in the object
+		if (item['Start date']) {
+			// Replace double spaces with a single space
+			let cleanedDate = item['Start date'].replace(/\s{2,}/g, ' ');
+
+			// Convert the cleaned date string into a more standard date string
+			// Assuming 'Oct 15 2021 at 4:11:32 PM' is the format after cleaning
+			cleanedDate = cleanedDate.replace(' at ', ' ');
+
+			// Create a new Date object from the cleaned date string
+			const dateObject = new Date(cleanedDate);
+
+			// Convert the Date object to an ISO string or any preferred format
+			item['Start date'] = dateObject.toISOString();
+		}
+		return item;
+	});
+};
