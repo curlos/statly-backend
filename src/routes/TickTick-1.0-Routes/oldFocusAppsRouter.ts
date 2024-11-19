@@ -7,42 +7,6 @@ dotenv.config();
 
 const router = express.Router();
 
-const getForestDurationSec = (forestFocusRecord: any) => {
-	const startTimeStr = forestFocusRecord['Start Time'];
-	const endTimeStr = forestFocusRecord['End Time'];
-
-	const startTimeDate = new Date(startTimeStr);
-	const endTimeDate = new Date(endTimeStr);
-
-	// Calculate the difference in milliseconds
-	// @ts-ignore
-	const differenceInMilliseconds = endTimeDate - startTimeDate;
-
-	// Convert milliseconds to seconds
-	const differenceInSeconds = differenceInMilliseconds / 1000;
-	const durationInSeconds = differenceInSeconds;
-
-	return durationInSeconds;
-};
-
-router.get('/focus-records/forest-app', async (req, res) => {
-	try {
-		const forestAppFocusData = await getJsonData('forest-app-data');
-
-		let totalFocus = 0;
-
-		forestAppFocusData.forEach((forestFocusRecord: any) => {
-			totalFocus += getForestDurationSec(forestFocusRecord);
-		});
-
-		console.log(totalFocus);
-
-		res.status(200).json(forestAppFocusData);
-	} catch (error) {
-		res.status(500).json({ message: 'Error fetching data', error });
-	}
-});
-
 router.get('/focus-records/session-app', async (req, res) => {
 	try {
 		const sessionAppFocusData = await getJsonData('session-app-data');
@@ -66,6 +30,37 @@ router.get('/focus-records/be-focused-app', async (req, res) => {
 		console.log(totalFocus);
 
 		res.status(200).json(beFocusedAppFocusData);
+	} catch (error) {
+		res.status(500).json({ message: 'Error fetching data', error });
+	}
+});
+
+router.get('/focus-records/forest-app', async (req, res) => {
+	try {
+		const forestAppFocusData = await getJsonData('forest-app-data');
+
+		// Check if "beforeSessionApp" query parameter was provided
+		const beforeSessionApp = req.query.beforeSessionApp;
+
+		if (beforeSessionApp) {
+			// Define the cutoff date as April 14, 2021
+			const cutoffDate = new Date('April 14, 2021');
+
+			// Filter the data to include only records before the cutoff date
+			const filteredData = forestAppFocusData.filter((item: any) => {
+				// Parse the "Start Time" from each item into a Date object
+				const itemStartDate = new Date(item['Start Time']);
+
+				// Return true if the item's start date is before the cutoff date
+				return itemStartDate < cutoffDate;
+			});
+
+			// Respond with the filtered data
+			return res.status(200).json(filteredData);
+		}
+
+		// Respond with all data if no specific filter was requested
+		res.status(200).json(forestAppFocusData);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
 	}
