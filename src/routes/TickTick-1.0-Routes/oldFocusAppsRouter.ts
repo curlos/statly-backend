@@ -2,7 +2,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { getJsonData } from '../../utils/mongoose.utils';
-// import { TODOIST_ALL_TASKS_BY_ID } from '../../focus-data/Todoist/TODOIST_ALL_TASKS_BY_ID';
 
 dotenv.config();
 
@@ -67,6 +66,15 @@ router.get('/be-focused', async (req, res) => {
 		console.log(totalFocus);
 
 		res.status(200).json(beFocusedAppFocusData);
+	} catch (error) {
+		res.status(500).json({ message: 'Error fetching data', error });
+	}
+});
+
+router.get('/tide-ios-app', async (req, res) => {
+	try {
+		const sessionAppFocusData = await getJsonData('tide-ios-app-focus-records');
+		res.status(200).json(sessionAppFocusData);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
 	}

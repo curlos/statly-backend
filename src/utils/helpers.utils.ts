@@ -65,3 +65,34 @@ export function arrayToObjectByKey(array: any[], keyProperty: string) {
 		return acc;
 	}, {});
 }
+
+/**
+ * Parses the string of TIDE app Focus Records. I had to manually take screenshots on my Mac and copy and paste that text into a file because the API wasn't giving me everything I needed. So, that big string I created in "MY_DATA.txt" needed to be parsed using this function. Keeping this function here historical purposes.
+ * @param {String} input
+ * @returns {Array<Object>}
+ */
+export const parseTideFocusRecordsString = (input: String) => {
+	const lines = input.split('\n');
+	const records: any = [];
+	let current: any = {};
+
+	lines.forEach((line) => {
+		if (line.trim()) {
+			// Skip empty lines
+			if (line.includes('/')) {
+				// Checks for date line
+				current.startTime = line.trim();
+			} else if (line.includes('m') || line.includes('h')) {
+				// Checks for duration line
+				current.duration = line.trim();
+				records.push(current);
+				current = {};
+			} else {
+				// This should be the name line
+				current.name = line.trim();
+			}
+		}
+	});
+
+	return records;
+};
