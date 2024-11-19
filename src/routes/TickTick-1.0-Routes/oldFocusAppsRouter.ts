@@ -25,7 +25,7 @@ const getForestDurationSec = (forestFocusRecord: any) => {
 	return durationInSeconds;
 };
 
-router.get('/forest', async (req, res) => {
+router.get('/focus-records/forest-app', async (req, res) => {
 	try {
 		const forestAppFocusData = await getJsonData('forest-app-data');
 
@@ -43,7 +43,7 @@ router.get('/forest', async (req, res) => {
 	}
 });
 
-router.get('/session', async (req, res) => {
+router.get('/focus-records/session-app', async (req, res) => {
 	try {
 		const sessionAppFocusData = await getJsonData('session-app-data');
 		res.status(200).json(sessionAppFocusData);
@@ -52,7 +52,7 @@ router.get('/session', async (req, res) => {
 	}
 });
 
-router.get('/be-focused', async (req, res) => {
+router.get('/focus-records/be-focused-app', async (req, res) => {
 	try {
 		const beFocusedAppFocusData = await getJsonData('be-focused-app-data');
 
@@ -71,7 +71,7 @@ router.get('/be-focused', async (req, res) => {
 	}
 });
 
-router.get('/tide-ios-app', async (req, res) => {
+router.get('/focus-records/tide-app', async (req, res) => {
 	try {
 		const sessionAppFocusData = await getJsonData('tide-ios-app-focus-records');
 		res.status(200).json(sessionAppFocusData);
