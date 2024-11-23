@@ -35,6 +35,7 @@ const UserSettingsSchema = new Schema(
 				},
 				completedTasks: {
 					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
+					groupedTasksCollapsedByDefault: { type: Boolean, default: true },
 				},
 			},
 		},
