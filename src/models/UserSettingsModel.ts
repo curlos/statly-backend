@@ -33,6 +33,9 @@ const UserSettingsSchema = new Schema(
 					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
 					maxFocusRecordsPerPage: { type: Number, default: 50 },
 				},
+				completedTasks: {
+					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
+				},
 			},
 		},
 	},
