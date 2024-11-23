@@ -36,6 +36,7 @@ const UserSettingsSchema = new Schema(
 				completedTasks: {
 					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
 					groupedTasksCollapsedByDefault: { type: Boolean, default: true },
+					maxDaysPerPage: { type: Number, default: 7 },
 				},
 			},
 		},
