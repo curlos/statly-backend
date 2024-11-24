@@ -80,7 +80,10 @@ router.get('/focus-records/tide-app', async (req, res) => {
 
 router.get('/todoist-all-completed-tasks', async (req, res) => {
 	try {
-		const todoistAllCompletedTasks = await getJsonData('todoist-all-completed-tasks');
+		const todoistPersonalCompletedTasks = await getJsonData('todoist-personal-completed-tasks');
+		const todoistQLinkCompletedTasks = await getJsonData('todoist-qlink-completed-tasks');
+		const todoistAllCompletedTasks = [...todoistPersonalCompletedTasks.items, ...todoistQLinkCompletedTasks.items];
+
 		res.status(200).json(todoistAllCompletedTasks);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
@@ -89,8 +92,45 @@ router.get('/todoist-all-completed-tasks', async (req, res) => {
 
 router.get('/todoist-all-tasks-by-id', async (req, res) => {
 	try {
-		const todoistAllTasksById = await getJsonData('todoist-all-tasks-by-id');
+		// Personal
+		const todoistPersonalCompletedTasksById = await getJsonData('todoist-personal-completed-tasks-by-id');
+		const todoistPersonalActiveTasksById = await getJsonData('todoist-personal-active-tasks-by-id');
+
+		// Q Link
+		const todoistQLinkCompletedTasksById = await getJsonData('todoist-qlink-completed-tasks-by-id');
+		const todoistQLinkActiveTasksById = await getJsonData('todoist-qlink-active-tasks-by-id');
+
+		const todoistAllTasksById = {
+			...todoistPersonalCompletedTasksById,
+			...todoistPersonalActiveTasksById,
+			...todoistQLinkCompletedTasksById,
+			...todoistQLinkActiveTasksById,
+		};
+
 		res.status(200).json(todoistAllTasksById);
+	} catch (error) {
+		res.status(500).json({ message: 'Error fetching data', error });
+	}
+});
+
+router.get('/todoist-all-projects', async (req, res) => {
+	try {
+		// Personal
+		const todoistPersonalActiveProjects = await getJsonData('todoist-personal-active-projects');
+		const todoistPersonalArchivedProjects = await getJsonData('todoist-personal-archived-projects');
+
+		// Q Link
+		const todoistQLinkActiveProjects = await getJsonData('todoist-qlink-active-projects');
+		const todoistQLinkArchivedProjects = await getJsonData('todoist-qlink-archived-projects');
+
+		const todoistAllProjects = [
+			...todoistPersonalActiveProjects,
+			...todoistPersonalArchivedProjects,
+			...todoistQLinkActiveProjects,
+			...todoistQLinkArchivedProjects,
+		];
+
+		res.status(200).json(todoistAllProjects);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
 	}

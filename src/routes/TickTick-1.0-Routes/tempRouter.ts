@@ -3,6 +3,8 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import { getDayAfterToday } from '../../utils/helpers.utils';
 // import { updateLocalData } from '../../utils/mongoose.utils';
+// import { TODOIST_PROJECTS_DATASETS, TODOIST_TASKS_DATASETS } from '../../utils/LOCAL_DATASETS';
+// import { updateLocalData } from '../../utils/mongoose.utils';
 // import { OLD_FOCUS_APPS_DATASETS } from '../../utils/LOCAL_DATASETS';
 
 const router = express.Router();
@@ -111,14 +113,14 @@ router.put('/update-local-data', async (req, res) => {
 			case 'old-focus-apps':
 				// await updateLocalData(OLD_FOCUS_APPS_DATASETS);
 				break;
-			case 'todoist-all-completed-tasks':
-				// await updateLocalData(TODOIST_COMPLETED_TASKS_DATASETS);
-				break;
-			case 'todoist-all-tasks-by-id':
-				// await updateLocalData(TODOIST_TASKS_BY_ID_DATASETS);
-				break;
 			case 'tide-ios-app-focus-records':
 				// await updateLocalData(TIDE_IOS_APP_DATASETS);
+				break;
+			case 'todoist-all-tasks-data':
+				// await updateLocalData(TODOIST_TASKS_DATASETS);
+				break;
+			case 'todoist-all-projects':
+				// await updateLocalData(TODOIST_PROJECTS_DATASETS);
 				break;
 			default:
 				throw new Error("Must pass in a valid 'data-type' query parameter!");

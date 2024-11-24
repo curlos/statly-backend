@@ -13,6 +13,19 @@
 // import { TODOIST_ALL_COMPLETED_TASKS } from '../focus-data/Todoist/TODOIST_ALL_COMPLETED_TASKS';
 // import { TODOIST_ALL_TASKS_BY_ID } from '../focus-data/Todoist/TODOIST_ALL_TASKS_BY_ID';
 // import { TIDE_DATA } from '../focus-data/2021-2022-focus-data-from-other-apps/TIDE-IOS-APP/TIDE_DATA';
+// import { TODOIST_ALL_PROJECTS } from '../focus-data/Todoist/TODOIST_ALL_PROJECTS';
+// import { todoistAllPersonalCompletedTasks } from '../focus-data/Todoist/personal/todoistAllPersonalCompletedTasks';
+// import { todoistAllQLinkCompletedTasksById } from '../focus-data/Todoist/qlink/todoistAllQLinkCompletedTasksById';
+// import { todoistAllPersonalActiveTasks } from '../focus-data/Todoist/personal/todoistAllPersonalActiveTasks';
+// import { todoistAllPersonalCompletedTasksById } from '../focus-data/Todoist/personal/todoistAllPersonalCompletedTasksById';
+// import { todoistAllPersonalActiveTasksById } from '../focus-data/Todoist/personal/todoistAllPersonalActiveTasksById';
+// import { todoistAllQLinkCompletedTasks } from '../focus-data/Todoist/qlink/todoistAllQLinkCompletedTasks';
+// import { todoistAllQLinkActiveTasks } from '../focus-data/Todoist/qlink/todoistAllQLinkActiveTasks';
+// import { todoistAllQLinkActiveTasksById } from '../focus-data/Todoist/qlink/todoistAllQLinkActiveTasksById';
+// import { todoistPersonalActiveProjects } from '../focus-data/Todoist/personal/todoistPersonalActiveProjects';
+// import { todoistPersonalArchivedProjects } from '../focus-data/Todoist/personal/todoistPersonalArchivedProjects';
+// import { todoistQLinkActiveProjects } from '../focus-data/Todoist/qlink/todoistQLinkActiveProjects';
+// import { todoistQLinkArchivedProjects } from '../focus-data/Todoist/qlink/todoistQLinkArchivedProjects';
 
 // export const LOCAL_DATASETS = [
 // 	{ name: 'sorted-all-focus-data', data: sortedAllFocusData },
@@ -30,8 +43,28 @@
 // 	{ name: 'tide-ios-app-focus-records', data: TIDE_DATA },
 // ];
 
-// export const TODOIST_COMPLETED_TASKS_DATASETS = [
-// 	{ name: 'todoist-all-completed-tasks', data: TODOIST_ALL_COMPLETED_TASKS },
+// // Completed and Active Tasks in array form as well as in object form by id.
+// export const TODOIST_TASKS_DATASETS = [
+// 	// Personal
+// 	{ name: 'todoist-personal-completed-tasks', data: todoistAllPersonalCompletedTasks },
+// 	{ name: 'todoist-personal-completed-tasks-by-id', data: todoistAllPersonalCompletedTasksById },
+// 	{ name: 'todoist-personal-active-tasks', data: todoistAllPersonalActiveTasks },
+// 	{ name: 'todoist-personal-active-tasks-by-id', data: todoistAllPersonalActiveTasksById },
+
+// 	// Q Link
+// 	{ name: 'todoist-qlink-completed-tasks', data: todoistAllQLinkCompletedTasks },
+// 	{ name: 'todoist-qlink-completed-tasks-by-id', data: todoistAllQLinkCompletedTasksById },
+// 	{ name: 'todoist-qlink-active-tasks', data: todoistAllQLinkActiveTasks },
+// 	{ name: 'todoist-qlink-active-tasks-by-id', data: todoistAllQLinkActiveTasksById },
 // ];
 
-// export const TODOIST_TASKS_BY_ID_DATASETS = [{ name: 'todoist-all-tasks-by-id', data: TODOIST_ALL_TASKS_BY_ID }];
+// // Active and archived projects from todoist
+// export const TODOIST_PROJECTS_DATASETS = [
+// 	// Personal
+// 	{ name: 'todoist-personal-active-projects', data: todoistPersonalActiveProjects },
+// 	{ name: 'todoist-personal-archived-projects', data: todoistPersonalArchivedProjects },
+
+// 	// Q Link
+// 	{ name: 'todoist-qlink-active-projects', data: todoistQLinkActiveProjects },
+// 	{ name: 'todoist-qlink-archived-projects', data: todoistQLinkArchivedProjects },
+// ];
