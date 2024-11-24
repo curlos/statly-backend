@@ -78,6 +78,31 @@ router.get('/focus-records/tide-app', async (req, res) => {
 	}
 });
 
+router.get('/todoist-all-tasks', async (req, res) => {
+	try {
+		// Personal
+		const todoistPersonalCompletedTasksById = await getJsonData('todoist-personal-completed-tasks-by-id');
+		const todoistPersonalActiveTasksById = await getJsonData('todoist-personal-active-tasks-by-id');
+
+		// Q Link
+		const todoistQLinkCompletedTasksById = await getJsonData('todoist-qlink-completed-tasks-by-id');
+		const todoistQLinkActiveTasksById = await getJsonData('todoist-qlink-active-tasks-by-id');
+
+		const todoistAllTasksById = {
+			...todoistPersonalCompletedTasksById,
+			...todoistPersonalActiveTasksById,
+			...todoistQLinkCompletedTasksById,
+			...todoistQLinkActiveTasksById,
+		};
+
+		const allTasksWithOnlyItem = Object.values(todoistAllTasksById).map((task: any) => task.item);
+
+		res.status(200).json(allTasksWithOnlyItem);
+	} catch (error) {
+		res.status(500).json({ message: 'Error fetching data', error });
+	}
+});
+
 router.get('/todoist-all-completed-tasks', async (req, res) => {
 	try {
 		const todoistPersonalCompletedTasks = await getJsonData('todoist-personal-completed-tasks');
