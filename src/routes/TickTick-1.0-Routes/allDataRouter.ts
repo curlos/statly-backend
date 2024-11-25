@@ -2,6 +2,8 @@
 import express from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { sortedAllFocusData as localSortedAllFocusData } from '../../focus-data/sortedAllFocusData';
+import { allTasks as localAllTasks } from '../../focus-data/allTasks';
 
 dotenv.config();
 
@@ -20,17 +22,23 @@ const cookie = TICKTICK_API_COOKIE;
 // new Date(2705792451783) = September 28, 2055. This is to make sure all my tasks are fetched properly. I doubt I'll have to worry about this expiring since I'll be long past TickTick and humans coding anything will be a thing of the past by then with GPT-20 out by then.
 const farAwayDateInMs = 2705792451783;
 
-const useLocalData = false;
+const useLocalData = true;
+const doNotUseMongoDB = true;
 
 router.get('/focus-records', async (req, res) => {
 	try {
 		const todayOnly = req.query.today === 'true';
-		const localFocusData = await getJsonData('sorted-all-focus-data');
+
+		// console.log('Fetching local data from MongoDB');
+
+		const localFocusData = doNotUseMongoDB ? localSortedAllFocusData : await getJsonData('sorted-all-focus-data');
 
 		if (useLocalData) {
 			res.status(200).json(localFocusData);
 			return;
 		}
+
+		console.log("Making a call to TickTick's real API!");
 
 		let fromMs = 0;
 		let toMs = farAwayDateInMs;
@@ -108,11 +116,8 @@ router.get('/tasks', async (req, res) => {
 	try {
 		const dayAfterTodayStr = getDayAfterToday();
 
-		const completedTasksFromArchivedProjects = await getJsonData('completed-tasks-from-archived-projects');
-		const notCompletedTasksFromArchivedProjects = await getJsonData('not-completed-tasks-from-archived-projects');
-
 		if (useLocalData) {
-			const localTasks = await getJsonData('all-tasks');
+			const localTasks = doNotUseMongoDB ? localAllTasks : await getJsonData('all-tasks');
 			res.status(200).json(localTasks);
 			return;
 		}
@@ -156,6 +161,10 @@ router.get('/tasks', async (req, res) => {
 		const willNotDoTasks = willNotDoTasksResponse.data;
 		const { tasks: trashTasks } = trashTasksResponse.data;
 
+		const completedTasksFromArchivedProjects = await getJsonData('completed-tasks-from-archived-projects');
+		const notCompletedTasksFromArchivedProjects = await getJsonData('not-completed-tasks-from-archived-projects');
+
+		// TODO: Should update "all-tasks" JSON DATA from MongoDB with data from here.
 		const allTasks = [
 			...tasksToBeUpdated,
 			...completedTasks,
@@ -197,11 +206,12 @@ router.get('/projects', async (req, res) => {
 
 router.get('/project-groups', async (req, res) => {
 	try {
-		if (useLocalData) {
-			const localTasks = await getJsonData('project-groups');
-			res.status(200).json(localTasks);
-			return;
-		}
+		// TODO: Should try to store this in MongoDB later. I don't think I've done it yet.
+		// if (useLocalData) {
+		// 	const localTasks = await getJsonData('project-groups');
+		// 	res.status(200).json(localTasks);
+		// 	return;
+		// }
 
 		const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
 			headers: {
