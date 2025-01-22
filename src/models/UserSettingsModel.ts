@@ -31,6 +31,8 @@ const UserSettingsSchema = new Schema(
 					showTotalFocusDuration: { type: Boolean, default: true },
 					showCompletedTasks: { type: Boolean, default: true },
 					showTaskAncestors: { type: Boolean, default: true },
+					showTaskProjectName: { type: Boolean, default: true },
+					taskIdIncludeFocusRecordsFromSubtasks: { type: Boolean, default: true },
 					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
 					maxFocusRecordsPerPage: { type: Number, default: 50 },
 				},
