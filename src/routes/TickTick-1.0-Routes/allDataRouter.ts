@@ -2,8 +2,8 @@
 import express from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
-import { sortedAllFocusData as localSortedAllFocusData } from '../../focus-data/sortedAllFocusData';
-import { allTasks as localAllTasks } from '../../focus-data/allTasks';
+// import { sortedAllFocusData as localSortedAllFocusData } from '../../focus-data/sortedAllFocusData';
+// import { allTasks as localAllTasks } from '../../focus-data/allTasks';
 
 dotenv.config();
 
@@ -28,10 +28,10 @@ const doNotUseMongoDB = false;
 router.get('/focus-records', async (req, res) => {
 	try {
 		const todayOnly = req.query.today === 'true';
-
-		// console.log('Fetching local data from MongoDB');
-
-		const localFocusData = doNotUseMongoDB ? localSortedAllFocusData : await getJsonData('sorted-all-focus-data');
+		
+		// const localFocusData = doNotUseMongoDB ? localSortedAllFocusData : await getJsonData('sorted-all-focus-data');
+		
+		const localFocusData = await getJsonData('sorted-all-focus-data');
 
 		if (useLocalData) {
 			res.status(200).json(localFocusData);
@@ -117,7 +117,9 @@ router.get('/tasks', async (req, res) => {
 		const dayAfterTodayStr = getDayAfterToday();
 
 		if (useLocalData) {
-			const localTasks = doNotUseMongoDB ? localAllTasks : await getJsonData('all-tasks');
+			// const localTasks = doNotUseMongoDB ? localAllTasks : await getJsonData('all-tasks');
+			// res.status(200).json(localTasks);
+			const localTasks = await getJsonData('all-tasks');
 			res.status(200).json(localTasks);
 			return;
 		}
