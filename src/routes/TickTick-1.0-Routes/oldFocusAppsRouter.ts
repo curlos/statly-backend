@@ -3,22 +3,27 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { getJsonData } from '../../utils/mongoose.utils';
 
-import { SESSION_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/Session/SESSION_DATA';
-import { BE_FOCUSED_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/BeFocused/BE_FOCUSED';
-import { FOREST_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/Forest/FOREST';
-import { TIDE_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/TIDE-IOS-APP/TIDE_DATA';
+// import { SESSION_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/Session/SESSION_DATA';
+// import { BE_FOCUSED_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/BeFocused/BE_FOCUSED';
+// import { FOREST_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/Forest/FOREST';
+// import { TIDE_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/TIDE-IOS-APP/TIDE_DATA';
 
-import { todoistAllPersonalCompletedTasksById } from '../../focus-data/Todoist/personal/todoistAllPersonalCompletedTasksById';
-import { todoistAllPersonalActiveTasksById } from '../../focus-data/Todoist/personal/todoistAllPersonalActiveTasksById';
+// import { todoistAllPersonalCompletedTasksById } from '../../focus-data/Todoist/personal/todoistAllPersonalCompletedTasksById';
+// import { todoistAllPersonalActiveTasksById } from '../../focus-data/Todoist/personal/todoistAllPersonalActiveTasksById';
 
-import { todoistAllQLinkCompletedTasksById } from '../../focus-data/Todoist/qlink/todoistAllQLinkCompletedTasksById';
-import { todoistAllQLinkActiveTasksById } from '../../focus-data/Todoist/qlink/todoistAllQLinkActiveTasksById';
+// import { todoistAllQLinkCompletedTasksById } from '../../focus-data/Todoist/qlink/todoistAllQLinkCompletedTasksById';
+// import { todoistAllQLinkActiveTasksById } from '../../focus-data/Todoist/qlink/todoistAllQLinkActiveTasksById';
 
 dotenv.config();
 
 const router = express.Router();
 
-const doNotUseMongoDB = true;
+const doNotUseMongoDB = false;
+const {
+	SESSION_DATA, BE_FOCUSED_DATA, FOREST_DATA, TIDE_DATA, todoistAllPersonalCompletedTasksById, todoistAllPersonalActiveTasksById, todoistAllQLinkCompletedTasksById, todoistAllQLinkActiveTasksById
+} = {
+	SESSION_DATA: {}, BE_FOCUSED_DATA: {}, FOREST_DATA: {}, TIDE_DATA: {}, todoistAllPersonalCompletedTasksById: {}, todoistAllPersonalActiveTasksById: {}, todoistAllQLinkCompletedTasksById: {}, todoistAllQLinkActiveTasksById: {}
+}
 
 router.get('/focus-records/session-app', async (req, res) => {
 	try {

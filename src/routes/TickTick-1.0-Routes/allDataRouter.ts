@@ -25,13 +25,16 @@ const farAwayDateInMs = 2705792451783;
 const useLocalData = false;
 const doNotUseMongoDB = false;
 
+const { localSortedAllFocusData, localAllTasks } = {
+	localSortedAllFocusData: {},
+	localAllTasks: {}
+}
+
 router.get('/focus-records', async (req, res) => {
 	try {
 		const todayOnly = req.query.today === 'true';
 		
-		// const localFocusData = doNotUseMongoDB ? localSortedAllFocusData : await getJsonData('sorted-all-focus-data');
-		
-		const localFocusData = await getJsonData('sorted-all-focus-data');
+		const localFocusData = doNotUseMongoDB ? localSortedAllFocusData : await getJsonData('sorted-all-focus-data');
 
 		if (useLocalData) {
 			res.status(200).json(localFocusData);
@@ -117,9 +120,7 @@ router.get('/tasks', async (req, res) => {
 		const dayAfterTodayStr = getDayAfterToday();
 
 		if (useLocalData) {
-			// const localTasks = doNotUseMongoDB ? localAllTasks : await getJsonData('all-tasks');
-			// res.status(200).json(localTasks);
-			const localTasks = await getJsonData('all-tasks');
+			const localTasks = doNotUseMongoDB ? localAllTasks : await getJsonData('all-tasks');
 			res.status(200).json(localTasks);
 			return;
 		}
