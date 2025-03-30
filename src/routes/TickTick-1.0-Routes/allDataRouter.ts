@@ -22,8 +22,8 @@ const cookie = TICKTICK_API_COOKIE;
 // new Date(2705792451783) = September 28, 2055. This is to make sure all my tasks are fetched properly. I doubt I'll have to worry about this expiring since I'll be long past TickTick and humans coding anything will be a thing of the past by then with GPT-20 out by then.
 const farAwayDateInMs = 2705792451783;
 
-const useLocalData = true;
-const doNotUseMongoDB = true;
+const useLocalData = false;
+const doNotUseMongoDB = false;
 
 router.get('/focus-records', async (req, res) => {
 	try {
