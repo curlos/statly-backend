@@ -44,6 +44,12 @@ const UserSettingsSchema = new Schema(
 				},
 				focusHoursGoal: {
 					projects: { type: Object, default: {} }
+				},
+				challenges: {
+					selectedChallengeCardImage: {
+						focus: { type: String, default: "https://i.imgur.com/6xLKg5k.jpeg" },
+						tasks: { type: String, default: "https://i.imgur.com/x084PtQ.png" },
+					}
 				}
 			},
 		},
