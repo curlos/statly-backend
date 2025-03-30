@@ -42,6 +42,9 @@ const UserSettingsSchema = new Schema(
 					showIndentedTasks: { type: Boolean, default: true },
 					maxDaysPerPage: { type: Number, default: 7 },
 				},
+				focusHoursGoal: {
+					projects: { type: Object, default: {} }
+				}
 			},
 		},
 	},
