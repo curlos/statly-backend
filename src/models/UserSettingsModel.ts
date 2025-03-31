@@ -50,6 +50,12 @@ const UserSettingsSchema = new Schema(
 						focus: { type: String, default: "https://i.imgur.com/6xLKg5k.jpeg" },
 						tasks: { type: String, default: "https://i.imgur.com/x084PtQ.png" },
 					}
+				},
+				medals: {
+					selectedMedalCardImage: {
+						focus: { type: String, default: "https://i.imgur.com/dIvJYlX.png" },
+						tasks: { type: String, default: "https://i.imgur.com/91AMzBS.png" },
+					}
 				}
 			},
 		},
