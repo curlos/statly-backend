@@ -42,8 +42,6 @@ router.get('/focus-records', verifyToken, async (req, res) => {
 			return;
 		}
 
-		console.log("Making a call to TickTick's real API!");
-
 		let fromMs = 0;
 		let toMs = farAwayDateInMs;
 

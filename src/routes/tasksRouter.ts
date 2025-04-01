@@ -4,7 +4,7 @@ import { verifyToken } from '../middleware/verifyToken';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		const tasks = await Task.find({});
 		res.status(200).json(tasks);

@@ -39,8 +39,6 @@ router.get('/tasks-from-archived-projects', verifyToken, async (req, res) => {
 		const getTasksFromArchivedProjects = true;
 
 		if (getTasksFromArchivedProjects) {
-			console.log(`${SERVER_URL}/ticktick-1.0/projects`);
-
 			// Get all the projects
 			const projectsResponse = await axios.get(`${SERVER_URL}/ticktick-1.0/projects`, {
 				headers: {
