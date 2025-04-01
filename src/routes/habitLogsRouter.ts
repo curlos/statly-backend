@@ -1,9 +1,10 @@
 import express from 'express';
 import HabitLog from '../models/HabitLog';
 import Habit from '../models/HabitModel';
+import { verifyToken } from '../middleware/verifyToken';
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		const habitSections = await HabitLog.find();
 		res.status(200).json(habitSections);
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	try {
 		const payload = req.body;
 		const { habitId, checkedInDayKey } = payload;
@@ -61,7 +62,7 @@ router.post('/add', async (req, res) => {
 	}
 });
 
-router.put('/edit/:habitLogId', async (req, res) => {
+router.put('/edit/:habitLogId', verifyToken, async (req, res) => {
 	const { habitLogId } = req.params;
 	const payload = req.body;
 	const { habitId, checkedInDayKey } = payload;
@@ -109,7 +110,7 @@ router.put('/edit/:habitLogId', async (req, res) => {
 	}
 });
 
-router.delete('/delete/:habitLogId', async (req, res) => {
+router.delete('/delete/:habitLogId', verifyToken, async (req, res) => {
 	const { habitLogId } = req.params;
 
 	try {

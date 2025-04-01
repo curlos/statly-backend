@@ -1,8 +1,9 @@
 import express from 'express';
 import HabitSection from '../models/HabitSectionModel';
+import { verifyToken } from '../middleware/verifyToken';
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		const habitSections = await HabitSection.find();
 		res.status(200).json(habitSections);
@@ -13,7 +14,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	try {
 		const newHabitSection = new HabitSection(req.body);
 		const savedHabitSection = await newHabitSection.save();
@@ -26,7 +27,7 @@ router.post('/add', async (req, res) => {
 	}
 });
 
-router.put('/edit/:habitSectionId', async (req, res) => {
+router.put('/edit/:habitSectionId', verifyToken, async (req, res) => {
 	const { habitSectionId } = req.params;
 
 	try {
@@ -47,7 +48,7 @@ router.put('/edit/:habitSectionId', async (req, res) => {
 	}
 });
 
-router.delete('/delete/:habitSectionId', async (req, res) => {
+router.delete('/delete/:habitSectionId', verifyToken, async (req, res) => {
 	const { habitSectionId } = req.params;
 
 	try {

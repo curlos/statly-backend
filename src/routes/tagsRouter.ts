@@ -2,9 +2,10 @@
 import express from 'express';
 import Tag from '../models/TagModel';
 import Task from '../models/taskModel';
+import { verifyToken } from '../middleware/verifyToken';
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		const tags = await Tag.find(); // Fetch projects based on the filter
 		res.status(200).json(tags);
@@ -15,7 +16,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	try {
 		const { parentId, ...restOfBody } = req.body;
 
@@ -46,7 +47,7 @@ router.post('/add', async (req, res) => {
 	}
 });
 
-router.put('/edit/:tagId', async (req, res) => {
+router.put('/edit/:tagId', verifyToken, async (req, res) => {
 	const { tagId } = req.params;
 	const { oldParentTagId, newParentTagId, ...restOfBody } = req.body;
 
@@ -89,7 +90,7 @@ router.put('/edit/:tagId', async (req, res) => {
 	}
 });
 
-router.delete('/delete/:tagId', async (req, res) => {
+router.delete('/delete/:tagId', verifyToken, async (req, res) => {
 	const { tagId } = req.params;
 
 	try {

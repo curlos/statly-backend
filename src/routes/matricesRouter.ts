@@ -1,9 +1,10 @@
 import express from 'express';
 import Matrix from '../models/MatrixModel';
+import { verifyToken } from '../middleware/verifyToken';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		// Use projection to exclude the _id field from selectedPriorities and dateOptions
 		const matrices = await Matrix.find({}, { 'selectedPriorities._id': 0, 'dateOptions._id': 0 });
@@ -13,7 +14,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	const { name, selectedProjects, selectedDates, selectedPriorities, projectId } = req.body;
 	const newMatrix = new Matrix({
 		name,
@@ -31,7 +32,7 @@ router.post('/add', async (req, res) => {
 	}
 });
 
-router.put('/edit/:id', async (req, res) => {
+router.put('/edit/:id', verifyToken, async (req, res) => {
 	const { id } = req.params;
 
 	try {

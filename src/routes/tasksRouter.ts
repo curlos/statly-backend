@@ -1,5 +1,6 @@
 import express from 'express';
 import Task from '../models/taskModel';
+import { verifyToken } from '../middleware/verifyToken';
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.get('/:taskId', async (req, res) => {
+router.get('/:taskId', verifyToken, async (req, res) => {
 	const { taskId } = req.params;
 	const includeSubtasks = req.query.subtasks === 'true';
 
@@ -40,7 +41,7 @@ router.get('/:taskId', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	const { parentId } = req.query;
 
 	try {
@@ -74,7 +75,7 @@ router.post('/add', async (req, res) => {
 });
 
 // "children" property of a task SHOULD NOT be updated through this endpoint. ONLY allow it to be edited through the bulk edit tasks endpoint as editing the children of a task affects multiple tasks, not just one.
-router.put('/edit/:taskId', async (req, res) => {
+router.put('/edit/:taskId', verifyToken, async (req, res) => {
 	const { taskId } = req.params;
 	let updateData = req.body;
 
@@ -100,7 +101,7 @@ router.put('/edit/:taskId', async (req, res) => {
 });
 
 // This is mainly meant to be used when dragging a task in list of tasks/subtasks and changing the order. Since the "children" property of the task changes for every task, they all need to be updated in bulk.
-router.put('/bulk-edit', async (req, res) => {
+router.put('/bulk-edit', verifyToken, async (req, res) => {
 	const tasksToUpdate = req.body;
 
 	if (!Array.isArray(tasksToUpdate)) {
@@ -142,7 +143,7 @@ const deleteTaskAndSubtasks = async (taskId: string) => {
 
 // TODO: So this does actually delete tasks from the DB and it's good to keep it like this for NOw. However, I don't think it's a good idea for me to actually DELETE the tasks from the DB because I like to keep track of everything. Even stuff I've "deleted". I think it'll be a better idea to mark tasks with a flag or something saying they're deleted but not actually removing them. It'll just be more futureproof in case I wanna bring something back.
 // TODO: Add parentId here so that if a task is deleted, it can be removed from the parent's "children"
-router.delete('/delete/:taskId', async (req, res) => {
+router.delete('/delete/:taskId', verifyToken, async (req, res) => {
 	const { taskId } = req.params;
 
 	try {
@@ -174,7 +175,7 @@ const markTaskAndSubtasksWithProperty = async (taskId: string, property: string,
 	}
 };
 
-router.patch('/flag/:taskId', async (req, res) => {
+router.patch('/flag/:taskId', verifyToken, async (req, res) => {
 	const { taskId } = req.params;
 	const { property, value, parentId } = req.body;
 

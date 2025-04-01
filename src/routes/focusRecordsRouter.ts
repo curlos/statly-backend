@@ -1,9 +1,10 @@
 // src/routes/taskRouter.ts
 import express from 'express';
 import FocusRecord from '../models/FocusRecordModel';
+import { verifyToken } from '../middleware/verifyToken';
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		const focusRecords = await FocusRecord.find({});
 		res.status(200).json(focusRecords);
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	try {
 		// Check if both taskId and habitId are provided
 		const { taskId, habitId } = req.body;
@@ -36,7 +37,7 @@ router.post('/add', async (req, res) => {
 	}
 });
 
-router.put('/edit/:focusRecordId', async (req, res) => {
+router.put('/edit/:focusRecordId', verifyToken, async (req, res) => {
 	const { focusRecordId } = req.params;
 	let updateData = req.body;
 
@@ -64,7 +65,7 @@ router.put('/edit/:focusRecordId', async (req, res) => {
 	}
 });
 
-router.delete('/delete/:focusRecordId', async (req, res) => {
+router.delete('/delete/:focusRecordId', verifyToken, async (req, res) => {
 	const { focusRecordId } = req.params;
 
 	try {
@@ -84,7 +85,7 @@ router.delete('/delete/:focusRecordId', async (req, res) => {
 });
 
 // This is needed because if a user pauses a focus record, we need to know when they pick back up. There were a couple of ways to do this but the easiest way I saw to do it while also having the ability to edit individual focus record tasks, is to just create new focus records every time it's paused. When the timer is done, the "/bulk-add" endpoint can be called to add all the focus records together under one Focus Record Summary.
-router.post('/bulk-add', async (req, res) => {
+router.post('/bulk-add', verifyToken, async (req, res) => {
 	const focusRecords = req.body.focusRecords;
 	const focusNote = req.body.focusNote;
 

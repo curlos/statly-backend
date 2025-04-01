@@ -2,6 +2,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { getJsonData } from '../../utils/mongoose.utils';
+import { verifyToken } from '../../middleware/verifyToken';
 
 // import { SESSION_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/Session/SESSION_DATA';
 // import { BE_FOCUSED_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/BeFocused/BE_FOCUSED';
@@ -25,7 +26,7 @@ const {
 	SESSION_DATA: {}, BE_FOCUSED_DATA: {}, FOREST_DATA: {}, TIDE_DATA: {}, todoistAllPersonalCompletedTasksById: {}, todoistAllPersonalActiveTasksById: {}, todoistAllQLinkCompletedTasksById: {}, todoistAllQLinkActiveTasksById: {}
 }
 
-router.get('/focus-records/session-app', async (req, res) => {
+router.get('/focus-records/session-app', verifyToken, async (req, res) => {
 	try {
 		const noBreaks = req.query['no-breaks'];
 
@@ -45,7 +46,7 @@ router.get('/focus-records/session-app', async (req, res) => {
 	}
 });
 
-router.get('/focus-records/be-focused-app', async (req, res) => {
+router.get('/focus-records/be-focused-app', verifyToken, async (req, res) => {
 	try {
 		const beFocusedAppFocusData = doNotUseMongoDB ? BE_FOCUSED_DATA : await getJsonData('be-focused-app-data');
 
@@ -62,7 +63,7 @@ router.get('/focus-records/be-focused-app', async (req, res) => {
 	}
 });
 
-router.get('/focus-records/forest-app', async (req, res) => {
+router.get('/focus-records/forest-app', verifyToken, async (req, res) => {
 	try {
 		const forestAppFocusData = doNotUseMongoDB ? FOREST_DATA : await getJsonData('forest-app-data');
 
@@ -87,7 +88,7 @@ router.get('/focus-records/forest-app', async (req, res) => {
 	}
 });
 
-router.get('/focus-records/tide-app', async (req, res) => {
+router.get('/focus-records/tide-app', verifyToken, async (req, res) => {
 	try {
 		const sessionAppFocusData = doNotUseMongoDB ? TIDE_DATA : await getJsonData('tide-ios-app-focus-records');
 		res.status(200).json(sessionAppFocusData);
@@ -96,7 +97,7 @@ router.get('/focus-records/tide-app', async (req, res) => {
 	}
 });
 
-router.get('/todoist-all-tasks', async (req, res) => {
+router.get('/todoist-all-tasks', verifyToken, async (req, res) => {
 	try {
 		// Personal
 		const todoistPersonalCompletedTasksById = doNotUseMongoDB
@@ -129,7 +130,7 @@ router.get('/todoist-all-tasks', async (req, res) => {
 	}
 });
 
-// router.get('/todoist-all-completed-tasks', async (req, res) => {
+// router.get('/todoist-all-completed-tasks', verifyToken, async (req, res) => {
 // 	try {
 // 		const todoistPersonalCompletedTasks = await getJsonData('todoist-personal-completed-tasks');
 // 		const todoistQLinkCompletedTasks = await getJsonData('todoist-qlink-completed-tasks');
@@ -141,7 +142,7 @@ router.get('/todoist-all-tasks', async (req, res) => {
 // 	}
 // });
 
-// router.get('/todoist-all-tasks-by-id', async (req, res) => {
+// router.get('/todoist-all-tasks-by-id', verifyToken, async (req, res) => {
 // 	try {
 // 		// Personal
 // 		const todoistPersonalCompletedTasksById = await getJsonData('todoist-personal-completed-tasks-by-id');
@@ -164,7 +165,7 @@ router.get('/todoist-all-tasks', async (req, res) => {
 // 	}
 // });
 
-router.get('/todoist-all-projects', async (req, res) => {
+router.get('/todoist-all-projects', verifyToken, async (req, res) => {
 	try {
 		// Personal
 		const todoistPersonalActiveProjects = await getJsonData('todoist-personal-active-projects');

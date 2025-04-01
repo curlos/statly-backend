@@ -1,9 +1,10 @@
 import express from 'express';
 import Comment from '../models/CommentModel';
+import { verifyToken } from '../middleware/verifyToken';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		const comments = await Comment.find({});
 		res.status(200).json(comments);
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	try {
 		const { taskId, authorId, content } = req.body;
 
@@ -39,7 +40,7 @@ router.post('/add', async (req, res) => {
 	}
 });
 
-router.put('/edit/:commentId', async (req, res) => {
+router.put('/edit/:commentId', verifyToken, async (req, res) => {
 	const { commentId } = req.params;
 	const { content } = req.body;
 
@@ -67,7 +68,7 @@ router.put('/edit/:commentId', async (req, res) => {
 	}
 });
 
-router.delete('/delete/:commentId', async (req, res) => {
+router.delete('/delete/:commentId', verifyToken, async (req, res) => {
 	const { commentId } = req.params;
 
 	try {

@@ -2,6 +2,7 @@ import express from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { getDayAfterToday } from '../../utils/helpers.utils';
+import { verifyToken } from '../../middleware/verifyToken';
 // import { updateLocalData } from '../../utils/mongoose.utils';
 // import { TODOIST_PROJECTS_DATASETS, TODOIST_TASKS_DATASETS } from '../../utils/LOCAL_DATASETS';
 // import { updateLocalData } from '../../utils/mongoose.utils';
@@ -24,7 +25,7 @@ const cookie = TICKTICK_API_COOKIE;
  * 2. Get the Completed and Non-Completed tasks from the API calls of all of the projects.
  * 3. Store them in local data in the "focus-data" folder and then set "doNotMakeApiCalls" variable to true to prevent accidentally making the API calls in the future.
  */
-router.get('/tasks-from-archived-projects', async (req, res) => {
+router.get('/tasks-from-archived-projects', verifyToken, async (req, res) => {
 	const doNotMakeApiCalls = true;
 
 	// Most of the time, just return the local tasks data instead of making all the API calls to TickTick 1.0.
@@ -102,7 +103,7 @@ router.get('/tasks-from-archived-projects', async (req, res) => {
 /**
  * @description Temporary function that was only used once to update MongoDB with the JSON data I manually copied and pasted from TickTick 1.0. This won't be necessary anymore - or at least it shouldn't be since the data will be stored on the DB from now on BUT just in case, will keep this here. Also used to store old focus apps data from Session, Forest, BeFocused, and Tide.
  */
-router.put('/update-local-data', async (req, res) => {
+router.put('/update-local-data', verifyToken, async (req, res) => {
 	try {
 		const dataType = req.query['data-type'];
 

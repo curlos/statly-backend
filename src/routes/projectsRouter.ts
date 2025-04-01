@@ -1,10 +1,11 @@
 import express from 'express';
 import Project from '../models/ProjectModel';
 import Task from '../models/taskModel';
+import { verifyToken } from '../middleware/verifyToken';
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		const isFolderQuery = req.query.isFolder;
 
@@ -23,7 +24,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	try {
 		if (req.body.isInbox) {
 			const existingInbox = await Project.findOne({ isInbox: true });
@@ -42,7 +43,7 @@ router.post('/add', async (req, res) => {
 	}
 });
 
-router.put('/edit/:projectId', async (req, res) => {
+router.put('/edit/:projectId', verifyToken, async (req, res) => {
 	const { projectId } = req.params;
 	const updateData = req.body;
 
@@ -73,7 +74,7 @@ router.put('/edit/:projectId', async (req, res) => {
 	}
 });
 
-router.delete('/delete/:projectId', async (req, res) => {
+router.delete('/delete/:projectId', verifyToken, async (req, res) => {
 	const { projectId } = req.params;
 
 	try {

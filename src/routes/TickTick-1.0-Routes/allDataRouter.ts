@@ -14,6 +14,7 @@ import {
 	arrayToObjectByKey,
 } from '../../utils/helpers.utils';
 import { getJsonData, updateLocalJsonData } from '../../utils/mongoose.utils';
+import { verifyToken } from '../../middleware/verifyToken';
 
 const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
@@ -30,7 +31,7 @@ const { localSortedAllFocusData, localAllTasks } = {
 	localAllTasks: {}
 }
 
-router.get('/focus-records', async (req, res) => {
+router.get('/focus-records', verifyToken, async (req, res) => {
 	try {
 		const todayOnly = req.query.today === 'true';
 		
@@ -115,7 +116,7 @@ router.get('/focus-records', async (req, res) => {
 	}
 });
 
-router.get('/tasks', async (req, res) => {
+router.get('/tasks', verifyToken, async (req, res) => {
 	try {
 		const dayAfterTodayStr = getDayAfterToday();
 
@@ -184,7 +185,7 @@ router.get('/tasks', async (req, res) => {
 	}
 });
 
-router.get('/projects', async (req, res) => {
+router.get('/projects', verifyToken, async (req, res) => {
 	try {
 		if (useLocalData) {
 			const localProjects = await getJsonData('all-projects');
@@ -207,7 +208,7 @@ router.get('/projects', async (req, res) => {
 	}
 });
 
-router.get('/project-groups', async (req, res) => {
+router.get('/project-groups', verifyToken, async (req, res) => {
 	try {
 		// TODO: Should try to store this in MongoDB later. I don't think I've done it yet.
 		// if (useLocalData) {
@@ -232,7 +233,7 @@ router.get('/project-groups', async (req, res) => {
 	}
 });
 
-router.get('/tags', async (req, res) => {
+router.get('/tags', verifyToken, async (req, res) => {
 	try {
 		if (useLocalData) {
 			const localTags = await getJsonData('all-tags');
@@ -257,7 +258,7 @@ router.get('/tags', async (req, res) => {
 });
 
 // Route to get data by name
-router.get('/json-data/:name', async (req, res) => {
+router.get('/json-data/:name', verifyToken, async (req, res) => {
 	try {
 		const dataName = req.params.name;
 		const data = await getJsonData(dataName);

@@ -1,9 +1,10 @@
 // src/routes/taskRouter.ts
 import express from 'express';
 import Filter from '../models/FilterModel';
+import { verifyToken } from '../middleware/verifyToken';
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		const filters = await Filter.find(); // Fetch projects based on the filter
 		res.status(200).json(filters);
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	try {
 		const newFilter = new Filter(req.body);
 		const savedFilter = await newFilter.save();
@@ -27,7 +28,7 @@ router.post('/add', async (req, res) => {
 	}
 });
 
-router.put('/edit/:filterId', async (req, res) => {
+router.put('/edit/:filterId', verifyToken, async (req, res) => {
 	const { filterId } = req.params;
 
 	try {
@@ -45,7 +46,7 @@ router.put('/edit/:filterId', async (req, res) => {
 	}
 });
 
-router.delete('/delete/:filterId', async (req, res) => {
+router.delete('/delete/:filterId', verifyToken, async (req, res) => {
 	const { filterId } = req.params;
 
 	try {

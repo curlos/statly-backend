@@ -1,9 +1,10 @@
 import express from 'express';
 import Habit from '../models/HabitModel';
 import HabitSection from '../models/HabitSectionModel';
+import { verifyToken } from '../middleware/verifyToken';
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
 	try {
 		const habits = await Habit.find();
 		res.status(200).json(habits);
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	try {
 		const newHabit = new Habit(req.body);
 		const savedHabit = await newHabit.save();
@@ -35,7 +36,7 @@ router.post('/add', async (req, res) => {
 	}
 });
 
-router.put('/edit/:habitId', async (req, res) => {
+router.put('/edit/:habitId', verifyToken, async (req, res) => {
 	const { habitId } = req.params;
 
 	try {
@@ -69,7 +70,7 @@ router.put('/edit/:habitId', async (req, res) => {
 	}
 });
 
-router.patch('/flag/:habitId', async (req, res) => {
+router.patch('/flag/:habitId', verifyToken, async (req, res) => {
 	const { habitId } = req.params;
 	const { property, value } = req.body;
 
@@ -88,7 +89,7 @@ router.patch('/flag/:habitId', async (req, res) => {
 	}
 });
 
-router.delete('/delete/:habitId', async (req, res) => {
+router.delete('/delete/:habitId', verifyToken, async (req, res) => {
 	const { habitId } = req.params;
 
 	try {

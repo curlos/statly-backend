@@ -25,7 +25,7 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 });
 
 // Get all user settings
-router.get('/all', async (req, res) => {
+router.get('/all', verifyToken, async (req, res) => {
 	try {
 		const userSettings = await UserSettings.find({});
 
@@ -39,7 +39,7 @@ router.get('/all', async (req, res) => {
 	}
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', verifyToken, async (req, res) => {
 	const { userId } = req.body;
 
 	if (!userId) {
@@ -90,7 +90,7 @@ router.put('/edit', verifyToken, async (req: CustomRequest, res) => {
 });
 
 // SHOULD NOT BE IN THE FRONTEND. THE INDIVIDUAL USERS SHOULD NOT BE ABLE TO DELETE THIS, ONLY DEVELOPER. THIS IS MOSTLY FOR TESTING PURPOSES ON THE BACKEND!
-router.delete('/delete/:userSettingsId', async (req, res) => {
+router.delete('/delete/:userSettingsId', verifyToken, async (req, res) => {
 	const { userSettingsId } = req.params;
 
 	try {
