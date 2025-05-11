@@ -127,6 +127,9 @@ router.get('/tasks', verifyToken, async (req, res) => {
 		const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
 			headers: {
 				Cookie: cookie,
+				'x-device': JSON.stringify({
+      				platform: 'web'
+				}),
 			},
 		});
 
@@ -218,6 +221,9 @@ router.get('/project-groups', verifyToken, async (req, res) => {
 		const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
 			headers: {
 				Cookie: cookie,
+				// 'x-device': JSON.stringify({
+      			// 	platform: 'web'
+				// }),
 			},
 		});
 
@@ -242,6 +248,9 @@ router.get('/tags', verifyToken, async (req, res) => {
 		const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
 			headers: {
 				Cookie: cookie,
+				'x-device': JSON.stringify({
+      				platform: 'web'
+				}),
 			},
 		});
 
