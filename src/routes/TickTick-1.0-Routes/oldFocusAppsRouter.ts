@@ -15,6 +15,19 @@ import { verifyToken } from '../../middleware/verifyToken';
 // import { todoistAllQLinkCompletedTasksById } from '../../focus-data/Todoist/qlink/todoistAllQLinkCompletedTasksById';
 // import { todoistAllQLinkActiveTasksById } from '../../focus-data/Todoist/qlink/todoistAllQLinkActiveTasksById';
 
+
+// TODOIST - PERSONAL ACCOUNT
+// import { api_v1_todoist_all_personal_completed_tasks_by_id } from '../../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_completed_tasks_by_id';
+// import { api_v1_todoist_all_personal_active_tasks_by_id } from '../../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_active_tasks_by_id'
+// import { api_v1_todoist_all_personal_active_projects } from '../../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_active_projects'
+// import { api_v1_todoist_all_personal_archived_projects } from '../../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_archived_projects'
+
+// // TODOIST - WORK ACCOUNT
+// import { api_v1_todoist_all_work_completed_tasks_by_id } from '../../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_completed_tasks_by_id';
+// import { api_v1_todoist_all_work_active_tasks_by_id } from '../../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_active_tasks_by_id'
+// import { api_v1_todoist_all_work_active_projects } from '../../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_active_projects'
+// import { api_v1_todoist_all_work_archived_projects } from '../../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_archived_projects'
+
 dotenv.config();
 
 const router = express.Router();
@@ -103,70 +116,64 @@ router.get('/todoist-all-tasks', verifyToken, async (req, res) => {
 
 	try {
 		// Personal
-		const todoistPersonalCompletedTasksById = doNotUseMongoDB
+		let todoistPersonalCompletedTasksById = doNotUseMongoDB
 			? todoistAllPersonalCompletedTasksById
 			: (useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-personal-completed-tasks-by-id') : await getJsonData('todoist-personal-completed-tasks-by-id'));
-		const todoistPersonalActiveTasksById = doNotUseMongoDB
+		let todoistPersonalActiveTasksById = doNotUseMongoDB
 			? todoistAllPersonalActiveTasksById
 			: (useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-personal-active-tasks-by-id') : await getJsonData('todoist-personal-active-tasks-by-id'));
 
 		// Q Link
-		const todoistQLinkCompletedTasksById = doNotUseMongoDB
+		let todoistQLinkCompletedTasksById = doNotUseMongoDB
 			? todoistAllQLinkCompletedTasksById
 			: (useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-qlink-completed-tasks-by-id') : await getJsonData('todoist-qlink-completed-tasks-by-id'));
-		const todoistQLinkActiveTasksById = doNotUseMongoDB
+		let todoistQLinkActiveTasksById = doNotUseMongoDB
 			? todoistAllQLinkActiveTasksById
 			: (useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-qlink-active-tasks-by-id') : await getJsonData('todoist-qlink-active-tasks-by-id'));
 
-		const todoistAllTasksById = {
+		const todoistAllSyncTasksById = {
 			...todoistPersonalCompletedTasksById,
 			...todoistPersonalActiveTasksById,
 			...todoistQLinkCompletedTasksById,
 			...todoistQLinkActiveTasksById,
 		};
 
-		const allTasksWithOnlyItem = Object.values(todoistAllTasksById).map((task: any) => task.item);
+		const api_v1_todoist_all_personal_completed_tasks_by_id = await getJsonData('api_v1_todoist_all_personal_completed_tasks_by_id')
+		const api_v1_todoist_all_personal_active_tasks_by_id = await getJsonData('api_v1_todoist_all_personal_active_tasks_by_id')
+		const api_v1_todoist_all_work_completed_tasks_by_id = await getJsonData('api_v1_todoist_all_work_completed_tasks_by_id')
+		const api_v1_todoist_all_work_active_tasks_by_id = await getJsonData('api_v1_todoist_all_work_active_tasks_by_id')
 
-		res.status(200).json(allTasksWithOnlyItem);
+		const todoistAllApiV1TasksById = {
+			...api_v1_todoist_all_personal_completed_tasks_by_id,
+			...api_v1_todoist_all_personal_active_tasks_by_id,
+			...api_v1_todoist_all_work_completed_tasks_by_id,
+			...api_v1_todoist_all_work_active_tasks_by_id
+		}
+
+		const allSyncTasksWithOnlyItem = Object.values(todoistAllSyncTasksById).map((task: any) => task.item)
+		const allSyncTasksThatDoNotAppearInAPIV1 = allSyncTasksWithOnlyItem.filter((task) => {
+			const task_v2_id = task["v2_id"]
+
+			// @ts-ignore
+			return !todoistAllApiV1TasksById[task_v2_id]
+		});
+		const allNewAPIV1Tasks = Object.values(todoistAllApiV1TasksById)
+		const allTasks = [
+			...allSyncTasksThatDoNotAppearInAPIV1,
+			...allNewAPIV1Tasks
+		]
+
+		const todoistTasksThatOnlyAppearInAPIV1 = getTodoistTasksThatOnlyAppearInAPIV1(todoistAllSyncTasksById, allNewAPIV1Tasks)
+
+		// @ts-ignore
+		console.log(`todoistTasksThatOnlyAppearInAPIV1 = ${todoistTasksThatOnlyAppearInAPIV1.length}`)
+		console.log(`allSyncTasksThatDoNotAppearInAPIV1 = ${allSyncTasksThatDoNotAppearInAPIV1.length}`)
+
+		res.status(200).json(allTasks);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
 	}
 });
-
-// router.get('/todoist-all-completed-tasks', verifyToken, async (req, res) => {
-// 	try {
-// 		const todoistPersonalCompletedTasks = await getJsonData('todoist-personal-completed-tasks');
-// 		const todoistQLinkCompletedTasks = await getJsonData('todoist-qlink-completed-tasks');
-// 		const todoistAllCompletedTasks = [...todoistPersonalCompletedTasks.items, ...todoistQLinkCompletedTasks.items];
-
-// 		res.status(200).json(todoistAllCompletedTasks);
-// 	} catch (error) {
-// 		res.status(500).json({ message: 'Error fetching data', error });
-// 	}
-// });
-
-// router.get('/todoist-all-tasks-by-id', verifyToken, async (req, res) => {
-// 	try {
-// 		// Personal
-// 		const todoistPersonalCompletedTasksById = await getJsonData('todoist-personal-completed-tasks-by-id');
-// 		const todoistPersonalActiveTasksById = await getJsonData('todoist-personal-active-tasks-by-id');
-
-// 		// Q Link
-// 		const todoistQLinkCompletedTasksById = await getJsonData('todoist-qlink-completed-tasks-by-id');
-// 		const todoistQLinkActiveTasksById = await getJsonData('todoist-qlink-active-tasks-by-id');
-
-// 		const todoistAllTasksById = {
-// 			...todoistPersonalCompletedTasksById,
-// 			...todoistPersonalActiveTasksById,
-// 			...todoistQLinkCompletedTasksById,
-// 			...todoistQLinkActiveTasksById,
-// 		};
-
-// 		res.status(200).json(todoistAllTasksById);
-// 	} catch (error) {
-// 		res.status(500).json({ message: 'Error fetching data', error });
-// 	}
-// });
 
 router.get('/todoist-all-projects', verifyToken, async (req, res) => {
 	const useNewSyncDataTodoistData = true
@@ -180,17 +187,58 @@ router.get('/todoist-all-projects', verifyToken, async (req, res) => {
 		const todoistQLinkActiveProjects = useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-qlink-active-projects') : await getJsonData('todoist-qlink-active-projects');
 		const todoistQLinkArchivedProjects = useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-qlink-archived-projects') : await getJsonData('todoist-qlink-archived-projects');
 
-		const todoistAllProjects = [
+		// TODO: After confirming that everything on production is good, remove this as I probably don't really need this.
+		const todoistAllSyncProjects = [
 			...todoistPersonalActiveProjects,
 			...todoistPersonalArchivedProjects,
 			...todoistQLinkActiveProjects,
 			...todoistQLinkArchivedProjects,
 		];
 
-		res.status(200).json(todoistAllProjects);
+		const api_v1_todoist_all_personal_active_projects = await getJsonData('api_v1_todoist_all_personal_active_projects')
+		const api_v1_todoist_all_personal_archived_projects = await getJsonData('api_v1_todoist_all_personal_archived_projects')
+		const api_v1_todoist_all_work_active_projects = await getJsonData('api_v1_todoist_all_work_active_projects')
+		const api_v1_todoist_all_work_archived_projects = await getJsonData('api_v1_todoist_all_work_archived_projects')
+
+		const todoistAllApiV1Projects = [
+			...api_v1_todoist_all_personal_active_projects,
+			...api_v1_todoist_all_personal_archived_projects,
+			...api_v1_todoist_all_work_active_projects,
+			...api_v1_todoist_all_work_archived_projects
+		]
+
+		const allProjects = [
+			// ...todoistAllSyncProjects,
+			...todoistAllApiV1Projects
+		]
+
+		res.status(200).json(allProjects);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
 	}
 });
+
+// @ts-ignore
+const getTodoistTasksThatOnlyAppearInAPIV1 = (todoistAllSyncTasksById, allNewAPIV1Tasks) => {
+	const syncTasksByV2Id = {};
+
+	for (const key in todoistAllSyncTasksById) {
+		const entry = todoistAllSyncTasksById[key];
+		const v2Id = entry.item?.v2_id;
+
+		if (v2Id) {
+			// @ts-ignore
+			syncTasksByV2Id[v2Id] = entry;
+		}
+	}
+
+	// @ts-ignore
+	const apiV1TasksThatAreNotInSync = allNewAPIV1Tasks.filter((task) => {
+		// @ts-ignore
+		return !syncTasksByV2Id[task.id]
+	})
+
+	return apiV1TasksThatAreNotInSync
+}
 
 export default router;

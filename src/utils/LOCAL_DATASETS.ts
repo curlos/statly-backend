@@ -6,6 +6,7 @@
 // import { notCompletedTasksFromArchivedProjects } from '../focus-data/archivedTasks/notCompletedTasksFromArchivedProjects';
 // import { sortedAllFocusData } from '../focus-data/sortedAllFocusData';
 
+
 // TODO: New TODOIST SYNC DATA 2025
 // import { todoistAllPersonalActiveTasks } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistAllPersonalActiveTasks";
 // import { todoistAllPersonalActiveTasksById } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistAllPersonalActiveTasksById";
@@ -40,6 +41,26 @@
 // import { todoistPersonalArchivedProjects } from '../focus-data/Todoist/personal/todoistPersonalArchivedProjects';
 // import { todoistQLinkActiveProjects } from '../focus-data/Todoist/qlink/todoistQLinkActiveProjects';
 // import { todoistQLinkArchivedProjects } from '../focus-data/Todoist/qlink/todoistQLinkArchivedProjects';
+
+// // TODOIST API V1 TASKS - PERSONAL ACCOUNT
+// import { api_v1_todoist_all_personal_completed_tasks } from "../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_completed_tasks";
+// import { api_v1_todoist_all_personal_completed_tasks_by_id } from "../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_completed_tasks_by_id";
+// import { api_v1_todoist_all_personal_active_tasks } from "../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_active_tasks";
+// import { api_v1_todoist_all_personal_active_tasks_by_id } from "../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_active_tasks_by_id";
+
+// // TODOIST API V1 TASKS - WORK ACCOUNT
+// import { api_v1_todoist_all_work_completed_tasks } from "../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_completed_tasks";
+// import { api_v1_todoist_all_work_completed_tasks_by_id } from "../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_completed_tasks_by_id";
+// import { api_v1_todoist_all_work_active_tasks } from "../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_active_tasks";
+// import { api_v1_todoist_all_work_active_tasks_by_id } from "../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_active_tasks_by_id";
+
+// // TODOIST API V1 PROJECTS - PERSONAL ACCOUNT
+// import { api_v1_todoist_all_personal_active_projects } from "../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_active_projects";
+// import { api_v1_todoist_all_personal_archived_projects } from "../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_archived_projects";
+
+// // TODOIST API V1 PROJECTS - WORK ACCOUNT
+// import { api_v1_todoist_all_work_active_projects } from "../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_active_projects";
+// import { api_v1_todoist_all_work_archived_projects } from "../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_archived_projects";
 
 // export const LOCAL_DATASETS = [
 // 	{ name: 'sorted-all-focus-data', data: sortedAllFocusData },
@@ -109,4 +130,28 @@
 // 	// Q Link
 // 	{ name: 'sync-2025-todoist-qlink-active-projects', data: todoistQLinkActiveProjects },
 // 	{ name: 'sync-2025-todoist-qlink-archived-projects', data: todoistQLinkArchivedProjects },
+// ];
+
+// export const TODOIST_TASKS_API_V1_DATASETS = [
+// 	// Personal
+// 	{ name: 'api_v1_todoist_all_personal_completed_tasks', data: api_v1_todoist_all_personal_completed_tasks },
+// 	{ name: 'api_v1_todoist_all_personal_completed_tasks_by_id', data: api_v1_todoist_all_personal_completed_tasks_by_id },
+// 	{ name: 'api_v1_todoist_all_personal_active_tasks', data: api_v1_todoist_all_personal_active_tasks },
+// 	{ name: 'api_v1_todoist_all_personal_active_tasks_by_id', data: api_v1_todoist_all_personal_active_tasks_by_id },
+
+// 	// Q Link
+// 	{ name: 'api_v1_todoist_all_work_completed_tasks', data: api_v1_todoist_all_work_completed_tasks },
+// 	{ name: 'api_v1_todoist_all_work_completed_tasks_by_id', data: api_v1_todoist_all_work_completed_tasks_by_id },
+// 	{ name: 'api_v1_todoist_all_work_active_tasks', data: api_v1_todoist_all_work_active_tasks },
+// 	{ name: 'api_v1_todoist_all_work_active_tasks_by_id', data: api_v1_todoist_all_work_active_tasks_by_id },
+// ];
+
+// export const TODOIST_PROJECTS_API_V1_DATASETS = [
+// 	// Personal
+// 	{ name: 'api_v1_todoist_all_personal_active_projects', data: api_v1_todoist_all_personal_active_projects },
+// 	{ name: 'api_v1_todoist_all_personal_archived_projects', data: api_v1_todoist_all_personal_archived_projects },
+
+// 	// Q Link
+// 	{ name: 'api_v1_todoist_all_work_active_projects', data: api_v1_todoist_all_work_active_projects },
+// 	{ name: 'api_v1_todoist_all_work_archived_projects', data: api_v1_todoist_all_work_archived_projects },
 // ];

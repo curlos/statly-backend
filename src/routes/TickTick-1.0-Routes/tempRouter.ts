@@ -6,6 +6,7 @@ import { verifyToken } from '../../middleware/verifyToken';
 // import { updateLocalData } from '../../utils/mongoose.utils';
 // import { TODOIST_NEW_2025_SYNC_TASKS_DATASETS, TODOIST_NEW_2025_SYNC_PROJECTS_DATASETS } from '../../utils/LOCAL_DATASETS';
 // import { updateLocalData } from '../../utils/mongoose.utils';
+// import { TODOIST_PROJECTS_API_V1_DATASETS, TODOIST_TASKS_API_V1_DATASETS } from '../../utils/LOCAL_DATASETS';
 // import { updateLocalData } from '../../utils/mongoose.utils';
 // import { OLD_FOCUS_APPS_DATASETS } from '../../utils/LOCAL_DATASETS';
 
@@ -122,12 +123,18 @@ router.put('/update-local-data', verifyToken, async (req, res) => {
 			case 'todoist-all-projects':
 				// await updateLocalData(TODOIST_PROJECTS_DATASETS);
 				break;
-			// case 'todoist-all-tasks-data-sync-2025':
-			// 	await updateLocalData(TODOIST_NEW_2025_SYNC_TASKS_DATASETS);
-			// 	break;
-			// case 'todoist-all-projects-sync-2025':
-			// 	await updateLocalData(TODOIST_NEW_2025_SYNC_PROJECTS_DATASETS);
-			// 	break;
+			case 'todoist-all-tasks-data-sync-2025':
+				// await updateLocalData(TODOIST_NEW_2025_SYNC_TASKS_DATASETS);
+				break;
+			case 'todoist-all-projects-sync-2025':
+				// await updateLocalData(TODOIST_NEW_2025_SYNC_PROJECTS_DATASETS);
+				break;
+			case 'todoist-all-tasks-data-api-v1':
+				// await updateLocalData(TODOIST_TASKS_API_V1_DATASETS);
+				break;
+			case 'todoist-all-projects-data-api-v1':
+				// await updateLocalData(TODOIST_PROJECTS_API_V1_DATASETS);
+				break;
 			default:
 				throw new Error("Must pass in a valid 'data-type' query parameter!");
 				break;

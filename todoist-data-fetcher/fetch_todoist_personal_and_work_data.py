@@ -44,33 +44,8 @@ class TodoistDataFetcher:
             for start, end in self.date_ranges
         ]
 
-    async def fetch_task_by_id(self, task_id):
-        return await self.api.get_task(task_id)
-
-    async def fetch_task_by_id(self, tasks_file, output_file):
-        try:
-            with open(tasks_file, "r") as f:
-                completed_tasks = json.load(f)
-        except FileNotFoundError:
-            print(f"File {tasks_file} not found. Please fetch completed tasks first.")
-            return
-
-        full_tasks = []
-
-        for task in completed_tasks:
-            try:
-                full_task = await self.fetch_task_by_id(task["id"])
-                full_tasks.append(full_task.to_dict())
-            except Exception as e:
-                print(f"Failed to fetch task {task['id']}: {e}")
-
-        with open(output_file, "w") as f:
-            json.dump(full_tasks, f, indent=2)
-
-        print(f"Fetched {len(full_tasks)} full tasks.")
-
     async def fetch_completed_tasks(
-        self, output_file="completed_tasks.json", verbose=True
+        self, output_file="completed_tasks.ts", verbose=True
     ):
         all_completed = []
 
@@ -85,29 +60,54 @@ class TodoistDataFetcher:
                 if verbose:
                     print(f"Error fetching tasks from {since} to {until}: {e}")
 
+        # Ensure output directory exists
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-        with open(output_file, "w") as f:
-            json.dump([task.to_dict() for task in all_completed], f, indent=2)
+        # Step 1: Export raw tasks to TypeScript file
+        raw_tasks = [task.to_dict() for task in all_completed]
+        self.export_to_ts(raw_tasks, output_file)
 
-    async def fetch_active_projects(self, output_file="todoist_projects.json"):
+        # Step 2: Group by ID and export to a new .ts file
+        tasks_by_id = {task["id"]: task for task in raw_tasks}
+
+        base, ext = os.path.splitext(output_file)
+        grouped_output_file = f"{base}_by_id{ext}"
+        self.export_to_ts(tasks_by_id, grouped_output_file)
+
+    async def fetch_active_tasks(self, output_file="todoist_active_tasks.ts"):
+        tasks = []
+        try:
+            task_generator = await self.api.get_tasks()
+            async for batch in task_generator:
+                tasks.extend(batch)
+
+            tasks_dict = [task.to_dict() for task in tasks]
+            tasks_by_id = {task["id"]: task for task in tasks_dict}
+
+            # Export both the full list and the grouped version to TS
+            self.export_to_ts(tasks_dict, output_file)
+            self.export_to_ts(tasks_by_id, output_file.replace(".ts", "_by_id.ts"))
+
+            print(f"Fetched {len(tasks)} active tasks.")
+        except Exception as e:
+            print(f"Error fetching active tasks: {e}")
+
+    async def fetch_active_projects(self, output_file="todoist_projects.ts"):
         try:
             project_generator = await self.api.get_projects()
             projects = []
             async for batch in project_generator:
                 projects.extend(batch)
 
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            project_dicts = [p.to_dict() for p in projects]
 
-            with open(output_file, "w") as f:
-                json.dump([p.to_dict() for p in projects], f, indent=2)
+            self.export_to_ts(project_dicts, output_file)
+
             print(f"Fetched {len(projects)} projects.")
         except Exception as e:
             print(f"Error fetching projects: {e}")
 
-    async def fetch_archived_projects(
-        self, output_file="todoist_archived_projects.json"
-    ):
+    async def fetch_archived_projects(self, output_file="todoist_archived_projects.ts"):
         projects = []
         failed = []
 
@@ -119,10 +119,42 @@ class TodoistDataFetcher:
                 failed.append(project_id)
                 print(f"Failed to fetch project {project_id}: {e}")
 
+        self.export_to_ts(projects, output_file)
+
+    def group_tasks_by_id(self, input_file, output_file=None):
+        try:
+            with open(input_file, "r") as f:
+                tasks = json.load(f)
+        except FileNotFoundError:
+            print(f"File {input_file} not found.")
+            return
+
+        tasks_by_id = {task["id"]: task for task in tasks}
+
+        if output_file is None:
+            base, ext = os.path.splitext(input_file)
+            output_file = f"{base}_by_id{ext}"
+
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
         with open(output_file, "w") as f:
-            json.dump(projects, f, indent=2)
+            json.dump(tasks_by_id, f, indent=2)
+
+        print(f"Grouped tasks by ID and wrote to {output_file}")
+
+    def export_to_ts(self, data, ts_output_path):
+        ts_var_name = (
+            os.path.basename(ts_output_path).replace(".ts", "").replace("-", "_")
+        )
+
+        os.makedirs(os.path.dirname(ts_output_path), exist_ok=True)
+
+        with open(ts_output_path, "w") as ts_file:
+            ts_file.write(f"export const {ts_var_name} = ")
+            json.dump(data, ts_file, indent=2)
+            ts_file.write(";")
+
+        print(f"Wrote TypeScript export to {ts_output_path}")
 
 
 def fetch_all_data(account_type):
@@ -141,19 +173,25 @@ def fetch_all_data(account_type):
 
     asyncio.run(
         todoist_data_fetcher.fetch_completed_tasks(
-            output_file=f"data/{account_type}/api_v1_todoist_all_{account_type}_completed_tasks.json"
+            output_file=f"data/{account_type}/api_v1_todoist_all_{account_type}_completed_tasks.ts"
+        )
+    )
+
+    asyncio.run(
+        todoist_data_fetcher.fetch_active_tasks(
+            output_file=f"data/{account_type}/api_v1_todoist_all_{account_type}_active_tasks.ts"
         )
     )
 
     asyncio.run(
         todoist_data_fetcher.fetch_active_projects(
-            output_file=f"data/{account_type}/api_v1_todoist_all_{account_type}_active_projects.json"
+            output_file=f"data/{account_type}/api_v1_todoist_all_{account_type}_active_projects.ts"
         )
     )
 
     asyncio.run(
         todoist_data_fetcher.fetch_archived_projects(
-            output_file=f"data/{account_type}/api_v1_todoist_all_{account_type}_archived_projects.json"
+            output_file=f"data/{account_type}/api_v1_todoist_all_{account_type}_archived_projects.ts"
         )
     )
 
