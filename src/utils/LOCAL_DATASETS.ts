@@ -6,6 +6,20 @@
 // import { notCompletedTasksFromArchivedProjects } from '../focus-data/archivedTasks/notCompletedTasksFromArchivedProjects';
 // import { sortedAllFocusData } from '../focus-data/sortedAllFocusData';
 
+// TODO: New TODOIST SYNC DATA 2025
+// import { todoistAllPersonalActiveTasks } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistAllPersonalActiveTasks";
+// import { todoistAllPersonalActiveTasksById } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistAllPersonalActiveTasksById";
+// import { todoistAllPersonalCompletedTasks } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistAllPersonalCompletedTasks";
+// import { todoistAllPersonalCompletedTasksById } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistAllPersonalCompletedTasksById";
+// import { todoistPersonalActiveProjects } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistPersonalActiveProjects";
+// import { todoistPersonalArchivedProjects } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistPersonalArchivedProjects";
+// import { todoistAllQLinkActiveTasks } from "../focus-data/Todoist/new-sync-data-2025/qlink/todoistAllQlinkActiveTasks";
+// import { todoistAllQLinkActiveTasksById } from "../focus-data/Todoist/new-sync-data-2025/qlink/todoistAllQLinkActiveTasksById";
+// import { todoistAllQLinkCompletedTasks } from "../focus-data/Todoist/new-sync-data-2025/qlink/todoistAllQLinkCompletedTasks";
+// import { todoistAllQLinkCompletedTasksById } from "../focus-data/Todoist/new-sync-data-2025/qlink/todoistAllQLinkCompletedTasksById";
+// import { todoistQLinkActiveProjects } from "../focus-data/Todoist/new-sync-data-2025/qlink/todoistQLinkActiveProjects";
+// import { todoistQLinkArchivedProjects } from "../focus-data/Todoist/new-sync-data-2025/qlink/todoistQLinkArchivedProjects";
+
 // // Old Focus Apps Data
 // import { BE_FOCUSED_DATA } from '../focus-data/2021-2022-focus-data-from-other-apps/BeFocused/BE_FOCUSED';
 // import { FOREST_DATA } from '../focus-data/2021-2022-focus-data-from-other-apps/Forest/FOREST';
@@ -44,6 +58,7 @@
 // ];
 
 // // Completed and Active Tasks in array form as well as in object form by id.
+// OLD SYNC DATA AFTER 2025 UPDATE.
 // export const TODOIST_TASKS_DATASETS = [
 // 	// Personal
 // 	{ name: 'todoist-personal-completed-tasks', data: todoistAllPersonalCompletedTasks },
@@ -67,4 +82,31 @@
 // 	// Q Link
 // 	{ name: 'todoist-qlink-active-projects', data: todoistQLinkActiveProjects },
 // 	{ name: 'todoist-qlink-archived-projects', data: todoistQLinkArchivedProjects },
+// ];
+
+
+// TODO:NEW SYNC DATA AFTER 2025 UPDATE.
+// export const TODOIST_NEW_2025_SYNC_TASKS_DATASETS = [
+// 	// Personal
+// 	{ name: 'sync-2025-todoist-personal-completed-tasks', data: todoistAllPersonalCompletedTasks },
+// 	{ name: 'sync-2025-todoist-personal-completed-tasks-by-id', data: todoistAllPersonalCompletedTasksById },
+// 	{ name: 'sync-2025-todoist-personal-active-tasks', data: todoistAllPersonalActiveTasks },
+// 	{ name: 'sync-2025-todoist-personal-active-tasks-by-id', data: todoistAllPersonalActiveTasksById },
+
+// 	// Q Link
+// 	{ name: 'sync-2025-todoist-qlink-completed-tasks', data: todoistAllQLinkCompletedTasks },
+// 	{ name: 'sync-2025-todoist-qlink-completed-tasks-by-id', data: todoistAllQLinkCompletedTasksById },
+// 	{ name: 'sync-2025-todoist-qlink-active-tasks', data: todoistAllQLinkActiveTasks },
+// 	{ name: 'sync-2025-todoist-qlink-active-tasks-by-id', data: todoistAllQLinkActiveTasksById },
+// ];
+
+// // Active and archived projects from todoist
+// export const TODOIST_NEW_2025_SYNC_PROJECTS_DATASETS = [
+// 	// Personal
+// 	{ name: 'sync-2025-todoist-personal-active-projects', data: todoistPersonalActiveProjects },
+// 	{ name: 'sync-2025-todoist-personal-archived-projects', data: todoistPersonalArchivedProjects },
+
+// 	// Q Link
+// 	{ name: 'sync-2025-todoist-qlink-active-projects', data: todoistQLinkActiveProjects },
+// 	{ name: 'sync-2025-todoist-qlink-archived-projects', data: todoistQLinkArchivedProjects },
 // ];

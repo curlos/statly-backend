@@ -5,3 +5,4 @@ src/focus-data
 dist
 .vercel
 .DS_Store
+todoist-data-fetcher/data

@@ -20,6 +20,7 @@ dotenv.config();
 const router = express.Router();
 
 const doNotUseMongoDB = false;
+
 const {
 	SESSION_DATA, BE_FOCUSED_DATA, FOREST_DATA, TIDE_DATA, todoistAllPersonalCompletedTasksById, todoistAllPersonalActiveTasksById, todoistAllQLinkCompletedTasksById, todoistAllQLinkActiveTasksById
 } = {
@@ -98,22 +99,24 @@ router.get('/focus-records/tide-app', verifyToken, async (req, res) => {
 });
 
 router.get('/todoist-all-tasks', verifyToken, async (req, res) => {
+	const useNewSyncDataTodoistData = true
+
 	try {
 		// Personal
 		const todoistPersonalCompletedTasksById = doNotUseMongoDB
 			? todoistAllPersonalCompletedTasksById
-			: await getJsonData('todoist-personal-completed-tasks-by-id');
+			: (useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-personal-completed-tasks-by-id') : await getJsonData('todoist-personal-completed-tasks-by-id'));
 		const todoistPersonalActiveTasksById = doNotUseMongoDB
 			? todoistAllPersonalActiveTasksById
-			: await getJsonData('todoist-personal-active-tasks-by-id');
+			: (useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-personal-active-tasks-by-id') : await getJsonData('todoist-personal-active-tasks-by-id'));
 
 		// Q Link
 		const todoistQLinkCompletedTasksById = doNotUseMongoDB
 			? todoistAllQLinkCompletedTasksById
-			: await getJsonData('todoist-qlink-completed-tasks-by-id');
+			: (useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-qlink-completed-tasks-by-id') : await getJsonData('todoist-qlink-completed-tasks-by-id'));
 		const todoistQLinkActiveTasksById = doNotUseMongoDB
 			? todoistAllQLinkActiveTasksById
-			: await getJsonData('todoist-qlink-active-tasks-by-id');
+			: (useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-qlink-active-tasks-by-id') : await getJsonData('todoist-qlink-active-tasks-by-id'));
 
 		const todoistAllTasksById = {
 			...todoistPersonalCompletedTasksById,
@@ -166,14 +169,16 @@ router.get('/todoist-all-tasks', verifyToken, async (req, res) => {
 // });
 
 router.get('/todoist-all-projects', verifyToken, async (req, res) => {
+	const useNewSyncDataTodoistData = true
+
 	try {
 		// Personal
-		const todoistPersonalActiveProjects = await getJsonData('todoist-personal-active-projects');
-		const todoistPersonalArchivedProjects = await getJsonData('todoist-personal-archived-projects');
+		const todoistPersonalActiveProjects = useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-personal-active-projects') : await getJsonData('todoist-personal-active-projects');
+		const todoistPersonalArchivedProjects = useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-personal-archived-projects') : await getJsonData('todoist-personal-archived-projects');
 
 		// Q Link
-		const todoistQLinkActiveProjects = await getJsonData('todoist-qlink-active-projects');
-		const todoistQLinkArchivedProjects = await getJsonData('todoist-qlink-archived-projects');
+		const todoistQLinkActiveProjects = useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-qlink-active-projects') : await getJsonData('todoist-qlink-active-projects');
+		const todoistQLinkArchivedProjects = useNewSyncDataTodoistData ? await getJsonData('sync-2025-todoist-qlink-archived-projects') : await getJsonData('todoist-qlink-archived-projects');
 
 		const todoistAllProjects = [
 			...todoistPersonalActiveProjects,
