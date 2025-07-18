@@ -119,7 +119,7 @@ router.get('/tasks', verifyToken, async (req, res) => {
 		const dayAfterTodayStr = getDayAfterToday();
 
 		if (useLocalData) {
-			const localTasks = doNotUseMongoDB ? localAllTasks : await getJsonData('all-tasks');
+			const localTasks = doNotUseMongoDB ? localAllTasks : await getJsonData('all-ticktick-tasks');
 			res.status(200).json(localTasks);
 			return;
 		}
@@ -169,16 +169,21 @@ router.get('/tasks', verifyToken, async (req, res) => {
 		const completedTasksFromArchivedProjects = await getJsonData('completed-tasks-from-archived-projects');
 		const notCompletedTasksFromArchivedProjects = await getJsonData('not-completed-tasks-from-archived-projects');
 
-		// TODO: Should update "all-tasks" JSON DATA from MongoDB with data from here.
-		const allTasks = [
+		const tickTickOneTasks = [
 			...tasksToBeUpdated,
 			...completedTasks,
-			...completedTasksFromArchivedProjects,
-			...notCompletedTasksFromArchivedProjects,
 			...willNotDoTasks,
 			...trashTasks,
+			...completedTasksFromArchivedProjects,
+			...notCompletedTasksFromArchivedProjects
 		];
-		res.status(200).json(allTasks);
+
+		await updateLocalJsonData({
+			name: 'all-ticktick-tasks',
+			data: tickTickOneTasks,
+		});
+
+		res.status(200).json(tickTickOneTasks);
 	} catch (error) {
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',

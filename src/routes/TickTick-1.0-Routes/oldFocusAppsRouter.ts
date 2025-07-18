@@ -166,8 +166,8 @@ router.get('/todoist-all-tasks', verifyToken, async (req, res) => {
 		const todoistTasksThatOnlyAppearInAPIV1 = getTodoistTasksThatOnlyAppearInAPIV1(todoistAllSyncTasksById, allNewAPIV1Tasks)
 
 		// @ts-ignore
-		console.log(`todoistTasksThatOnlyAppearInAPIV1 = ${todoistTasksThatOnlyAppearInAPIV1.length}`)
-		console.log(`allSyncTasksThatDoNotAppearInAPIV1 = ${allSyncTasksThatDoNotAppearInAPIV1.length}`)
+		// console.log(`todoistTasksThatOnlyAppearInAPIV1 = ${todoistTasksThatOnlyAppearInAPIV1.length}`)
+		// console.log(`allSyncTasksThatDoNotAppearInAPIV1 = ${allSyncTasksThatDoNotAppearInAPIV1.length}`)
 
 		res.status(200).json(allTasks);
 	} catch (error) {
