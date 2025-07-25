@@ -49,15 +49,7 @@ app.use(
 // ✅ Handle preflight
 app.options('*', cors());
 
-app.use(async (req, res, next) => {
-	try {
-		await connectDB(); // Will reuse cached connection
-		next();
-	} catch (err) {
-		console.error('MongoDB connection error:', err);
-		res.status(500).json({ error: 'Failed to connect to database' });
-	}
-});
+connectDB(); // ✅ Only runs once when the serverless function initializes
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
