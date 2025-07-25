@@ -27,9 +27,6 @@ dotenv.config();
 
 const app = express();
 
-// Connect to MongoDB
-connectDB();
-
 const allowedOrigins = [
   'http://localhost:5173',                         // local frontend
   'https://ticktick-2-0-web.vercel.app'            // deployed frontend
@@ -52,15 +49,17 @@ app.use(
 // ✅ Handle preflight
 app.options('*', cors());
 
+app.use(async (req, res, next) => {
+	try {
+		await connectDB(); // Will reuse cached connection
+		next();
+	} catch (err) {
+		console.error('MongoDB connection error:', err);
+		res.status(500).json({ error: 'Failed to connect to database' });
+	}
+});
+
 app.use(express.json()); // Middleware to parse JSON bodies
-
-
-// Use it before all route definitions
-app.use(
-	cors({
-		origin: '*', // or use "*" to allow all origins
-	})
-);
 
 // This is for the TickTick 1.0 Data that I'm currently using until I finish TickTick 2.0 and migrate all my data into the DB
 app.use('/ticktick-1.0', allDataRouter);
@@ -85,12 +84,6 @@ app.use('/user-settings', settingsRouter);
 app.get('/', (req, res) => {
 	res.send('Hello World!');
 });
-
-// // ✅ Error handler (adds CORS headers even on 500)
-// app.use((err, req, res, next) => {
-//   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-//   res.status(500).json({ error: err.message || 'Internal Server Error' });
-// });
 
 // Only listen on a port if the script is run locally
 if (!process.env.VERCEL) {

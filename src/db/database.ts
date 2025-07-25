@@ -5,23 +5,34 @@ dotenv.config();
 
 const ATLAS_URI = process.env.ATLAS_URI;
 
+if (!ATLAS_URI) {
+	console.error('❌ ATLAS_URI is not defined');
+	process.exit(1);
+}
+
+let cached = (global as any).mongoose;
+
+if (!cached) {
+	cached = (global as any).mongoose = { conn: null, promise: null };
+}
+
 export const connectDB = async () => {
-	if (!ATLAS_URI) {
-		console.error('ATLAS_URI is not defined in your env variables');
-		process.exit(1); // Exit process with failure
+	if (cached.conn) return cached.conn;
+
+	if (!cached.promise) {
+		console.log('⏳ Connecting to MongoDB...');
+		cached.promise = mongoose.connect(ATLAS_URI, {
+			bufferCommands: false,
+		});
 	}
 
 	try {
-		const conn = await mongoose.connect(ATLAS_URI);
-		console.log(`MongoDB Connected: ${conn.connection.host}`);
+		cached.conn = await cached.promise;
+		console.log(`✅ MongoDB Connected: ${cached.conn.connection.host}`);
+		return cached.conn;
 	} catch (error) {
-		// Use type assertion to treat error as an instance of Error
-		if (error instanceof Error) {
-			console.error(`Error: ${error.message}`);
-		} else {
-			console.error(`An unexpected error occurred`);
-		}
-		process.exit(1);
+		console.error(`❌ MongoDB connection failed:`, error);
+		throw error;
 	}
 };
 
