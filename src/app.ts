@@ -26,12 +26,34 @@ import oldFocusAppsRouter from './routes/TickTick-1.0-Routes/oldFocusAppsRouter'
 dotenv.config();
 
 const app = express();
-const PORT = 8888;
 
 // Connect to MongoDB
 connectDB();
 
+const allowedOrigins = [
+  'http://localhost:5173',                         // local frontend
+  'https://ticktick-2-0-web.vercel.app'            // deployed frontend
+];
+
+// ✅ Dynamically allow based on origin
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true, // Optional if using cookies/auth headers
+  })
+);
+
+// ✅ Handle preflight
+app.options('*', cors());
+
 app.use(express.json()); // Middleware to parse JSON bodies
+
 
 // Use it before all route definitions
 app.use(
@@ -63,6 +85,12 @@ app.use('/user-settings', settingsRouter);
 app.get('/', (req, res) => {
 	res.send('Hello World!');
 });
+
+// // ✅ Error handler (adds CORS headers even on 500)
+// app.use((err, req, res, next) => {
+//   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+//   res.status(500).json({ error: err.message || 'Internal Server Error' });
+// });
 
 // Only listen on a port if the script is run locally
 if (!process.env.VERCEL) {

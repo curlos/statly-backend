@@ -185,6 +185,7 @@ router.get('/tasks', verifyToken, async (req, res) => {
 
 		res.status(200).json(tickTickOneTasks);
 	} catch (error) {
+		console.error(error)
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
 		});
