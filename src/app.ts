@@ -49,7 +49,15 @@ app.use(
 // ✅ Handle preflight
 app.options('*', cors());
 
-connectDB(); // ✅ Only runs once when the serverless function initializes
+app.use(async (req, res, next) => {
+  try {
+    await connectDB(); // will use cached.conn or cached.promise
+    next();
+  } catch (err) {
+    console.error('❌ Failed to connect to DB:', err);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
