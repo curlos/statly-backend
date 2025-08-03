@@ -36,6 +36,7 @@ const UserSettingsSchema = new Schema(
 					taskIdIncludeFocusRecordsFromSubtasks: { type: Boolean, default: true },
 					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
 					maxFocusRecordsPerPage: { type: Number, default: 50 },
+					onlyExportTasksWithNoParent: { type: Boolean, default: true },
 				},
 				completedTasks: {
 					taskIdIncludeCompletedTasksFromSubtasks: { type: Boolean, default: true },
