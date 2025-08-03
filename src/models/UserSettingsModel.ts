@@ -42,6 +42,7 @@ const UserSettingsSchema = new Schema(
 					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
 					groupedTasksCollapsedByDefault: { type: Boolean, default: true },
 					showIndentedTasks: { type: Boolean, default: true },
+					onlyExportTasksWithNoParent: { type: Boolean, default: true },
 					maxDaysPerPage: { type: Number, default: 7 },
 				},
 				focusHoursGoal: {
