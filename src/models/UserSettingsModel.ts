@@ -48,6 +48,8 @@ const UserSettingsSchema = new Schema(
 					showIndentedTasks: { type: Boolean, default: true },
 					onlyExportTasksWithNoParent: { type: Boolean, default: true },
 					maxDaysPerPage: { type: Number, default: 7 },
+					showMedals: { type: Boolean, default: true },
+					selectedMedalImage: { type: String, default: "https://i.imgur.com/6xLKg5k.jpeg" },
 				},
 				focusHoursGoal: {
 					projects: { type: Object, default: {} }
