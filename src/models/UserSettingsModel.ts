@@ -38,6 +38,8 @@ const UserSettingsSchema = new Schema(
 					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
 					maxFocusRecordsPerPage: { type: Number, default: 50 },
 					onlyExportTasksWithNoParent: { type: Boolean, default: true },
+					showMedals: { type: Boolean, default: true },
+					selectedMedalImage: { type: String, default: "https://i.imgur.com/6xLKg5k.jpeg" },
 				},
 				completedTasks: {
 					taskIdIncludeCompletedTasksFromSubtasks: { type: Boolean, default: true },
