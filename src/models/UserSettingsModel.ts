@@ -40,6 +40,7 @@ const UserSettingsSchema = new Schema(
 					onlyExportTasksWithNoParent: { type: Boolean, default: true },
 					showMedals: { type: Boolean, default: true },
 					selectedMedalImage: { type: String, default: "https://i.imgur.com/6xLKg5k.jpeg" },
+					medalImageSizePx: { type: Number, default: 100 }
 				},
 				completedTasks: {
 					taskIdIncludeCompletedTasksFromSubtasks: { type: Boolean, default: true },
