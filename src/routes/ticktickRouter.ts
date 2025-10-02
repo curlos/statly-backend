@@ -12,9 +12,9 @@ import {
 	sortArrayByProperty,
 	getDayAfterToday,
 	arrayToObjectByKey,
-} from '../../utils/helpers.utils';
-import { getJsonData, updateLocalJsonData } from '../../utils/mongoose.utils';
-import { verifyToken } from '../../middleware/verifyToken';
+} from '../utils/helpers.utils';
+import { getJsonData, updateLocalJsonData } from '../utils/mongoose.utils';
+import { verifyToken } from '../middleware/verifyToken';
 
 const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;

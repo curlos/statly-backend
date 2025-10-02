@@ -24,43 +24,6 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 	}
 });
 
-// Get all user settings
-router.get('/all', verifyToken, async (req, res) => {
-	try {
-		const userSettings = await UserSettings.find({});
-
-		if (!userSettings) {
-			return res.status(404).json({ message: 'User Settings not found' });
-		}
-
-		res.json(userSettings);
-	} catch (error) {
-		res.status(500).json({ message: error instanceof Error ? error.message : error });
-	}
-});
-
-router.post('/add', verifyToken, async (req, res) => {
-	const { userId } = req.body;
-
-	if (!userId) {
-		return res.status(400).json({ message: 'User ID is required' });
-	}
-
-	try {
-		// Check if settings already exist for the user
-		const existingUserSettings = await UserSettings.findOne({ userId });
-		if (existingUserSettings) {
-			return res.status(409).json({ message: 'User Settings already exist for this user' });
-		}
-
-		const newUserSettings = new UserSettings(req.body);
-		const savedUserSettings = await newUserSettings.save();
-		res.status(201).json(savedUserSettings);
-	} catch (error) {
-		res.status(400).json({ message: error instanceof Error ? error.message : error });
-	}
-});
-
 router.put('/edit', verifyToken, async (req: CustomRequest, res) => {
 	const user = req.user; // This is set by the verifyToken middleware
 	// @ts-ignore
@@ -86,25 +49,6 @@ router.put('/edit', verifyToken, async (req: CustomRequest, res) => {
 		res.json(updatedUserSettings);
 	} catch (error) {
 		res.status(400).json({ message: error instanceof Error ? error.message : error });
-	}
-});
-
-// SHOULD NOT BE IN THE FRONTEND. THE INDIVIDUAL USERS SHOULD NOT BE ABLE TO DELETE THIS, ONLY DEVELOPER. THIS IS MOSTLY FOR TESTING PURPOSES ON THE BACKEND!
-router.delete('/delete/:userSettingsId', verifyToken, async (req, res) => {
-	const { userSettingsId } = req.params;
-
-	try {
-		const deletedUserSettings = await UserSettings.findByIdAndDelete(userSettingsId);
-
-		if (!deletedUserSettings) {
-			return res.status(404).json({ message: 'User Settings not found' });
-		}
-
-		res.status(200).json({ message: 'User Settings deleted successfully' });
-	} catch (error) {
-		res.status(500).json({
-			message: error instanceof Error ? error.message : 'An error occurred during the deletion process',
-		});
 	}
 });
 

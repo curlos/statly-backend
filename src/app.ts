@@ -1,4 +1,3 @@
-import killPort from 'kill-port';
 import dotenv from 'dotenv';
 // src/index.ts
 import express from 'express';
@@ -6,30 +5,19 @@ import cors from 'cors';
 import connectDB from './db/database'; // Import the connectDB function
 
 // Routes
-import allDataRouter from './routes/TickTick-1.0-Routes/allDataRouter';
-import tempRouter from './routes/TickTick-1.0-Routes/tempRouter';
-
-import tasksRouter from './routes/tasksRouter';
-import projectsRouter from './routes/projectsRouter';
-import focusRecordsRouter from './routes/focusRecordsRouter';
+import ticktickRouter from './routes/ticktickRouter';
+import tempRouter from './routes/tempRouter';
 import usersRouter from './routes/usersRouter';
-import commentsRouter from './routes/commentsRouter';
-import matricesRouter from './routes/matricesRouter';
-import tagsRouter from './routes/tagsRouter';
-import filtersRouter from './routes/filtersRouter';
-import habitsRouter from './routes/habitsRouter';
-import habitSectionsRouter from './routes/habitSectionsRouter';
-import habitLogsRouter from './routes/habitLogsRouter';
 import settingsRouter from './routes/userSettingsRouter';
-import oldFocusAppsRouter from './routes/TickTick-1.0-Routes/oldFocusAppsRouter';
+import oldFocusAppsRouter from './routes/oldFocusAppsRouter';
 
 dotenv.config();
 
 const app = express();
 
 const allowedOrigins = [
-  'http://localhost:5173',                         // local frontend
-  'https://ticktick-2-0-web.vercel.app'            // deployed frontend
+  'http://localhost:5173', // local frontend
+  'https://ticktick-2-0-web.vercel.app' // deployed frontend
 ];
 
 // ✅ Dynamically allow based on origin
@@ -61,24 +49,10 @@ app.use(async (req, res, next) => {
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
-// This is for the TickTick 1.0 Data that I'm currently using until I finish TickTick 2.0 and migrate all my data into the DB
-app.use('/ticktick-1.0', allDataRouter);
-app.use('/ticktick-1.0', tempRouter);
-
-// Old Focus Apps Data (Session, Forest, BeFocused, possibly Tide)
+app.use('/ticktick', ticktickRouter);
+app.use('/ticktick', tempRouter);
 app.use('/old-focus-apps', oldFocusAppsRouter);
-
-app.use('/tasks', tasksRouter);
-app.use('/projects', projectsRouter);
-app.use('/focus-records', focusRecordsRouter);
 app.use('/users', usersRouter);
-app.use('/comments', commentsRouter);
-app.use('/matrices', matricesRouter);
-app.use('/tags', tagsRouter);
-app.use('/filters', filtersRouter);
-app.use('/habits', habitsRouter);
-app.use('/habit-sections', habitSectionsRouter);
-app.use('/habit-logs', habitLogsRouter);
 app.use('/user-settings', settingsRouter);
 
 app.get('/', (req, res) => {
@@ -95,15 +69,3 @@ if (!process.env.VERCEL) {
 }
 
 export default app;
-
-// TODO: Maybe come back to this later. I think I was using this to debug node.js code but was having problems with this killing my ports when the server started so was useless. For the far future.
-
-// killPort(PORT, 'tcp').then(() => {
-//     console.log(`Port ${PORT} cleared`);
-// }).catch((error) => {
-//     console.log(`No process on port ${PORT}: ${error.message}`);
-// }).finally(() => {
-//     app.listen(PORT, () => {
-//         console.log(`Server running at http://localhost:${PORT}`);
-//     });
-// });

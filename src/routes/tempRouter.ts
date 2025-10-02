@@ -1,14 +1,7 @@
 import express from 'express';
 import axios from 'axios';
-import dotenv from 'dotenv';
-import { getDayAfterToday } from '../../utils/helpers.utils';
-import { verifyToken } from '../../middleware/verifyToken';
-// import { updateLocalData } from '../../utils/mongoose.utils';
-// import { TODOIST_NEW_2025_SYNC_TASKS_DATASETS, TODOIST_NEW_2025_SYNC_PROJECTS_DATASETS } from '../../utils/LOCAL_DATASETS';
-// import { updateLocalData } from '../../utils/mongoose.utils';
-// import { TODOIST_PROJECTS_API_V1_DATASETS, TODOIST_TASKS_API_V1_DATASETS } from '../../utils/LOCAL_DATASETS';
-// import { updateLocalData } from '../../utils/mongoose.utils';
-// import { OLD_FOCUS_APPS_DATASETS } from '../../utils/LOCAL_DATASETS';
+import { getDayAfterToday } from '../utils/helpers.utils';
+import { verifyToken } from '../middleware/verifyToken';
 
 const router = express.Router();
 
@@ -42,7 +35,7 @@ router.get('/tasks-from-archived-projects', verifyToken, async (req, res) => {
 
 		if (getTasksFromArchivedProjects) {
 			// Get all the projects
-			const projectsResponse = await axios.get(`${SERVER_URL}/ticktick-1.0/projects`, {
+			const projectsResponse = await axios.get(`${SERVER_URL}/ticktick/projects`, {
 				headers: {
 					Cookie: cookie,
 				},

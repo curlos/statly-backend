@@ -1,32 +1,8 @@
 // src/routes/taskRouter.ts
 import express from 'express';
 import dotenv from 'dotenv';
-import { getJsonData } from '../../utils/mongoose.utils';
-import { verifyToken } from '../../middleware/verifyToken';
-
-// import { SESSION_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/Session/SESSION_DATA';
-// import { BE_FOCUSED_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/BeFocused/BE_FOCUSED';
-// import { FOREST_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/Forest/FOREST';
-// import { TIDE_DATA } from '../../focus-data/2021-2022-focus-data-from-other-apps/TIDE-IOS-APP/TIDE_DATA';
-
-// import { todoistAllPersonalCompletedTasksById } from '../../focus-data/Todoist/personal/todoistAllPersonalCompletedTasksById';
-// import { todoistAllPersonalActiveTasksById } from '../../focus-data/Todoist/personal/todoistAllPersonalActiveTasksById';
-
-// import { todoistAllQLinkCompletedTasksById } from '../../focus-data/Todoist/qlink/todoistAllQLinkCompletedTasksById';
-// import { todoistAllQLinkActiveTasksById } from '../../focus-data/Todoist/qlink/todoistAllQLinkActiveTasksById';
-
-
-// TODOIST - PERSONAL ACCOUNT
-// import { api_v1_todoist_all_personal_completed_tasks_by_id } from '../../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_completed_tasks_by_id';
-// import { api_v1_todoist_all_personal_active_tasks_by_id } from '../../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_active_tasks_by_id'
-// import { api_v1_todoist_all_personal_active_projects } from '../../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_active_projects'
-// import { api_v1_todoist_all_personal_archived_projects } from '../../../todoist-data-fetcher/data/personal/api_v1_todoist_all_personal_archived_projects'
-
-// // TODOIST - WORK ACCOUNT
-// import { api_v1_todoist_all_work_completed_tasks_by_id } from '../../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_completed_tasks_by_id';
-// import { api_v1_todoist_all_work_active_tasks_by_id } from '../../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_active_tasks_by_id'
-// import { api_v1_todoist_all_work_active_projects } from '../../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_active_projects'
-// import { api_v1_todoist_all_work_archived_projects } from '../../../todoist-data-fetcher/data/work/api_v1_todoist_all_work_archived_projects'
+import { getJsonData } from '../utils/mongoose.utils';
+import { verifyToken } from '../middleware/verifyToken';
 
 dotenv.config();
 

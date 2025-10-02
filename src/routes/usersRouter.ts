@@ -3,20 +3,8 @@ import bcrypt from 'bcryptjs';
 import jwt, { Secret } from 'jsonwebtoken';
 import User from '../models/UserModel';
 import UserSettings from '../models/UserSettingsModel';
-import { verifyToken } from '../middleware/verifyToken';
 
 const router = express.Router();
-
-router.get('/', verifyToken, async (req, res) => {
-	try {
-		const users = await User.find({});
-		res.status(200).json(users);
-	} catch (error) {
-		res.status(500).json({
-			message: error instanceof Error ? error.message : 'An error occurred fetching the tasks',
-		});
-	}
-});
 
 router.get('/logged-in', async (req, res) => {
 	const token = req.headers.authorization?.split(' ')[1]; // Safely access the token
