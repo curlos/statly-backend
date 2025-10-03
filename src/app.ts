@@ -10,6 +10,7 @@ import tempRouter from './routes/tempRouter';
 import usersRouter from './routes/usersRouter';
 import settingsRouter from './routes/userSettingsRouter';
 import oldFocusAppsRouter from './routes/oldFocusAppsRouter';
+import documentsTickTickRouter from './routes/documents/documentsTickTickRouter';
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use(express.json()); // Middleware to parse JSON bodies
 
 app.use('/ticktick', ticktickRouter);
 app.use('/ticktick', tempRouter);
+app.use('/documents/ticktick', documentsTickTickRouter);
 app.use('/old-focus-apps', oldFocusAppsRouter);
 app.use('/users', usersRouter);
 app.use('/user-settings', settingsRouter);
