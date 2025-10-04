@@ -1,18 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
 
-// Embedded schema for item objects (stored in TickTick full tasks)
-const ItemSchema = new Schema({
-	id: { type: String, required: true },
-	status: { type: Number, default: 0 },
-	title: { type: String, required: true },
-	sortOrder: { type: Number },
-	startDate: { type: Date },
-	isAllDay: { type: Boolean, default: false },
-	timeZone: { type: String },
-	snoozeReminderTime: { type: Date },
-	completedTime: { type: Date }
-}, { _id: false });
-
 // Base schema with NORMALIZED shared fields for ALL tasks (TickTick and Todoist)
 const BaseTaskSchema = new Schema({
 	id: {
@@ -90,10 +77,6 @@ const TickTickTaskSchema = new Schema({
 	completedUserId: {
 		type: Number
 	},
-	items: {
-		type: [ItemSchema],
-		default: []
-	},
 	modifiedTime: {
 		type: Date,
 		index: true
@@ -107,6 +90,9 @@ const TickTickTaskSchema = new Schema({
 	},
 	startDate: {
 		type: Date
+	},
+	status: {
+		type: Number
 	}
 });
 

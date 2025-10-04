@@ -44,11 +44,12 @@ async function buildAncestorData(tasks: any[]) {
 	}).lean();
 
 	// Step 3: Build ancestorTasksById map
-	const ancestorTasksById: Record<string, { id: string; title: string }> = {};
+	const ancestorTasksById: Record<string, { id: string; title: string; parentId: string | null; }> = {};
 	ancestorTasks.forEach(task => {
 		ancestorTasksById[task.id] = {
 			id: task.id,
-			title: task.title
+			title: task.title,
+			parentId: task.parentId ?? null
 		};
 	});
 
@@ -112,6 +113,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		const limit = parseInt(req.query.limit as string) || 7;
 		const projectId = req.query.projectId as string;
 		const taskId = req.query.taskId as string;
+		const timezone = (req.query.timezone as string) || 'UTC';
 
 		// Build match filter
 		const matchFilter: any = {
@@ -136,13 +138,14 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			// Step 2: Sort by completedTime descending (uses index)
 			{ $sort: { completedTime: -1 } },
 
-			// Step 3: Group tasks by formatted date string
+			// Step 3: Group tasks by formatted date string (in user's timezone)
 			{
 				$group: {
 					_id: {
 						$dateToString: {
 							format: "%B %d, %Y",
-							date: "$completedTime"
+							date: "$completedTime",
+							timezone: timezone
 						}
 					},
 					completedTasksForDay: { $push: "$$ROOT" },
@@ -176,10 +179,12 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		// Build ancestor data for all tasks
 		const { ancestorTasksById } = await buildAncestorData(allTasksInPage);
 
-		// Calculate hasMore by checking if there's another day after this page
-		const nextPageResult = await Task.aggregate([
+		// Get total count of all tasks matching the filters
+		const totalTasks = await Task.countDocuments(matchFilter);
+
+		// Get total number of days with completed tasks (for totalPages calculation)
+		const totalDaysResult = await Task.aggregate([
 			{ $match: matchFilter },
-			{ $sort: { completedTime: -1 } },
 			{
 				$group: {
 					_id: {
@@ -187,20 +192,22 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 							format: "%B %d, %Y",
 							date: "$completedTime"
 						}
-					},
-					firstCompletedTime: { $first: "$completedTime" }
+					}
 				}
-			},
-			{ $sort: { firstCompletedTime: -1 } },
-			{ $skip: (page + 1) * limit },
-			{ $limit: 1 }
+			}
 		]);
 
-		const hasMore = nextPageResult.length > 0;
+		const totalDays = totalDaysResult.length;
+		const totalPages = Math.ceil(totalDays / limit);
+
+		// Calculate hasMore by checking if there's another day after this page
+		const hasMore = (page + 1) * limit < totalDays;
 
 		res.status(200).json({
 			data: result,
 			ancestorTasksById,
+			totalTasks,
+			totalPages,
 			page,
 			limit,
 			hasMore,
