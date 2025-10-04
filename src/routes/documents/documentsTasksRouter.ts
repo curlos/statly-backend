@@ -21,81 +21,38 @@ async function findDescendants(taskId: string) {
 	return descendants;
 }
 
-// Helper function to build ancestor data for tasks (batched approach)
+// Helper function to build ancestor data for tasks (optimized with pre-computed ancestorIds)
 async function buildAncestorData(tasks: any[]) {
-	// Step 1: Collect all unique parentIds from the paginated tasks
-	const parentIdsToFetch = new Set<string>();
+	// Step 1: Collect ALL unique ancestor IDs from tasks (using pre-computed ancestorIds)
+	const allAncestorIds = new Set<string>();
+
 	tasks.forEach(task => {
-		if (task.parentId) {
-			parentIdsToFetch.add(task.parentId);
+		if (task.ancestorIds && task.ancestorIds.length > 0) {
+			// Optimization: If we've seen an ancestor in the chain, we've seen all above it
+			for (const ancestorId of task.ancestorIds) {
+				if (allAncestorIds.has(ancestorId)) {
+					break; // Skip the rest - we've already added this ancestor chain
+				}
+				allAncestorIds.add(ancestorId);
+			}
 		}
 	});
 
-	// Step 2: Fetch ancestors in batches until we have them all (max 4-5 rounds due to nesting limit)
-	const tasksById: Record<string, any> = {};
-	let currentParentIds = Array.from(parentIdsToFetch);
+	// Step 2: Fetch ALL ancestor tasks in ONE batch query
+	const ancestorTasks = await Task.find({
+		id: { $in: Array.from(allAncestorIds) }
+	}).lean();
 
-	while (currentParentIds.length > 0) {
-		// Batch fetch all tasks at this level
-		const fetchedTasks = await Task.find({
-			id: { $in: currentParentIds }
-		}).lean();
-
-		const nextParentIds: string[] = [];
-		fetchedTasks.forEach(task => {
-			tasksById[task.id] = task;
-			// If this task has a parent we haven't fetched yet, add to next round
-			if (task.parentId && !tasksById[task.parentId]) {
-				nextParentIds.push(task.parentId);
-			}
-		});
-
-		currentParentIds = nextParentIds;
-	}
-
-	// Step 3: Build ancestor data using in-memory map (no more DB queries)
-	// Store ancestor chains per unique parentId (not per task to avoid duplication)
-	const ancestorTaskIds: Record<string, string[]> = {};
+	// Step 3: Build ancestorTasksById map
 	const ancestorTasksById: Record<string, { id: string; title: string }> = {};
-
-	// For each unique parentId, compute its ancestor chain once
-	parentIdsToFetch.forEach(parentId => {
-		// Skip if we already computed this ancestor chain
-		if (ancestorTaskIds[parentId]) {
-			return;
-		}
-
-		const ancestorChain: string[] = [];
-		let currentParentId: string | undefined = parentId;
-
-		// Walk up the ancestor chain using in-memory map
-		while (currentParentId && tasksById[currentParentId]) {
-			ancestorChain.push(currentParentId);
-			const parentTask: any = tasksById[currentParentId];
-
-			// Cache basic ancestor info
-			if (!ancestorTasksById[currentParentId]) {
-				ancestorTasksById[currentParentId] = {
-					id: parentTask.id,
-					title: parentTask.title
-				};
-			}
-
-			// If we've already computed the chain for this parent's parent, reuse it
-			if (parentTask.parentId && ancestorTaskIds[parentTask.parentId]) {
-				// Append the already-computed chain and stop
-				ancestorChain.push(...ancestorTaskIds[parentTask.parentId]);
-				break;
-			}
-
-			currentParentId = parentTask.parentId;
-		}
-
-		// Store the ancestor chain for this parentId
-		ancestorTaskIds[parentId] = ancestorChain;
+	ancestorTasks.forEach(task => {
+		ancestorTasksById[task.id] = {
+			id: task.id,
+			title: task.title
+		};
 	});
 
-	return { ancestorTaskIds, ancestorTasksById };
+	return { ancestorTasksById };
 }
 
 router.get('/', verifyToken, async (req, res) => {
@@ -128,13 +85,12 @@ router.get('/', verifyToken, async (req, res) => {
 			.lean(); // Use lean() for better performance when we don't need Mongoose documents
 
 		// Build ancestor data for all tasks
-		const { ancestorTaskIds, ancestorTasksById } = await buildAncestorData(tasks);
+		const { ancestorTasksById } = await buildAncestorData(tasks);
 
 		const hasMore = skip + tasks.length < total;
 
 		res.status(200).json({
 			data: tasks,
-			ancestorTaskIds,
 			ancestorTasksById,
 			total,
 			totalPages,
@@ -145,6 +101,113 @@ router.get('/', verifyToken, async (req, res) => {
 	} catch (error) {
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching tasks.',
+		});
+	}
+});
+
+// GET /days-with-completed-tasks - Returns completed tasks grouped by date with pagination
+router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
+	try {
+		const page = parseInt(req.query.page as string) || 0;
+		const limit = parseInt(req.query.limit as string) || 7;
+		const projectId = req.query.projectId as string;
+		const taskId = req.query.taskId as string;
+
+		// Build match filter
+		const matchFilter: any = {
+			completedTime: { $exists: true, $ne: null }
+		};
+
+		// Add optional filters
+		if (projectId) {
+			matchFilter.projectId = projectId;
+		}
+
+		// Filter by taskId (includes task itself + all descendants)
+		if (taskId) {
+			matchFilter[`ancestorSet.${taskId}`] = true;
+		}
+
+		// Aggregation pipeline to group tasks by date
+		const result = await Task.aggregate([
+			// Step 1: Filter completed tasks (and optional projectId filter)
+			{ $match: matchFilter },
+
+			// Step 2: Sort by completedTime descending (uses index)
+			{ $sort: { completedTime: -1 } },
+
+			// Step 3: Group tasks by formatted date string
+			{
+				$group: {
+					_id: {
+						$dateToString: {
+							format: "%B %d, %Y",
+							date: "$completedTime"
+						}
+					},
+					completedTasksForDay: { $push: "$$ROOT" },
+					firstCompletedTime: { $first: "$completedTime" }
+				}
+			},
+
+			// Step 4: Sort grouped days by date descending (newest first)
+			{ $sort: { firstCompletedTime: -1 } },
+
+			// Step 5: Paginate days (not tasks)
+			{ $skip: page * limit },
+			{ $limit: limit },
+
+			// Step 6: Format output
+			{
+				$project: {
+					dateStr: "$_id",
+					completedTasksForDay: 1,
+					_id: 0
+				}
+			}
+		]);
+
+		// Extract all tasks from the paginated days
+		const allTasksInPage: any[] = [];
+		result.forEach(day => {
+			allTasksInPage.push(...day.completedTasksForDay);
+		});
+
+		// Build ancestor data for all tasks
+		const { ancestorTasksById } = await buildAncestorData(allTasksInPage);
+
+		// Calculate hasMore by checking if there's another day after this page
+		const nextPageResult = await Task.aggregate([
+			{ $match: matchFilter },
+			{ $sort: { completedTime: -1 } },
+			{
+				$group: {
+					_id: {
+						$dateToString: {
+							format: "%B %d, %Y",
+							date: "$completedTime"
+						}
+					},
+					firstCompletedTime: { $first: "$completedTime" }
+				}
+			},
+			{ $sort: { firstCompletedTime: -1 } },
+			{ $skip: (page + 1) * limit },
+			{ $limit: 1 }
+		]);
+
+		const hasMore = nextPageResult.length > 0;
+
+		res.status(200).json({
+			data: result,
+			ancestorTasksById,
+			page,
+			limit,
+			hasMore,
+		});
+	} catch (error) {
+		res.status(500).json({
+			message: error instanceof Error ? error.message : 'An error occurred fetching days with completed tasks.',
 		});
 	}
 });
@@ -164,9 +227,51 @@ router.post('/transfer-tasks-ticktick', verifyToken, async (req, res) => {
 	try {
 		const jsonData = await getJsonData('all-ticktick-tasks');
 
+		// Step 1: Build tasksById map for quick parent lookups
+		const tasksById: Record<string, any> = {};
+		jsonData.forEach((task: any) => {
+			tasksById[task.id] = task;
+		});
+
+		// Step 2: Build ancestor data with caching
+		const ancestorCache: Record<string, string[]> = {};
+
+		const buildAncestorChain = (taskId: string, parentId: string | undefined): string[] => {
+			// Include the task itself in its ancestor chain
+			if (!parentId) {
+				return [taskId];
+			}
+
+			// Check cache first (reuse for siblings with same parent)
+			if (ancestorCache[parentId]) {
+				return [taskId, ...ancestorCache[parentId]];
+			}
+
+			// Walk up the parent chain
+			const chain = [taskId];
+			let currentParentId: string | undefined = parentId;
+
+			while (currentParentId && tasksById[currentParentId]) {
+				chain.push(currentParentId);
+				currentParentId = tasksById[currentParentId].parentId;
+			}
+
+			// Cache the chain for this parent (excluding the task itself)
+			ancestorCache[parentId] = chain.slice(1);
+
+			return chain;
+		};
+
 		const bulkOps = [];
 
 		for (const task of jsonData) {
+			// Build ancestor data for full task
+			const ancestorIds = buildAncestorChain(task.id, task.parentId);
+			const ancestorSet: Record<string, boolean> = {};
+			ancestorIds.forEach((id: string) => {
+				ancestorSet[id] = true;
+			});
+
 			// Normalize the FULL task
 			const normalizedFullTask = {
 				...task,
@@ -179,6 +284,8 @@ router.post('/transfer-tasks-ticktick', verifyToken, async (req, res) => {
 				completedTime: task.completedTime,
 				sortOrder: task.sortOrder,
 				timeZone: task.timeZone,
+				ancestorIds,
+				ancestorSet,
 			};
 
 			// Add full task upsert operation to bulk array
@@ -193,6 +300,13 @@ router.post('/transfer-tasks-ticktick', verifyToken, async (req, res) => {
 			// Process items array (if it exists and has items)
 			if (task.items && task.items.length > 0) {
 				for (const item of task.items) {
+					// Build ancestor data for item (parent is the full task)
+					const itemAncestorIds = buildAncestorChain(item.id, task.id);
+					const itemAncestorSet: Record<string, boolean> = {};
+					itemAncestorIds.forEach((id: string) => {
+						itemAncestorSet[id] = true;
+					});
+
 					// Normalize item task
 					const normalizedItemTask = {
 						...item,
@@ -206,6 +320,8 @@ router.post('/transfer-tasks-ticktick', verifyToken, async (req, res) => {
 						sortOrder: item.sortOrder,
 						timeZone: item.timeZone,
 						startDate: item.startDate,
+						ancestorIds: itemAncestorIds,
+						ancestorSet: itemAncestorSet,
 					};
 
 					// Add item task upsert operation to bulk array

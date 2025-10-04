@@ -52,6 +52,15 @@ const BaseTaskSchema = new Schema({
 	},
 	timeZone: {
 		type: String
+	},
+	ancestorIds: {
+		type: [String],
+		default: []
+	},
+	ancestorSet: {
+		type: Map,
+		of: Boolean,
+		default: {}
 	}
 }, {
 	collection: 'tasks',
