@@ -15,6 +15,7 @@ import {
 } from '../utils/helpers.utils';
 import { getJsonData, updateLocalJsonData } from '../utils/mongoose.utils';
 import { verifyToken } from '../middleware/verifyToken';
+import { fetchAllTickTickTasks } from '../utils/ticktick.utils';
 
 const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
@@ -116,67 +117,13 @@ router.get('/focus-records', verifyToken, async (req, res) => {
 
 router.get('/tasks', verifyToken, async (req, res) => {
 	try {
-		const dayAfterTodayStr = getDayAfterToday();
-
 		if (useLocalData) {
 			const localTasks = doNotUseMongoDB ? localAllTasks : await getJsonData('all-ticktick-tasks');
 			res.status(200).json(localTasks);
 			return;
 		}
 
-		const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
-			headers: {
-				Cookie: cookie,
-				'x-device': JSON.stringify({
-      				platform: 'web'
-				}),
-			},
-		});
-
-		// TODO: Update this so it gets tasks from latest date no matter what.
-		const completedTasksResponse = await axios.get(
-			`https://api.ticktick.com/api/v2/project/all/completedInAll/?from=&to=${dayAfterTodayStr}%2010:50:58&limit=20000&=`,
-			{
-				headers: {
-					Cookie: cookie,
-				},
-			}
-		);
-
-		const willNotDoTasksResponse = await axios.get(
-			`https://api.ticktick.com/api/v2/project/all/closed/?from=&to=${dayAfterTodayStr}%2010:50:58&limit=20000&=&status=Abandoned`,
-			{
-				headers: {
-					Cookie: cookie,
-				},
-			}
-		);
-
-		const trashTasksResponse = await axios.get(
-			`https://api.ticktick.com/api/v2/project/all/trash/page?limit=9999999`,
-			{
-				headers: {
-					Cookie: cookie,
-				},
-			}
-		);
-
-		const tasksToBeUpdated = batchCheckResponse.data.syncTaskBean.update;
-		const completedTasks = completedTasksResponse.data;
-		const willNotDoTasks = willNotDoTasksResponse.data;
-		const { tasks: trashTasks } = trashTasksResponse.data;
-
-		const completedTasksFromArchivedProjects = await getJsonData('completed-tasks-from-archived-projects');
-		const notCompletedTasksFromArchivedProjects = await getJsonData('not-completed-tasks-from-archived-projects');
-
-		const tickTickOneTasks = [
-			...tasksToBeUpdated,
-			...completedTasks,
-			...willNotDoTasks,
-			...trashTasks,
-			...completedTasksFromArchivedProjects,
-			...notCompletedTasksFromArchivedProjects
-		];
+		const tickTickOneTasks = await fetchAllTickTickTasks();
 
 		await updateLocalJsonData({
 			name: 'all-ticktick-tasks',

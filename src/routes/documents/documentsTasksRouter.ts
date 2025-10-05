@@ -2,6 +2,9 @@ import express from 'express';
 import { Task, TaskTickTick } from '../../models/taskModel'
 import { verifyToken } from '../../middleware/verifyToken';
 import { getJsonData } from '../../utils/mongoose.utils';
+import SyncMetadata from '../../models/SyncMetadataModel';
+import { CustomRequest } from '../../interfaces/CustomRequest';
+import { fetchAllTickTickTasks } from '../../utils/ticktick.utils';
 
 const router = express.Router();
 
@@ -220,9 +223,11 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 });
 
 router.get('/test-json-data-ticktick', verifyToken, async (req, res) => {
+	const useLiveData = true
+
 	try {
-		const jsonData = await getJsonData('all-ticktick-tasks');
-		res.status(200).json(jsonData);
+		const tickTickTasks = useLiveData ? await fetchAllTickTickTasks() : await getJsonData('all-ticktick-tasks');
+		res.status(200).json(tickTickTasks);
 	} catch (error) {
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching JSON data.',
@@ -230,13 +235,25 @@ router.get('/test-json-data-ticktick', verifyToken, async (req, res) => {
 	}
 });
 
-router.post('/transfer-tasks-ticktick', verifyToken, async (req, res) => {
+router.post('/sync-tasks', verifyToken, async (req: CustomRequest, res) => {
 	try {
-		const jsonData = await getJsonData('all-ticktick-tasks');
+		// Get or create sync metadata
+		let syncMetadata = await SyncMetadata.findOne({ syncType: 'tasks' });
+
+		if (!syncMetadata) {
+			syncMetadata = new SyncMetadata({
+				userId: req.user!.userId,
+				syncType: 'tasks',
+				lastSyncTime: new Date(0), // Set to epoch so all tasks are synced initially
+			});
+		}
+
+		const lastSyncTime = syncMetadata.lastSyncTime;
+		const tickTickTasks = await fetchAllTickTickTasks();
 
 		// Step 1: Build tasksById map for quick parent lookups
 		const tasksById: Record<string, any> = {};
-		jsonData.forEach((task: any) => {
+		tickTickTasks.forEach((task: any) => {
 			tasksById[task.id] = task;
 		});
 
@@ -271,74 +288,81 @@ router.post('/transfer-tasks-ticktick', verifyToken, async (req, res) => {
 
 		const bulkOps = [];
 
-		for (const task of jsonData) {
-			// Build ancestor data for full task
-			const ancestorIds = buildAncestorChain(task.id, task.parentId);
-			const ancestorSet: Record<string, boolean> = {};
-			ancestorIds.forEach((id: string) => {
-				ancestorSet[id] = true;
-			});
+		for (const task of tickTickTasks) {
+			// Check if task needs updating based on modifiedTime
+			const taskModifiedTime = task.modifiedTime ? new Date(task.modifiedTime) : null;
+			const shouldUpdateTask = !taskModifiedTime || taskModifiedTime >= lastSyncTime;
 
-			// Normalize the FULL task
-			const normalizedFullTask = {
-				...task,
-				taskSource: 'ticktick',
-				taskType: 'full',
-				title: task.title,
-				description: task.desc || task.description || '',
-				projectId: task.projectId,
-				parentId: task.parentId,
-				completedTime: task.completedTime,
-				sortOrder: task.sortOrder,
-				timeZone: task.timeZone,
-				ancestorIds,
-				ancestorSet,
-			};
+			if (shouldUpdateTask) {
+				// Build ancestor data for full task
+				const ancestorIds = buildAncestorChain(task.id, task.parentId);
+				const ancestorSet: Record<string, boolean> = {};
+				ancestorIds.forEach((id: string) => {
+					ancestorSet[id] = true;
+				});
 
-			// Add full task upsert operation to bulk array
-			bulkOps.push({
-				updateOne: {
-					filter: { id: task.id },
-					update: { $set: normalizedFullTask },
-					upsert: true,
-				},
-			});
+				// Normalize the FULL task
+				const normalizedFullTask = {
+					...task,
+					taskSource: 'ticktick',
+					taskType: 'full',
+					title: task.title,
+					description: task.desc || task.description || '',
+					projectId: task.projectId,
+					parentId: task.parentId,
+					completedTime: task.completedTime,
+					sortOrder: task.sortOrder,
+					timeZone: task.timeZone,
+					ancestorIds,
+					ancestorSet,
+				};
 
-			// Process items array (if it exists and has items)
-			if (task.items && task.items.length > 0) {
-				for (const item of task.items) {
-					// Build ancestor data for item (parent is the full task)
-					const itemAncestorIds = buildAncestorChain(item.id, task.id);
-					const itemAncestorSet: Record<string, boolean> = {};
-					itemAncestorIds.forEach((id: string) => {
-						itemAncestorSet[id] = true;
-					});
+				// Add full task upsert operation to bulk array
+				bulkOps.push({
+					updateOne: {
+						filter: { id: task.id },
+						update: { $set: normalizedFullTask },
+						upsert: true,
+					},
+				});
 
-					// Normalize item task
-					const normalizedItemTask = {
-						...item,
-						taskSource: 'ticktick',
-						taskType: 'item',
-						title: item.title,
-						description: '',
-						projectId: task.projectId, // Inherit from parent
-						parentId: task.id, // Parent is the full task
-						completedTime: item.completedTime,
-						sortOrder: item.sortOrder,
-						timeZone: item.timeZone,
-						startDate: item.startDate,
-						ancestorIds: itemAncestorIds,
-						ancestorSet: itemAncestorSet,
-					};
+				// Process items array (if it exists and has items)
+				// Items are always updated if their parent task is updated
+				if (task.items && task.items.length > 0) {
+					for (const item of task.items) {
+						// Build ancestor data for item (parent is the full task)
+						const itemAncestorIds = buildAncestorChain(item.id, task.id);
+						const itemAncestorSet: Record<string, boolean> = {};
+						itemAncestorIds.forEach((id: string) => {
+							itemAncestorSet[id] = true;
+						});
 
-					// Add item task upsert operation to bulk array
-					bulkOps.push({
-						updateOne: {
-							filter: { id: item.id },
-							update: { $set: normalizedItemTask },
-							upsert: true,
-						},
-					});
+						// Normalize item task
+						const normalizedItemTask = {
+							...item,
+							taskSource: 'ticktick',
+							taskType: 'item',
+							title: item.title,
+							description: '',
+							projectId: task.projectId, // Inherit from parent
+							parentId: task.id, // Parent is the full task
+							completedTime: item.completedTime,
+							sortOrder: item.sortOrder,
+							timeZone: item.timeZone,
+							startDate: item.startDate,
+							ancestorIds: itemAncestorIds,
+							ancestorSet: itemAncestorSet,
+						};
+
+						// Add item task upsert operation to bulk array
+						bulkOps.push({
+							updateOne: {
+								filter: { id: item.id },
+								update: { $set: normalizedItemTask },
+								upsert: true,
+							},
+						});
+					}
 				}
 			}
 		}
@@ -346,12 +370,18 @@ router.post('/transfer-tasks-ticktick', verifyToken, async (req, res) => {
 		// Execute all operations in a single bulkWrite
 		const result = await TaskTickTick.bulkWrite(bulkOps);
 
+		// Update sync metadata with current time and tasks updated count
+		syncMetadata.lastSyncTime = new Date();
+		syncMetadata.tasksUpdated = bulkOps.length;
+		await syncMetadata.save();
+
 		res.status(200).json({
 			message: 'Transfer complete',
 			upsertedCount: result.upsertedCount,
 			modifiedCount: result.modifiedCount,
 			matchedCount: result.matchedCount,
 			totalOperations: bulkOps.length,
+			lastSyncTime: syncMetadata.lastSyncTime,
 		});
 	} catch (error) {
 		res.status(500).json({
