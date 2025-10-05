@@ -390,4 +390,22 @@ router.post('/sync-tasks', verifyToken, async (req: CustomRequest, res) => {
 	}
 });
 
+router.get('/sync-metadata', verifyToken, async (req, res) => {
+	try {
+		const syncMetadata = await SyncMetadata.findOne({ syncType: 'tasks' });
+
+		if (!syncMetadata) {
+			return res.status(404).json({
+				message: 'No sync metadata found',
+			});
+		}
+
+		res.status(200).json(syncMetadata);
+	} catch (error) {
+		res.status(500).json({
+			message: error instanceof Error ? error.message : 'An error occurred fetching sync metadata.',
+		});
+	}
+});
+
 export default router;
