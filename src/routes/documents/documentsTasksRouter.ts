@@ -24,6 +24,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		const projectsTodoist = req.query['projects-todoist'] as string;
 		const toDoListApps = req.query['to-do-list-apps'] as string;
 		const taskIdIncludeSubtasks = req.query['task-id-include-completed-tasks-from-subtasks'] === 'true';
+		const searchQuery = req.query['search'] as string;
 
 		// Build match filter
 		const matchFilter: any = {
@@ -83,32 +84,93 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			matchFilter.taskSource = { $in: appSources };
 		}
 
-		// Aggregation pipeline to group tasks by date
-		const aggregationPipeline: any[] = [
-			// Step 1: Filter completed tasks (and optional projectId filter)
-			{ $match: matchFilter },
-
-			// Step 2: Sort by completedTime ascending (oldest first within each day)
-			{ $sort: { completedTime: 1 } },
-
-			// Step 3: Group tasks by formatted date string (in user's timezone)
-			{
-				$group: {
-					_id: {
-						$dateToString: {
-							format: "%B %d, %Y",
-							date: "$completedTime",
-							timezone: timezone
+		// Build search stage if query exists (reusable for all pipelines)
+		const searchStage = searchQuery && searchQuery.trim() ? {
+			$search: {
+				index: "search_tasks",
+				compound: {
+					must: [
+						{
+							text: {
+								query: searchQuery.trim(),
+								path: ["title", "content", "description"],
+								fuzzy: {
+									maxEdits: 1,
+									prefixLength: 3
+								}
+							}
 						}
-					},
-					completedTasksForDay: { $push: "$$ROOT" },
-					firstCompletedTime: { $first: "$completedTime" },
-					taskCount: { $sum: 1 }
+					],
+					should: [
+						{
+							text: {
+								query: searchQuery.trim(),
+								path: "title",
+								score: { boost: { value: 10 } }
+							}
+						},
+						{
+							text: {
+								query: searchQuery.trim(),
+								path: "content",
+								score: { boost: { value: 10 } }
+							}
+						},
+						{
+							text: {
+								query: searchQuery.trim(),
+								path: "description",
+								score: { boost: { value: 5 } }
+							}
+						}
+					]
 				}
 			}
-		];
+		} : null;
 
-		// Step 4: Sort based on sortBy parameter
+		// Aggregation pipeline to group tasks by date
+		const aggregationPipeline: any[] = [];
+
+		// Step 1: If search query exists, use Atlas Search
+		if (searchStage) {
+			aggregationPipeline.push(searchStage);
+
+			// Add search score
+			aggregationPipeline.push({
+				$addFields: {
+					searchScore: { $meta: "searchScore" }
+				}
+			});
+		}
+
+		// Step 2: Filter completed tasks and apply other filters
+		aggregationPipeline.push({ $match: matchFilter });
+
+		// Step 3: Sort by completedTime ascending (oldest first within each day)
+		// Skip this if searching - keep search relevance order
+		if (!searchStage) {
+			aggregationPipeline.push({ $sort: { completedTime: 1 } });
+		}
+
+		// Step 4: Group tasks by formatted date string (in user's timezone)
+		aggregationPipeline.push({
+			$group: {
+				_id: {
+					$dateToString: {
+						format: "%B %d, %Y",
+						date: "$completedTime",
+						timezone: timezone
+					}
+				},
+				completedTasksForDay: { $push: "$$ROOT" },
+				firstCompletedTime: { $first: "$completedTime" },
+				taskCount: { $sum: 1 },
+				// Add day score for search relevance (sum of all task scores in this day)
+				dayTasksTotalSearchScore: searchStage ? { $sum: "$searchScore" } : { $sum: 0 }
+			}
+		});
+
+		// Step 5: Sort based on sortBy parameter
 		if (sortBy === 'Newest') {
 			aggregationPipeline.push({ $sort: { firstCompletedTime: -1 } });
 		} else if (sortBy === 'Oldest') {
@@ -117,19 +179,23 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			aggregationPipeline.push({ $sort: { taskCount: -1 } });
 		} else if (sortBy === 'Completed Tasks: Least-Most') {
 			aggregationPipeline.push({ $sort: { taskCount: 1 } });
+		} else if (sortBy === 'Most Relevant' && searchStage) {
+			// Sort by day score (sum of all task scores in the day)
+			aggregationPipeline.push({ $sort: { dayTasksTotalSearchScore: -1 } });
 		}
 
-		// Step 5: Paginate days (not tasks)
+		// Step 6: Paginate days (not tasks)
 		aggregationPipeline.push(
 			{ $skip: page * limit },
 			{ $limit: limit }
 		);
 
-		// Step 6: Format output
+		// Step 7: Format output
 		aggregationPipeline.push({
 			$project: {
 				dateStr: "$_id",
 				completedTasksForDay: 1,
+				dayTasksTotalSearchScore: 1,
 				_id: 0
 			}
 		});
@@ -145,25 +211,45 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		// Build ancestor data for all tasks
 		const { ancestorTasksById } = await buildAncestorData(allTasksInPage);
 
-		// Get total count of all tasks matching the filters
-		const totalTasks = await Task.countDocuments(matchFilter);
+		// Build count pipelines (must include search stage if it exists)
+		const countDaysPipeline: any[] = [];
+		const countTasksPipeline: any[] = [];
 
-		// Get total number of days with completed tasks (for totalPages calculation)
-		const totalDaysResult = await Task.aggregate([
-			{ $match: matchFilter },
-			{
-				$group: {
-					_id: {
-						$dateToString: {
-							format: "%B %d, %Y",
-							date: "$completedTime"
-						}
+		// Add search stage to both count pipelines if it exists
+		if (searchStage) {
+			countDaysPipeline.push(searchStage);
+			countTasksPipeline.push(searchStage);
+		}
+
+		// Add match filter to both
+		countDaysPipeline.push({ $match: matchFilter });
+		countTasksPipeline.push({ $match: matchFilter });
+
+		// Count total tasks (before grouping)
+		countTasksPipeline.push({ $count: "total" });
+
+		// Count total days (after grouping by date)
+		countDaysPipeline.push({
+			$group: {
+				_id: {
+					$dateToString: {
+						format: "%B %d, %Y",
+						date: "$completedTime",
+						timezone: timezone
 					}
 				}
 			}
+		});
+		countDaysPipeline.push({ $count: "total" });
+
+		// Run both counts in parallel with main query results
+		const [totalTasksResult, totalDaysResult] = await Promise.all([
+			Task.aggregate(countTasksPipeline),
+			Task.aggregate(countDaysPipeline)
 		]);
 
-		const totalDays = totalDaysResult.length;
+		const totalTasks = totalTasksResult[0]?.total || 0;
+		const totalDays = totalDaysResult[0]?.total || 0;
 		const totalPages = Math.ceil(totalDays / limit);
 
 		// Calculate hasMore by checking if there's another day after this page
