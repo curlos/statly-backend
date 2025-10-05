@@ -13,7 +13,7 @@ const router = express.Router();
 router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 	try {
 		const page = parseInt(req.query.page as string) || 0;
-		const limit = parseInt(req.query.limit as string) || 7;
+		const limit = parseInt(req.query['max-days-per-page'] as string) || 7;
 		const projectId = req.query.projectId as string;
 		const taskId = req.query.taskId as string;
 		const timezone = (req.query.timezone as string) || 'UTC';
