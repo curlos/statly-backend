@@ -1,11 +1,11 @@
 import express from 'express';
-import { Task, TaskTickTick } from '../../models/TaskModel'
+import { Task, TaskTickTick, TaskTodoist } from '../../models/TaskModel'
 import { verifyToken } from '../../middleware/verifyToken';
 import { getJsonData } from '../../utils/mongoose.utils';
 import SyncMetadata from '../../models/SyncMetadataModel';
 import { CustomRequest } from '../../interfaces/CustomRequest';
 import { fetchAllTickTickTasks } from '../../utils/ticktick.utils';
-import { buildAncestorData } from '../../utils/task.utils';
+import { buildAncestorData, getAllTodoistTasks } from '../../utils/task.utils';
 
 const router = express.Router();
 
@@ -343,6 +343,97 @@ router.get('/sync-metadata', verifyToken, async (req, res) => {
 	} catch (error) {
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching sync metadata.',
+		});
+	}
+});
+
+router.post('/sync-todoist-tasks', verifyToken, async (req: CustomRequest, res) => {
+	try {
+		const allTasks = await getAllTodoistTasks();
+
+		// Step 1: Build tasksById map for quick parent lookups
+		const tasksById: Record<string, any> = {};
+		allTasks.forEach((task: any) => {
+			tasksById[task.id] = task;
+		});
+
+		// Step 2: Build ancestor data with caching
+		const ancestorCache: Record<string, string[]> = {};
+
+		const buildAncestorChain = (taskId: string, parentId: string | undefined): string[] => {
+			// Include the task itself in its ancestor chain
+			if (!parentId) {
+				return [taskId];
+			}
+
+			// Check cache first (reuse for siblings with same parent)
+			if (ancestorCache[parentId]) {
+				return [taskId, ...ancestorCache[parentId]];
+			}
+
+			// Walk up the parent chain
+			const chain = [taskId];
+			let currentParentId: string | undefined = parentId;
+
+			while (currentParentId && tasksById[currentParentId]) {
+				chain.push(currentParentId);
+				currentParentId = tasksById[currentParentId].v2_parent_id || tasksById[currentParentId].parent_id;
+			}
+
+			// Cache the chain for this parent (excluding the task itself)
+			ancestorCache[parentId] = chain.slice(1);
+
+			return chain;
+		};
+
+		const bulkOps = [];
+
+		for (const task of allTasks) {
+			// Build ancestor data
+			const parentId = task.v2_parent_id || task.parent_id;
+			const ancestorIds = buildAncestorChain(task.id, parentId);
+			const ancestorSet: Record<string, boolean> = {};
+			ancestorIds.forEach((id: string) => {
+				ancestorSet[id] = true;
+			});
+
+			// Normalize the Todoist task to match our schema
+			const normalizedTask = {
+				...task,
+				id: task.id,
+				taskSource: 'todoist',
+				title: task.content || task.title || '',
+				description: task.description || '',
+				projectId: task.v2_project_id || task.project_id,
+				parentId: parentId,
+				completedTime: task.completed_at ? new Date(task.completed_at) : null,
+				ancestorIds,
+				ancestorSet,
+			};
+
+			// Add upsert operation to bulk array
+			bulkOps.push({
+				updateOne: {
+					filter: { id: task.id },
+					update: { $set: normalizedTask },
+					upsert: true,
+				},
+			});
+		}
+
+		// Execute all operations in a single bulkWrite
+		const result = await TaskTodoist.bulkWrite(bulkOps);
+
+		res.status(200).json({
+			message: 'Todoist tasks synced successfully',
+			upsertedCount: result.upsertedCount,
+			modifiedCount: result.modifiedCount,
+			matchedCount: result.matchedCount,
+			totalOperations: bulkOps.length,
+		});
+	} catch (error) {
+		res.status(500).json({
+			message: error instanceof Error ? error.message : 'An error occurred syncing Todoist tasks.',
 		});
 	}
 });

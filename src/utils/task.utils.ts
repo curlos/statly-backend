@@ -1,4 +1,5 @@
 import { Task } from '../models/TaskModel';
+import { getJsonData } from './mongoose.utils';
 
 // Helper function to build ancestor data for tasks (optimized with pre-computed ancestorIds)
 export async function buildAncestorData(tasks: any[]) {
@@ -33,4 +34,77 @@ export async function buildAncestorData(tasks: any[]) {
 	});
 
 	return { ancestorTasksById };
+}
+
+// Helper function to get tasks that only appear in API v1 (not in sync)
+const getTodoistTasksThatOnlyAppearInAPIV1 = (todoistAllSyncTasksById: any, allNewAPIV1Tasks: any[]) => {
+	const syncTasksByV2Id: Record<string, any> = {};
+
+	for (const key in todoistAllSyncTasksById) {
+		const entry = todoistAllSyncTasksById[key];
+		const v2Id = entry.item?.v2_id;
+
+		if (v2Id) {
+			syncTasksByV2Id[v2Id] = entry;
+		}
+	}
+
+	const apiV1TasksThatAreNotInSync = allNewAPIV1Tasks.filter((task: any) => {
+		return !syncTasksByV2Id[task.id]
+	})
+
+	return apiV1TasksThatAreNotInSync
+}
+
+// Get all Todoist tasks (combining sync and API v1 data)
+export async function getAllTodoistTasks(useNewSyncDataTodoistData: boolean = true) {
+	// Personal
+	const todoistPersonalCompletedTasksById = useNewSyncDataTodoistData
+		? await getJsonData('sync-2025-todoist-personal-completed-tasks-by-id')
+		: await getJsonData('todoist-personal-completed-tasks-by-id');
+	const todoistPersonalActiveTasksById = useNewSyncDataTodoistData
+		? await getJsonData('sync-2025-todoist-personal-active-tasks-by-id')
+		: await getJsonData('todoist-personal-active-tasks-by-id');
+
+	// Q Link
+	const todoistQLinkCompletedTasksById = useNewSyncDataTodoistData
+		? await getJsonData('sync-2025-todoist-qlink-completed-tasks-by-id')
+		: await getJsonData('todoist-qlink-completed-tasks-by-id');
+	const todoistQLinkActiveTasksById = useNewSyncDataTodoistData
+		? await getJsonData('sync-2025-todoist-qlink-active-tasks-by-id')
+		: await getJsonData('todoist-qlink-active-tasks-by-id');
+
+	const todoistAllSyncTasksById = {
+		...todoistPersonalCompletedTasksById,
+		...todoistPersonalActiveTasksById,
+		...todoistQLinkCompletedTasksById,
+		...todoistQLinkActiveTasksById,
+	};
+
+	const api_v1_todoist_all_personal_completed_tasks_by_id = await getJsonData('api_v1_todoist_all_personal_completed_tasks_by_id')
+	const api_v1_todoist_all_personal_active_tasks_by_id = await getJsonData('api_v1_todoist_all_personal_active_tasks_by_id')
+	const api_v1_todoist_all_work_completed_tasks_by_id = await getJsonData('api_v1_todoist_all_work_completed_tasks_by_id')
+	const api_v1_todoist_all_work_active_tasks_by_id = await getJsonData('api_v1_todoist_all_work_active_tasks_by_id')
+
+	const todoistAllApiV1TasksById = {
+		...api_v1_todoist_all_personal_completed_tasks_by_id,
+		...api_v1_todoist_all_personal_active_tasks_by_id,
+		...api_v1_todoist_all_work_completed_tasks_by_id,
+		...api_v1_todoist_all_work_active_tasks_by_id
+	}
+
+	const allSyncTasksWithOnlyItem = Object.values(todoistAllSyncTasksById).map((task: any) => task.item)
+	const allSyncTasksThatDoNotAppearInAPIV1 = allSyncTasksWithOnlyItem.filter((task) => {
+		const task_v2_id = task["v2_id"]
+
+		// @ts-ignore
+		return !todoistAllApiV1TasksById[task_v2_id]
+	});
+	const allNewAPIV1Tasks = Object.values(todoistAllApiV1TasksById)
+	const allTasks = [
+		...allSyncTasksThatDoNotAppearInAPIV1,
+		...allNewAPIV1Tasks
+	]
+
+	return allTasks;
 }
