@@ -1,5 +1,5 @@
 import express from 'express';
-import { Task, TaskTickTick } from '../../models/taskModel'
+import { Task, TaskTickTick } from '../../models/TaskModel'
 import { verifyToken } from '../../middleware/verifyToken';
 import { getJsonData } from '../../utils/mongoose.utils';
 import SyncMetadata from '../../models/SyncMetadataModel';
@@ -7,22 +7,6 @@ import { CustomRequest } from '../../interfaces/CustomRequest';
 import { fetchAllTickTickTasks } from '../../utils/ticktick.utils';
 
 const router = express.Router();
-
-// Helper function to find all descendants of a task
-async function findDescendants(taskId: string) {
-	const descendants: any[] = [];
-
-	async function findChildren(parentId: string) {
-		const children = await Task.find({ parentId }).lean();
-		for (const child of children) {
-			descendants.push(child);
-			await findChildren(child.id);
-		}
-	}
-
-	await findChildren(taskId);
-	return descendants;
-}
 
 // Helper function to build ancestor data for tasks (optimized with pre-computed ancestorIds)
 async function buildAncestorData(tasks: any[]) {
@@ -58,56 +42,6 @@ async function buildAncestorData(tasks: any[]) {
 
 	return { ancestorTasksById };
 }
-
-router.get('/', verifyToken, async (req, res) => {
-	try {
-		const page = parseInt(req.query.page as string) || 0;
-		const limit = parseInt(req.query.limit as string) || 50;
-		const taskId = req.query.taskId as string;
-		const skip = page * limit;
-
-		// Build filter based on taskId if provided
-		let filter = {};
-		if (taskId) {
-			// Find all descendants of the specified taskId using aggregation
-			const descendants = await findDescendants(taskId);
-			const descendantIds = descendants.map((d: any) => d.id);
-
-			// Include the taskId itself and all its descendants
-			filter = { id: { $in: [taskId, ...descendantIds] } };
-		}
-
-		// Get total count for pagination metadata
-		const total = await Task.countDocuments(filter);
-		const totalPages = Math.ceil(total / limit);
-
-		// Fetch paginated tasks sorted by completedTime descending (newest first)
-		const tasks = await Task.find(filter)
-			.sort({ completedTime: -1 })
-			.skip(skip)
-			.limit(limit)
-			.lean(); // Use lean() for better performance when we don't need Mongoose documents
-
-		// Build ancestor data for all tasks
-		const { ancestorTasksById } = await buildAncestorData(tasks);
-
-		const hasMore = skip + tasks.length < total;
-
-		res.status(200).json({
-			data: tasks,
-			ancestorTasksById,
-			total,
-			totalPages,
-			page,
-			limit,
-			hasMore,
-		});
-	} catch (error) {
-		res.status(500).json({
-			message: error instanceof Error ? error.message : 'An error occurred fetching tasks.',
-		});
-	}
-});
 
 // GET /days-with-completed-tasks - Returns completed tasks grouped by date with pagination
 router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
