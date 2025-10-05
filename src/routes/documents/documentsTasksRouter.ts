@@ -21,6 +21,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		const startDate = req.query['start-date'] as string;
 		const endDate = req.query['end-date'] as string;
 		const projectsTickTick = req.query['projects-ticktick'] as string;
+		const toDoListApps = req.query['to-do-list-apps'] as string;
 
 		// Build match filter
 		const matchFilter: any = {
@@ -57,6 +58,12 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		// Filter by taskId (includes task itself + all descendants)
 		if (taskId) {
 			matchFilter[`ancestorSet.${taskId}`] = true;
+		}
+
+		// Filter by to-do list app (taskSource)
+		if (toDoListApps) {
+			const appSources = toDoListApps.split(',').map((app: string) => app.toLowerCase());
+			matchFilter.taskSource = { $in: appSources };
 		}
 
 		// Aggregation pipeline to group tasks by date
