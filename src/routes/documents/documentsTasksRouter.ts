@@ -20,6 +20,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		const sortBy = (req.query['sort-by'] as string) || 'Newest';
 		const startDate = req.query['start-date'] as string;
 		const endDate = req.query['end-date'] as string;
+		const projectsTickTick = req.query['projects-ticktick'] as string;
 
 		// Build match filter
 		const matchFilter: any = {
@@ -45,6 +46,12 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		// Add optional filters
 		if (projectId) {
 			matchFilter.projectId = projectId;
+		}
+
+		// Filter by multiple TickTick project IDs
+		if (projectsTickTick) {
+			const projectIds = projectsTickTick.split(',');
+			matchFilter.projectId = { $in: projectIds };
 		}
 
 		// Filter by taskId (includes task itself + all descendants)
