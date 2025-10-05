@@ -18,11 +18,29 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		const taskId = req.query.taskId as string;
 		const timezone = (req.query.timezone as string) || 'UTC';
 		const sortBy = (req.query['sort-by'] as string) || 'Newest';
+		const startDate = req.query['start-date'] as string;
+		const endDate = req.query['end-date'] as string;
 
 		// Build match filter
 		const matchFilter: any = {
 			completedTime: { $exists: true, $ne: null }
 		};
+
+		// Add date range filter
+		if (startDate && endDate) {
+			const startDateObj = new Date(startDate);
+			const endDateObj = new Date(endDate);
+
+			// Set start to beginning of day and end to end of day
+			startDateObj.setHours(0, 0, 0, 0);
+			endDateObj.setHours(23, 59, 59, 999);
+
+			matchFilter.completedTime = {
+				...matchFilter.completedTime,
+				$gte: startDateObj,
+				$lte: endDateObj
+			};
+		}
 
 		// Add optional filters
 		if (projectId) {
