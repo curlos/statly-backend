@@ -21,6 +21,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		const startDate = req.query['start-date'] as string;
 		const endDate = req.query['end-date'] as string;
 		const projectsTickTick = req.query['projects-ticktick'] as string;
+		const projectsTodoist = req.query['projects-todoist'] as string;
 		const toDoListApps = req.query['to-do-list-apps'] as string;
 
 		// Build match filter
@@ -49,10 +50,16 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			matchFilter.projectId = projectId;
 		}
 
-		// Filter by multiple TickTick project IDs
-		if (projectsTickTick) {
-			const projectIds = projectsTickTick.split(',');
-			matchFilter.projectId = { $in: projectIds };
+		// Filter by multiple project IDs (TickTick and/or Todoist)
+		if (projectsTickTick || projectsTodoist) {
+			const allProjectIds = [];
+			if (projectsTickTick) {
+				allProjectIds.push(...projectsTickTick.split(','));
+			}
+			if (projectsTodoist) {
+				allProjectIds.push(...projectsTodoist.split(','));
+			}
+			matchFilter.projectId = { $in: allProjectIds };
 		}
 
 		// Filter by taskId (includes task itself + all descendants)
