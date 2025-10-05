@@ -15,7 +15,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		const page = parseInt(req.query.page as string) || 0;
 		const limit = parseInt(req.query['max-days-per-page'] as string) || 7;
 		const projectId = req.query.projectId as string;
-		const taskId = req.query.taskId as string;
+		const taskId = (req.query['task-id'] as string);
 		const timezone = (req.query.timezone as string) || 'UTC';
 		const sortBy = (req.query['sort-by'] as string) || 'Newest';
 		const startDate = req.query['start-date'] as string;
@@ -23,6 +23,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		const projectsTickTick = req.query['projects-ticktick'] as string;
 		const projectsTodoist = req.query['projects-todoist'] as string;
 		const toDoListApps = req.query['to-do-list-apps'] as string;
+		const taskIdIncludeSubtasks = req.query['task-id-include-completed-tasks-from-subtasks'] === 'true';
 
 		// Build match filter
 		const matchFilter: any = {
@@ -62,9 +63,18 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			matchFilter.projectId = { $in: allProjectIds };
 		}
 
-		// Filter by taskId (includes task itself + all descendants)
+		// Filter by taskId
 		if (taskId) {
-			matchFilter[`ancestorSet.${taskId}`] = true;
+			if (taskIdIncludeSubtasks) {
+				// Include task itself + all descendants using ancestorSet
+				matchFilter[`ancestorSet.${taskId}`] = true;
+			} else {
+				// Only include tasks where id matches taskId OR parentId matches taskId
+				matchFilter.$or = [
+					{ id: taskId },
+					{ parentId: taskId }
+				];
+			}
 		}
 
 		// Filter by to-do list app (taskSource)
