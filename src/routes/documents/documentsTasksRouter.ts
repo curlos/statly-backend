@@ -71,8 +71,8 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			// Step 1: Filter completed tasks (and optional projectId filter)
 			{ $match: matchFilter },
 
-			// Step 2: Sort by completedTime descending (uses index)
-			{ $sort: { completedTime: -1 } },
+			// Step 2: Sort by completedTime ascending (oldest first within each day)
+			{ $sort: { completedTime: 1 } },
 
 			// Step 3: Group tasks by formatted date string (in user's timezone)
 			{
