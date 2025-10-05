@@ -17,6 +17,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		const projectId = req.query.projectId as string;
 		const taskId = req.query.taskId as string;
 		const timezone = (req.query.timezone as string) || 'UTC';
+		const sortBy = (req.query['sort-by'] as string) || 'Newest';
 
 		// Build match filter
 		const matchFilter: any = {
@@ -34,7 +35,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		}
 
 		// Aggregation pipeline to group tasks by date
-		const result = await Task.aggregate([
+		const aggregationPipeline: any[] = [
 			// Step 1: Filter completed tasks (and optional projectId filter)
 			{ $match: matchFilter },
 
@@ -52,26 +53,39 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 						}
 					},
 					completedTasksForDay: { $push: "$$ROOT" },
-					firstCompletedTime: { $first: "$completedTime" }
-				}
-			},
-
-			// Step 4: Sort grouped days by date descending (newest first)
-			{ $sort: { firstCompletedTime: -1 } },
-
-			// Step 5: Paginate days (not tasks)
-			{ $skip: page * limit },
-			{ $limit: limit },
-
-			// Step 6: Format output
-			{
-				$project: {
-					dateStr: "$_id",
-					completedTasksForDay: 1,
-					_id: 0
+					firstCompletedTime: { $first: "$completedTime" },
+					taskCount: { $sum: 1 }
 				}
 			}
-		]);
+		];
+
+		// Step 4: Sort based on sortBy parameter
+		if (sortBy === 'Newest') {
+			aggregationPipeline.push({ $sort: { firstCompletedTime: -1 } });
+		} else if (sortBy === 'Oldest') {
+			aggregationPipeline.push({ $sort: { firstCompletedTime: 1 } });
+		} else if (sortBy === 'Completed Tasks: Most-Least') {
+			aggregationPipeline.push({ $sort: { taskCount: -1 } });
+		} else if (sortBy === 'Completed Tasks: Least-Most') {
+			aggregationPipeline.push({ $sort: { taskCount: 1 } });
+		}
+
+		// Step 5: Paginate days (not tasks)
+		aggregationPipeline.push(
+			{ $skip: page * limit },
+			{ $limit: limit }
+		);
+
+		// Step 6: Format output
+		aggregationPipeline.push({
+			$project: {
+				dateStr: "$_id",
+				completedTasksForDay: 1,
+				_id: 0
+			}
+		});
+
+		const result = await Task.aggregate(aggregationPipeline);
 
 		// Extract all tasks from the paginated days
 		const allTasksInPage: any[] = [];
