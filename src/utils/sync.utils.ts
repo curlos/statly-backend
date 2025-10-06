@@ -1,8 +1,9 @@
 import SyncMetadata from '../models/SyncMetadataModel';
 import { TaskTickTick } from '../models/TaskModel';
-import { ProjectTickTick } from '../models/projectModel';
+import { ProjectTickTick, ProjectTodoist } from '../models/projectModel';
 import { ProjectGroupTickTick } from '../models/projectGroupModel';
 import { fetchAllTickTickTasks, fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from './ticktick.utils';
+import { getAllTodoistProjects } from './task.utils';
 
 export async function syncTickTickTasks(userId: string) {
 	// Get or create sync metadata
@@ -238,6 +239,73 @@ export async function syncTickTickProjectGroups(userId: string) {
 
 	return {
 		message: 'Project groups synced successfully',
+		upsertedCount: result.upsertedCount,
+		modifiedCount: result.modifiedCount,
+		matchedCount: result.matchedCount,
+		totalOperations: bulkOps.length,
+		lastSyncTime: syncMetadata.lastSyncTime,
+	};
+}
+
+export async function syncTodoistProjects(userId: string) {
+	// Get or create sync metadata for todoist projects
+	let syncMetadata = await SyncMetadata.findOne({ syncType: 'todoist_projects' });
+
+	if (!syncMetadata) {
+		syncMetadata = new SyncMetadata({
+			userId,
+			syncType: 'todoist_projects',
+			lastSyncTime: new Date(0), // Set to epoch so all projects are synced initially
+		});
+	}
+
+	const todoistProjects = await getAllTodoistProjects();
+
+	const bulkOps = [];
+
+	for (const project of todoistProjects) {
+		// Normalize Todoist project to match schema (convert snake_case to camelCase)
+		const normalizedProject = {
+			// Base fields
+			id: project.id,
+			name: project.name,
+			color: project.color,
+			parentId: project.parent_id,
+
+			// Todoist-specific fields
+			description: project.description || '',
+			order: project.order,
+			isCollapsed: project.is_collapsed,
+			isShared: project.is_shared,
+			isFavorite: project.is_favorite,
+			isArchived: project.is_archived,
+			canAssignTasks: project.can_assign_tasks,
+			viewStyle: project.view_style,
+			isInboxProject: project.is_inbox_project,
+			workspaceId: project.workspace_id,
+			folderId: project.folder_id,
+			createdAt: project.created_at ? new Date(project.created_at) : null,
+			updatedAt: project.updated_at ? new Date(project.updated_at) : null,
+		};
+
+		bulkOps.push({
+			updateOne: {
+				filter: { id: project.id },
+				update: { $set: normalizedProject },
+				upsert: true,
+			},
+		});
+	}
+
+	// Execute all operations in a single bulkWrite
+	const result = await ProjectTodoist.bulkWrite(bulkOps);
+
+	// Update sync metadata with current time
+	syncMetadata.lastSyncTime = new Date();
+	await syncMetadata.save();
+
+	return {
+		message: 'Todoist projects synced successfully',
 		upsertedCount: result.upsertedCount,
 		modifiedCount: result.modifiedCount,
 		matchedCount: result.matchedCount,

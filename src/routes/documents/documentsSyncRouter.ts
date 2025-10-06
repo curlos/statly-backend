@@ -4,7 +4,7 @@ import { verifyToken } from '../../middleware/verifyToken';
 import SyncMetadata from '../../models/SyncMetadataModel';
 import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
-import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups } from '../../utils/sync.utils';
+import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects } from '../../utils/sync.utils';
 
 const router = express.Router();
 
@@ -151,6 +151,17 @@ router.post('/ticktick-project-groups', verifyToken, async (req: CustomRequest, 
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing TickTick project groups.',
+        });
+    }
+});
+
+router.post('/todoist-projects', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        const result = await syncTodoistProjects(req.user!.userId);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing Todoist projects.',
         });
     }
 });

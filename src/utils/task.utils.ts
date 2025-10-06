@@ -108,3 +108,22 @@ export async function getAllTodoistTasks(useNewSyncDataTodoistData: boolean = tr
 
 	return allTasks;
 }
+
+export async function getAllTodoistProjects() {
+	// Personal
+	const todoistPersonalActiveProjects = await getJsonData('api_v1_todoist_all_personal_active_projects');
+	const todoistPersonalArchivedProjects = await getJsonData('api_v1_todoist_all_personal_archived_projects');
+
+	// Work
+	const todoistWorkActiveProjects = await getJsonData('api_v1_todoist_all_work_active_projects');
+	const todoistWorkArchivedProjects = await getJsonData('api_v1_todoist_all_work_archived_projects');
+
+	const allProjects = [
+		...todoistPersonalActiveProjects,
+		...todoistPersonalArchivedProjects,
+		...todoistWorkActiveProjects,
+		...todoistWorkArchivedProjects
+	];
+
+	return allProjects;
+}
