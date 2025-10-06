@@ -13,6 +13,7 @@ import oldFocusAppsRouter from './routes/oldFocusAppsRouter';
 import documentsTickTickRouter from './routes/documents/documentsTickTickRouter';
 import documentsTasksRouter from './routes/documents/documentsTasksRouter'
 import documentsSyncRouter from './routes/documents/documentsSyncRouter'
+import documentsProjectsRouter from './routes/documents/documentsProjectsRouter'
 
 dotenv.config();
 
@@ -52,14 +53,17 @@ app.use(async (req, res, next) => {
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
-app.use('/ticktick', ticktickRouter);
-app.use('/ticktick', tempRouter);
 app.use('/documents/ticktick', documentsTickTickRouter);
 app.use('/documents/tasks', documentsTasksRouter);
+app.use('/documents/projects', documentsProjectsRouter);
 app.use('/documents/sync', documentsSyncRouter);
-app.use('/old-focus-apps', oldFocusAppsRouter);
 app.use('/users', usersRouter);
 app.use('/user-settings', settingsRouter);
+
+// Old routes
+app.use('/ticktick', ticktickRouter);
+app.use('/ticktick', tempRouter);
+app.use('/old-focus-apps', oldFocusAppsRouter);
 
 app.get('/', (req, res) => {
 	res.send('Hello World!');
