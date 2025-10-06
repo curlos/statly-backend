@@ -15,7 +15,7 @@ import {
 } from '../utils/helpers.utils';
 import { getJsonData, updateLocalJsonData } from '../utils/mongoose.utils';
 import { verifyToken } from '../middleware/verifyToken';
-import { fetchAllTickTickTasks } from '../utils/ticktick.utils';
+import { fetchAllTickTickTasks, fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from '../utils/ticktick.utils';
 
 const router = express.Router();
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
@@ -147,14 +147,8 @@ router.get('/projects', verifyToken, async (req, res) => {
 			return;
 		}
 
-		const projects = await axios.get('https://api.ticktick.com/api/v2/projects', {
-			headers: {
-				Cookie: cookie,
-			},
-		});
-
-		const allTasks = projects.data;
-		res.status(200).json(allTasks);
+		const projects = await fetchAllTickTickProjects();
+		res.status(200).json(projects);
 	} catch (error) {
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
@@ -164,24 +158,7 @@ router.get('/projects', verifyToken, async (req, res) => {
 
 router.get('/project-groups', verifyToken, async (req, res) => {
 	try {
-		// TODO: Should try to store this in MongoDB later. I don't think I've done it yet.
-		// if (useLocalData) {
-		// 	const localTasks = await getJsonData('project-groups');
-		// 	res.status(200).json(localTasks);
-		// 	return;
-		// }
-
-		const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
-			headers: {
-				Cookie: cookie,
-				'x-device': JSON.stringify({
-      				platform: 'web'
-				}),
-			},
-		});
-
-		const projectGroups = batchCheckResponse.data.projectGroups;
-
+		const projectGroups = await fetchAllTickTickProjectGroups();
 		res.status(200).json(projectGroups);
 	} catch (error) {
 		res.status(500).json({

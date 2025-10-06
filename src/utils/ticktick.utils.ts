@@ -66,3 +66,31 @@ export async function fetchAllTickTickTasks() {
 
 	return tickTickOneTasks;
 }
+
+export async function fetchAllTickTickProjects() {
+	const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
+		headers: {
+			Cookie: cookie,
+			'x-device': JSON.stringify({
+				platform: 'web'
+			}),
+		},
+	});
+
+	const projects = batchCheckResponse.data.projectProfiles || [];
+	return projects;
+}
+
+export async function fetchAllTickTickProjectGroups() {
+	const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
+		headers: {
+			Cookie: cookie,
+			'x-device': JSON.stringify({
+				platform: 'web'
+			}),
+		},
+	});
+
+	const projectGroups = batchCheckResponse.data.projectGroups || [];
+	return projectGroups;
+}

@@ -3,14 +3,16 @@ import { CustomRequest } from '../../interfaces/CustomRequest';
 import { verifyToken } from '../../middleware/verifyToken';
 import SyncMetadata from '../../models/SyncMetadataModel';
 import { TaskTickTick, TaskTodoist } from '../../models/TaskModel';
+import { ProjectTickTick } from '../../models/projectModel';
+import { ProjectGroupTickTick } from '../../models/projectGroupModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
-import { fetchAllTickTickTasks } from '../../utils/ticktick.utils';
+import { fetchAllTickTickTasks, fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from '../../utils/ticktick.utils';
 
 const router = express.Router();
 
 router.get('/metadata', verifyToken, async (req, res) => {
     try {
-        const syncMetadata = await SyncMetadata.findOne({ syncType: 'tasks' });
+        const syncMetadata = await SyncMetadata.find({})
 
         if (!syncMetadata) {
             return res.status(404).json({
@@ -268,6 +270,113 @@ router.post('/todoist-tasks', verifyToken, async (req: CustomRequest, res) => {
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing Todoist tasks.',
+        });
+    }
+});
+
+router.post('/ticktick-projects', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        // Get or create sync metadata for projects
+        let syncMetadata = await SyncMetadata.findOne({ syncType: 'projects' });
+
+        if (!syncMetadata) {
+            syncMetadata = new SyncMetadata({
+                userId: req.user!.userId,
+                syncType: 'projects',
+                lastSyncTime: new Date(0), // Set to epoch so all projects are synced initially
+            });
+        }
+
+        const lastSyncTime = syncMetadata.lastSyncTime;
+        const tickTickProjects = await fetchAllTickTickProjects();
+
+        const bulkOps = [];
+
+        for (const project of tickTickProjects) {
+            // Check if project needs updating based on modifiedTime
+            const projectModifiedTime = project.modifiedTime ? new Date(project.modifiedTime) : null;
+            const shouldUpdateProject = !projectModifiedTime || projectModifiedTime >= lastSyncTime;
+
+            if (shouldUpdateProject) {
+                // Add project upsert operation to bulk array
+                bulkOps.push({
+                    updateOne: {
+                        filter: { id: project.id },
+                        update: { $set: project },
+                        upsert: true,
+                    },
+                });
+            }
+        }
+
+        // Execute all operations in a single bulkWrite
+        const result = await ProjectTickTick.bulkWrite(bulkOps);
+
+        // Update sync metadata with current time
+        syncMetadata.lastSyncTime = new Date();
+        await syncMetadata.save();
+
+        res.status(200).json({
+            message: 'Projects synced successfully',
+            upsertedCount: result.upsertedCount,
+            modifiedCount: result.modifiedCount,
+            matchedCount: result.matchedCount,
+            totalOperations: bulkOps.length,
+            lastSyncTime: syncMetadata.lastSyncTime,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing TickTick projects.',
+        });
+    }
+});
+
+router.post('/ticktick-project-groups', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        // Get or create sync metadata for project groups
+        let syncMetadata = await SyncMetadata.findOne({ syncType: 'project_groups' });
+
+        if (!syncMetadata) {
+            syncMetadata = new SyncMetadata({
+                userId: req.user!.userId,
+                syncType: 'project_groups',
+                lastSyncTime: new Date(0),
+            });
+        }
+
+        const tickTickProjectGroups = await fetchAllTickTickProjectGroups();
+
+        const bulkOps = [];
+
+        // Always update all project groups since there's no modifiedTime
+        for (const projectGroup of tickTickProjectGroups) {
+            bulkOps.push({
+                updateOne: {
+                    filter: { id: projectGroup.id },
+                    update: { $set: projectGroup },
+                    upsert: true,
+                },
+            });
+        }
+
+        // Execute all operations in a single bulkWrite
+        const result = await ProjectGroupTickTick.bulkWrite(bulkOps);
+
+        // Update sync metadata with current time
+        syncMetadata.lastSyncTime = new Date();
+        await syncMetadata.save();
+
+        res.status(200).json({
+            message: 'Project groups synced successfully',
+            upsertedCount: result.upsertedCount,
+            modifiedCount: result.modifiedCount,
+            matchedCount: result.matchedCount,
+            totalOperations: bulkOps.length,
+            lastSyncTime: syncMetadata.lastSyncTime,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing TickTick project groups.',
         });
     }
 });
