@@ -12,6 +12,7 @@ import settingsRouter from './routes/userSettingsRouter';
 import oldFocusAppsRouter from './routes/oldFocusAppsRouter';
 import documentsTickTickRouter from './routes/documents/documentsTickTickRouter';
 import documentsTasksRouter from './routes/documents/documentsTasksRouter'
+import documentsSyncRouter from './routes/documents/documentsSyncRouter'
 
 dotenv.config();
 
@@ -55,6 +56,7 @@ app.use('/ticktick', ticktickRouter);
 app.use('/ticktick', tempRouter);
 app.use('/documents/ticktick', documentsTickTickRouter);
 app.use('/documents/tasks', documentsTasksRouter);
+app.use('/documents/sync', documentsSyncRouter);
 app.use('/old-focus-apps', oldFocusAppsRouter);
 app.use('/users', usersRouter);
 app.use('/user-settings', settingsRouter);
