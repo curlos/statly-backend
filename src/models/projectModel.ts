@@ -1,26 +1,45 @@
 import mongoose, { Schema } from 'mongoose';
 
-// TickTick Project Schema
-const ProjectTickTickSchema = new Schema({
+// Base schema with NORMALIZED shared fields for ALL projects (TickTick, Todoist, and Session)
+const BaseProjectSchema = new Schema({
 	id: {
 		type: String,
 		required: true,
 		unique: true,
 		index: true
 	},
+	source: {
+		type: String,
+		required: true,
+		index: true
+	},
 	name: {
 		type: String,
 		required: true
-	},
-	isOwner: {
-		type: Boolean,
-		default: false
 	},
 	color: {
 		type: String
 	},
 	sortOrder: {
 		type: Number
+	},
+	viewMode: {
+		type: String
+	},
+	closed: {
+		type: Boolean,
+		index: true
+	},
+	groupId: {
+		type: String,
+		index: true
+	},
+	parentId: {
+		type: String,
+		index: true
+	},
+	sortType: {
+		type: String
 	},
 	sortOption: {
 		groupBy: {
@@ -30,8 +49,39 @@ const ProjectTickTickSchema = new Schema({
 			type: String
 		}
 	},
-	sortType: {
+	teamId: {
 		type: String
+	},
+	timeline: {
+		range: {
+			type: String
+		},
+		sortType: {
+			type: String
+		},
+		sortOption: {
+			groupBy: {
+				type: String
+			},
+			orderBy: {
+				type: String
+			}
+		}
+	}
+}, {
+	collection: 'projects',
+	discriminatorKey: 'source',
+	timestamps: false
+});
+
+// Create base model
+const Project = mongoose.model('Project', BaseProjectSchema);
+
+// TickTick-specific schema (discriminator for TickTick projects)
+const TickTickProjectSchema = new Schema({
+	isOwner: {
+		type: Boolean,
+		default: false
 	},
 	userCount: {
 		type: Number
@@ -57,46 +107,18 @@ const ProjectTickTickSchema = new Schema({
 	reminderType: {
 		type: Number
 	},
-	closed: {
-		type: Boolean
-	},
 	transferred: {
-		type: String
-	},
-	groupId: {
-		type: String
-	},
-	viewMode: {
 		type: String
 	},
 	notificationOptions: {
 		type: [Schema.Types.Mixed],
 		default: []
 	},
-	teamId: {
-		type: String
-	},
 	permission: {
 		type: String
 	},
 	kind: {
 		type: String
-	},
-	timeline: {
-		range: {
-			type: String
-		},
-		sortType: {
-			type: String
-		},
-		sortOption: {
-			groupBy: {
-				type: String
-			},
-			orderBy: {
-				type: String
-			}
-		}
 	},
 	needAudit: {
 		type: Boolean,
@@ -111,16 +133,66 @@ const ProjectTickTickSchema = new Schema({
 	},
 	teamMemberPermission: {
 		type: String
-	},
-	source: {
-		type: Number
 	}
-}, {
-	collection: 'projects',
-	timestamps: false
 });
 
-const ProjectTickTick = mongoose.model('ProjectTickTick', ProjectTickTickSchema);
+// Todoist-specific schema (discriminator for Todoist projects)
+const TodoistProjectSchema = new Schema({
+	description: {
+		type: String,
+		default: ''
+	},
+	order: {
+		type: Number
+	},
+	isCollapsed: {
+		type: Boolean,
+		default: false
+	},
+	isShared: {
+		type: Boolean,
+		default: false
+	},
+	isFavorite: {
+		type: Boolean,
+		default: false,
+		index: true
+	},
+	isArchived: {
+		type: Boolean,
+		default: false,
+		index: true
+	},
+	canAssignTasks: {
+		type: Boolean,
+		default: false
+	},
+	viewStyle: {
+		type: String
+	},
+	isInboxProject: {
+		type: Boolean,
+		default: false,
+		index: true
+	},
+	workspaceId: {
+		type: String
+	},
+	folderId: {
+		type: String
+	},
+	createdAt: {
+		type: Date,
+		index: true
+	},
+	updatedAt: {
+		type: Date,
+		index: true
+	}
+});
 
-export { ProjectTickTick };
-export default ProjectTickTick;
+const ProjectTickTick = Project.discriminator('ProjectTickTick', TickTickProjectSchema);
+const ProjectTodoist = Project.discriminator('ProjectTodoist', TodoistProjectSchema);
+
+export { Project, ProjectTickTick, ProjectTodoist };
+export default Project;

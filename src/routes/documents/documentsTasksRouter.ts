@@ -76,10 +76,10 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			}
 		}
 
-		// Filter by to-do list app (taskSource)
+		// Filter by to-do list app (source)
 		if (toDoListApps) {
 			const appSources = toDoListApps.split(',').map((app: string) => app.toLowerCase());
-			matchFilter.taskSource = { $in: appSources };
+			matchFilter.source = { $in: appSources };
 		}
 
 		// Build search stage if query exists (reusable for all pipelines)

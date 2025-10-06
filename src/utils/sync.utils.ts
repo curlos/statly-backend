@@ -72,7 +72,6 @@ export async function syncTickTickTasks(userId: string) {
 			// Normalize the FULL task
 			const normalizedFullTask = {
 				...task,
-				taskSource: 'ticktick',
 				taskType: 'full',
 				title: task.title,
 				description: task.desc || task.description || '',
@@ -108,7 +107,6 @@ export async function syncTickTickTasks(userId: string) {
 					// Normalize item task
 					const normalizedItemTask = {
 						...item,
-						taskSource: 'ticktick',
 						taskType: 'item',
 						title: item.title,
 						description: '',

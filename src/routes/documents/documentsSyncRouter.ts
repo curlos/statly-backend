@@ -97,7 +97,6 @@ router.post('/todoist-tasks', verifyToken, async (req: CustomRequest, res) => {
             const normalizedTask = {
                 ...task,
                 id: task.id,
-                taskSource: 'todoist',
                 title: task.content || task.title || '',
                 description: task.description || '',
                 projectId: task.v2_project_id || task.project_id,

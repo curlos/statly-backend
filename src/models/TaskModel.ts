@@ -8,10 +8,9 @@ const BaseTaskSchema = new Schema({
 		unique: true,
 		index: true
 	},
-	taskSource: {
+	source: {
 		type: String,
 		required: true,
-		enum: ['ticktick', 'todoist'],
 		index: true
 	},
 	title: {
@@ -51,7 +50,7 @@ const BaseTaskSchema = new Schema({
 	}
 }, {
 	collection: 'tasks',
-	discriminatorKey: 'taskSource',
+	discriminatorKey: 'source',
 	timestamps: false
 });
 
@@ -182,8 +181,8 @@ const TodoistTaskSchema = new Schema({
 });
 
 // Create discriminators
-const TaskTickTick = Task.discriminator('ticktick', TickTickTaskSchema);
-const TaskTodoist = Task.discriminator('todoist', TodoistTaskSchema);
+const TaskTickTick = Task.discriminator('TaskTickTick', TickTickTaskSchema);
+const TaskTodoist = Task.discriminator('TaskTodoist', TodoistTaskSchema);
 
 export { Task, TaskTickTick, TaskTodoist };
 export default Task;
