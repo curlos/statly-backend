@@ -50,7 +50,8 @@ router.post('/todoist-tasks', verifyToken, async (req: CustomRequest, res) => {
         // Step 1: Build tasksById map for quick parent lookups
         const tasksById: Record<string, any> = {};
         allTasks.forEach((task: any) => {
-            tasksById[task.id] = task;
+            const taskId = task.v2_id || task.id
+            tasksById[taskId] = task;
         });
 
         // Step 2: Build ancestor data with caching
@@ -86,8 +87,9 @@ router.post('/todoist-tasks', verifyToken, async (req: CustomRequest, res) => {
 
         for (const task of allTasks) {
             // Build ancestor data
+            const taskId = task.v2_id || task.id
             const parentId = task.v2_parent_id || task.parent_id;
-            const ancestorIds = buildAncestorChain(task.id, parentId);
+            const ancestorIds = buildAncestorChain(taskId, parentId);
             const ancestorSet: Record<string, boolean> = {};
             ancestorIds.forEach((id: string) => {
                 ancestorSet[id] = true;
@@ -96,7 +98,7 @@ router.post('/todoist-tasks', verifyToken, async (req: CustomRequest, res) => {
             // Normalize the Todoist task to match our schema
             const normalizedTask = {
                 ...task,
-                id: task.id,
+                id: taskId,
                 title: task.content || task.title || '',
                 description: task.description || '',
                 projectId: task.v2_project_id || task.project_id,
@@ -109,7 +111,7 @@ router.post('/todoist-tasks', verifyToken, async (req: CustomRequest, res) => {
             // Add upsert operation to bulk array
             bulkOps.push({
                 updateOne: {
-                    filter: { id: task.id },
+                    filter: { id: taskId },
                     update: { $set: normalizedTask },
                     upsert: true,
                 },
