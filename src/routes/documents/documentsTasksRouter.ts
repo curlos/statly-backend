@@ -78,7 +78,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 
 		// Filter by to-do list app (source)
 		if (toDoListApps) {
-			const appSources = toDoListApps.split(',').map((app: string) => app.toLowerCase());
+			const appSources = toDoListApps.split(',');
 			matchFilter.source = { $in: appSources };
 		}
 
