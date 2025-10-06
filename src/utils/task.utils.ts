@@ -24,12 +24,13 @@ export async function buildAncestorData(tasks: any[]) {
 	}).lean();
 
 	// Step 3: Build ancestorTasksById map
-	const ancestorTasksById: Record<string, { id: string; title: string; parentId: string | null; }> = {};
+	const ancestorTasksById: Record<string, { id: string; title: string; parentId: string | null; ancestorIds: Array<string> }> = {};
 	ancestorTasks.forEach(task => {
 		ancestorTasksById[task.id] = {
 			id: task.id,
 			title: task.title,
-			parentId: task.parentId ?? null
+			parentId: task.parentId ?? null,
+			ancestorIds: task.ancestorIds
 		};
 	});
 
