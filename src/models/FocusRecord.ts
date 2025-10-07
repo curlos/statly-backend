@@ -22,6 +22,10 @@ const FocusRecordTaskSchema = new Schema({
 		type: Date,
 		required: true,
 	},
+	duration: {
+		type: Number,
+		required: true,
+	},
 }, { _id: false }); // Disable _id for embedded documents
 
 // Base schema with shared fields for ALL focus records
