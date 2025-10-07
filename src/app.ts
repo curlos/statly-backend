@@ -10,7 +10,7 @@ import tempRouter from './routes/tempRouter';
 import usersRouter from './routes/usersRouter';
 import settingsRouter from './routes/userSettingsRouter';
 import oldFocusAppsRouter from './routes/oldFocusAppsRouter';
-import documentsTickTickRouter from './routes/documents/documentsTickTickRouter';
+import documentsFocusRecordsRouter from './routes/documents/documentsFocusRecordsRouter';
 import documentsTasksRouter from './routes/documents/documentsTasksRouter'
 import documentsSyncRouter from './routes/documents/documentsSyncRouter'
 import documentsProjectsRouter from './routes/documents/documentsProjectsRouter'
@@ -53,7 +53,7 @@ app.use(async (req, res, next) => {
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
-app.use('/documents/ticktick', documentsTickTickRouter);
+app.use('/documents/focus-records', documentsFocusRecordsRouter);
 app.use('/documents/tasks', documentsTasksRouter);
 app.use('/documents/projects', documentsProjectsRouter);
 app.use('/documents/sync', documentsSyncRouter);

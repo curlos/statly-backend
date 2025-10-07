@@ -3,8 +3,10 @@ import { CustomRequest } from '../../interfaces/CustomRequest';
 import { verifyToken } from '../../middleware/verifyToken';
 import SyncMetadata from '../../models/SyncMetadataModel';
 import { TaskTodoist } from '../../models/TaskModel';
+import { FocusRecordTickTick } from '../../models/FocusRecord';
 import { getAllTodoistTasks } from '../../utils/task.utils';
 import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects } from '../../utils/sync.utils';
+import { fetchTickTickFocusRecords } from '../../utils/focus.utils';
 
 const router = express.Router();
 
@@ -188,6 +190,45 @@ router.post('/ticktick-all', verifyToken, async (req: CustomRequest, res) => {
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing all data.',
+        });
+    }
+});
+
+router.post('/ticktick/focus-records', verifyToken, async (req, res) => {
+    try {
+        const focusRecords = await fetchTickTickFocusRecords();
+
+        const bulkOps = [];
+
+        for (const record of focusRecords) {
+            // Normalize the focus record to match our schema
+            const normalizedRecord = {
+                ...record,
+            };
+
+            // Add upsert operation to bulk array
+            bulkOps.push({
+                updateOne: {
+                    filter: { id: record.id },
+                    update: { $set: normalizedRecord },
+                    upsert: true,
+                },
+            });
+        }
+
+        // Execute all operations in a single bulkWrite
+        const result = await FocusRecordTickTick.bulkWrite(bulkOps);
+
+        res.status(200).json({
+            message: 'TickTick focus records synced successfully',
+            upsertedCount: result.upsertedCount,
+            modifiedCount: result.modifiedCount,
+            matchedCount: result.matchedCount,
+            totalOperations: bulkOps.length,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing TickTick focus records.',
         });
     }
 });
