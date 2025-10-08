@@ -2,6 +2,8 @@ import express from 'express';
 import FocusRecordTickTick from '../../models/FocusRecord';
 import { verifyToken } from '../../middleware/verifyToken';
 import { getJsonData } from '../../utils/mongoose.utils';
+import { Task } from '../../models/TaskModel';
+import { buildAncestorData } from '../../utils/task.utils';
 
 const router = express.Router();
 
@@ -56,8 +58,38 @@ router.get('/', verifyToken, async (req, res) => {
 			const totalDuration = durationResult[0]?.baseDuration[0]?.total || 0;
 			const onlyTasksTotalDuration = durationResult[0]?.tasksDuration[0]?.total || 0;
 
+			// Extract all unique task IDs from focus records
+			const allTaskIds = new Set<string>();
+			focusRecords.forEach((record: any) => {
+				if (record.tasks && Array.isArray(record.tasks)) {
+					record.tasks.forEach((task: any) => {
+						if (task.taskId) {
+							allTaskIds.add(task.taskId);
+						}
+					});
+				}
+			});
+
+			// Fetch full task documents to get ancestorIds
+			const tasksWithAncestors = await Task.find({ id: { $in: Array.from(allTaskIds) } }).lean();
+
+			// Build ancestor data
+			const { ancestorTasksById } = await buildAncestorData(tasksWithAncestors);
+
+			// Add the child tasks themselves to the map
+			tasksWithAncestors.forEach((task: any) => {
+				ancestorTasksById[task.id] = {
+					id: task.id,
+					title: task.title,
+					parentId: task.parentId ?? null,
+					ancestorIds: task.ancestorIds,
+					projectId: task.projectId ?? null
+				};
+			});
+
 			return res.status(200).json({
 				data: focusRecords,
+				ancestorTasksById,
 				total,
 				totalPages,
 				page,
