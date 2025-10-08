@@ -87,8 +87,80 @@ router.get('/', verifyToken, async (req, res) => {
 				};
 			});
 
+			// Add completed tasks to each focus record (optimized with grouping by date)
+			const offsetMs = 10 * 60 * 1000; // 10-minute buffer
+
+			// Find the overall time range across all focus records
+			const allStartTimes = focusRecords.map((r: any) => new Date(r.startTime).getTime() - offsetMs);
+			const allEndTimes = focusRecords.map((r: any) => new Date(r.endTime).getTime() + offsetMs);
+			const minStartTime = new Date(Math.min(...allStartTimes));
+			const maxEndTime = new Date(Math.max(...allEndTimes));
+
+			// Single query to fetch all potentially relevant completed tasks
+			const allCompletedTasks = await Task.find({
+				completedTime: {
+					$exists: true,
+					$ne: null,
+					$gte: minStartTime,
+					$lte: maxEndTime
+				}
+			})
+			.select('title completedTime')
+			.lean();
+
+			// Group completed tasks by date (YYYY-MM-DD) for faster lookups
+			const tasksByDate = new Map<string, any[]>();
+			allCompletedTasks.forEach((task: any) => {
+				const taskDate = new Date(task.completedTime);
+				const dateKey = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
+
+				if (!tasksByDate.has(dateKey)) {
+					tasksByDate.set(dateKey, []);
+				}
+				tasksByDate.get(dateKey)!.push(task);
+			});
+
+			// Map completed tasks to each focus record
+			const focusRecordsWithCompletedTasks = focusRecords.map((record: any) => {
+				const startTime = new Date(record.startTime);
+				const endTime = new Date(record.endTime);
+				const startTimeWithOffset = new Date(startTime.getTime() - offsetMs);
+				const endTimeWithOffset = new Date(endTime.getTime() + offsetMs);
+
+				// Get unique dates that this focus record spans
+				const relevantDates = new Set<string>();
+				const currentDate = new Date(startTimeWithOffset);
+				const endDate = new Date(endTimeWithOffset);
+
+				while (currentDate <= endDate) {
+					const dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+					relevantDates.add(dateKey);
+					currentDate.setDate(currentDate.getDate() + 1);
+				}
+
+				// Collect tasks only from relevant dates and filter by time
+				const completedTasks: any[] = [];
+				relevantDates.forEach(dateKey => {
+					const tasksForDate = tasksByDate.get(dateKey) || [];
+					tasksForDate.forEach((task: any) => {
+						const taskTime = new Date(task.completedTime).getTime();
+						if (taskTime >= startTimeWithOffset.getTime() && taskTime <= endTimeWithOffset.getTime()) {
+							completedTasks.push(task);
+						}
+					});
+				});
+
+				// Sort by completedTime ascending
+				completedTasks.sort((a, b) => new Date(a.completedTime).getTime() - new Date(b.completedTime).getTime());
+
+				return {
+					...record,
+					completedTasks
+				};
+			});
+
 			return res.status(200).json({
-				data: focusRecords,
+				data: focusRecordsWithCompletedTasks,
 				ancestorTasksById,
 				total,
 				totalPages,
@@ -97,6 +169,7 @@ router.get('/', verifyToken, async (req, res) => {
 				hasMore,
 				totalDuration,
 				onlyTasksTotalDuration,
+				tasksByDate
 			});
 		}
 
