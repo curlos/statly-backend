@@ -10,7 +10,7 @@ const router = express.Router();
 router.get('/', verifyToken, async (req, res) => {
 	try {
 		const page = parseInt(req.query.page as string) || 0;
-		const limit = parseInt(req.query.limit as string) || 50;
+		const limit = parseInt(req.query.limit as string) || 25;
 		const skip = page * limit;
 		const projects = req.query['projects-ticktick'] as string;
 
