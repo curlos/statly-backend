@@ -43,10 +43,10 @@ router.get('/focus-records', verifyToken, async (req, res) => {
 			localSortedAllFocusData,
 		});
 
-		await updateLocalJsonData({
-			name: 'sorted-all-focus-data',
-			data: sortedAllFocusData,
-		});
+		// await updateLocalJsonData({
+		// 	name: 'sorted-all-focus-data',
+		// 	data: sortedAllFocusData,
+		// });
 
 		res.status(200).json(sortedAllFocusData);
 	} catch (error) {
@@ -66,10 +66,10 @@ router.get('/tasks', verifyToken, async (req, res) => {
 
 		const tickTickOneTasks = await fetchAllTickTickTasks();
 
-		await updateLocalJsonData({
-			name: 'all-ticktick-tasks',
-			data: tickTickOneTasks,
-		});
+		// await updateLocalJsonData({
+		// 	name: 'all-ticktick-tasks',
+		// 	data: tickTickOneTasks,
+		// });
 
 		res.status(200).json(tickTickOneTasks);
 	} catch (error) {
@@ -209,15 +209,15 @@ router.put('/update-active-and-completed-tasks-from-archived-projects', verifyTo
 		const newCompletedTasksFromArchivedProjects = [...dbCompletedTasksFromArchivedProjectsNoDupes, ...apiCompletedTasks]
 
 		// Update the DB with the newest not completed and completed tasks from archived projects. This'll very useful whenever I archive a project.
-		await updateLocalJsonData({
-			name: 'not-completed-tasks-from-archived-projects',
-			data: newNotCompletedTasksFromArchivedProjects,
-		});
+		// await updateLocalJsonData({
+		// 	name: 'not-completed-tasks-from-archived-projects',
+		// 	data: newNotCompletedTasksFromArchivedProjects,
+		// });
 
-		await updateLocalJsonData({
-			name: 'completed-tasks-from-archived-projects',
-			data: newCompletedTasksFromArchivedProjects,
-		});
+		// await updateLocalJsonData({
+		// 	name: 'completed-tasks-from-archived-projects',
+		// 	data: newCompletedTasksFromArchivedProjects,
+		// });
 
 		res.status(200).json({
 			apiNotCompletedTasks,

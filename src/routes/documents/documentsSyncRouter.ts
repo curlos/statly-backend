@@ -2,7 +2,7 @@ import express from 'express';
 import { CustomRequest } from '../../interfaces/CustomRequest';
 import { verifyToken } from '../../middleware/verifyToken';
 import SyncMetadata from '../../models/SyncMetadataModel';
-import { TaskTodoist } from '../../models/TaskModel';
+import { TaskTodoist, TaskTickTick } from '../../models/TaskModel';
 import { FocusRecordTickTick } from '../../models/FocusRecord';
 import { getAllTodoistTasks } from '../../utils/task.utils';
 import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects } from '../../utils/sync.utils';
@@ -214,6 +214,34 @@ router.post('/ticktick/focus-records', verifyToken, async (req: CustomRequest, r
         const thirtyDaysBeforeLastSync = new Date(lastSyncTime);
         thirtyDaysBeforeLastSync.setDate(thirtyDaysBeforeLastSync.getDate() - 30);
 
+        // Collect all unique task IDs from focus records
+        const allTaskIds = new Set<string>();
+        for (const record of focusRecords) {
+            const recordEndTime = new Date(record.endTime);
+            if (recordEndTime >= thirtyDaysBeforeLastSync && record.tasks) {
+                record.tasks.forEach((task: any) => {
+                    if (task.taskId) {
+                        allTaskIds.add(task.taskId);
+                    }
+                });
+            }
+        }
+
+        // Fetch full task documents to get projectId and ancestorIds
+        const tasksById: Record<string, any> = {};
+        if (allTaskIds.size > 0) {
+            const fullTasks = await TaskTickTick.find({
+                id: { $in: Array.from(allTaskIds) }
+            }).select('id projectId ancestorIds').lean();
+
+            fullTasks.forEach((task: any) => {
+                tasksById[task.id] = {
+                    projectId: task.projectId,
+                    ancestorIds: task.ancestorIds || []
+                };
+            });
+        }
+
         const bulkOps = [];
 
         for (const record of focusRecords) {
@@ -221,15 +249,18 @@ router.post('/ticktick/focus-records', verifyToken, async (req: CustomRequest, r
 
             // Only sync if endTime is within 30 days of last sync
             if (recordEndTime >= thirtyDaysBeforeLastSync) {
-                // Calculate duration for each task in the tasks array (in seconds)
+                // Calculate duration and denormalize projectId/ancestorIds for each task
                 const tasksWithDuration = (record.tasks || []).map((task: any) => {
                     const startTime = new Date(task.startTime);
                     const endTime = new Date(task.endTime);
                     const duration = (endTime.getTime() - startTime.getTime()) / 1000; // Duration in seconds
 
+                    const taskData = tasksById[task.taskId];
                     return {
                         ...task,
                         duration,
+                        projectId: taskData?.projectId || null,
+                        ancestorIds: taskData?.ancestorIds || []
                     };
                 });
 

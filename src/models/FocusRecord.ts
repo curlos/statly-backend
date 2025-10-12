@@ -10,9 +10,19 @@ const FocusRecordTaskSchema = new Schema({
 		type: String,
 		required: true,
 	},
+	projectId: {
+		type: String,
+		required: true,
+		index: true, // Index for fast filtering
+	},
 	projectName: {
 		type: String,
 		required: true,
+	},
+	ancestorIds: {
+		type: [String],
+		default: [],
+		index: true, // Index for fast filtering by ancestors
 	},
 	startTime: {
 		type: Date,
