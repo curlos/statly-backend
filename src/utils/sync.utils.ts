@@ -2,8 +2,10 @@ import SyncMetadata from '../models/SyncMetadataModel';
 import { TaskTickTick } from '../models/TaskModel';
 import { ProjectTickTick, ProjectTodoist } from '../models/projectModel';
 import { ProjectGroupTickTick } from '../models/projectGroupModel';
+import { FocusRecordTickTick } from '../models/FocusRecord';
 import { fetchAllTickTickTasks, fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from './ticktick.utils';
 import { getAllTodoistProjects } from './task.utils';
+import { fetchTickTickFocusRecords } from './focus.utils';
 
 export async function syncTickTickTasks(userId: string) {
 	// Get or create sync metadata
@@ -306,6 +308,121 @@ export async function syncTodoistProjects(userId: string) {
 
 	return {
 		message: 'Todoist projects synced successfully',
+		upsertedCount: result.upsertedCount,
+		modifiedCount: result.modifiedCount,
+		matchedCount: result.matchedCount,
+		totalOperations: bulkOps.length,
+		lastSyncTime: syncMetadata.lastSyncTime,
+	};
+}
+
+export async function syncTickTickFocusRecords(userId: string) {
+	// Get or create sync metadata for focus records
+	let syncMetadata = await SyncMetadata.findOne({ syncType: 'focus-records-ticktick' });
+
+	if (!syncMetadata) {
+		syncMetadata = new SyncMetadata({
+			userId,
+			syncType: 'focus-records-ticktick',
+			lastSyncTime: new Date(0), // Set to epoch so all focus records are synced initially
+		});
+	}
+
+	const lastSyncTime = syncMetadata.lastSyncTime;
+	const focusRecords = await fetchTickTickFocusRecords();
+
+	// Calculate the cutoff date (30 days before last sync)
+	const thirtyDaysBeforeLastSync = new Date(lastSyncTime);
+	thirtyDaysBeforeLastSync.setDate(thirtyDaysBeforeLastSync.getDate() - 30);
+
+	// Collect all unique task IDs from focus records
+	const allTaskIds = new Set<string>();
+	for (const record of focusRecords) {
+		const recordEndTime = new Date(record.endTime);
+		if (recordEndTime >= thirtyDaysBeforeLastSync && record.tasks) {
+			record.tasks.forEach((task: any) => {
+				if (task.taskId) {
+					allTaskIds.add(task.taskId);
+				}
+			});
+		}
+	}
+
+	// Fetch full task documents to get projectId and ancestorIds
+	const tasksById: Record<string, any> = {};
+	if (allTaskIds.size > 0) {
+		const fullTasks = await TaskTickTick.find({
+			id: { $in: Array.from(allTaskIds) }
+		}).select('id projectId ancestorIds').lean();
+
+		fullTasks.forEach((task: any) => {
+			tasksById[task.id] = {
+				projectId: task.projectId,
+				ancestorIds: task.ancestorIds || []
+			};
+		});
+	}
+
+	const bulkOps = [];
+
+	for (const record of focusRecords) {
+		const recordEndTime = new Date(record.endTime);
+
+		// Only sync if endTime is within 30 days of last sync
+		if (recordEndTime >= thirtyDaysBeforeLastSync) {
+			// Calculate duration and denormalize projectId/ancestorIds for each task
+			const tasksWithDuration = (record.tasks || []).map((task: any) => {
+				const startTime = new Date(task.startTime);
+				const endTime = new Date(task.endTime);
+				const duration = (endTime.getTime() - startTime.getTime()) / 1000; // Duration in seconds
+
+				const taskData = tasksById[task.taskId];
+				return {
+					...task,
+					duration,
+					projectId: taskData?.projectId || null,
+					ancestorIds: taskData?.ancestorIds || []
+				};
+			});
+
+			// Calculate the focus record's total duration (subtract pauseDuration, in seconds)
+			const startTime = new Date(record.startTime);
+			const endTime = new Date(record.endTime);
+			const totalDurationSeconds = (endTime.getTime() - startTime.getTime()) / 1000; // Convert to seconds
+			const pauseDuration = record.pauseDuration || 0; // pauseDuration is already in seconds
+			const realFocusDuration = totalDurationSeconds - pauseDuration; // Subtract pause duration
+
+			// Normalize the focus record to match our schema
+			const normalizedRecord = {
+				...record,
+				duration: realFocusDuration,
+				tasks: tasksWithDuration,
+			};
+
+			// Add upsert operation to bulk array
+			bulkOps.push({
+				updateOne: {
+					filter: { id: record.id },
+					update: { $set: normalizedRecord },
+					upsert: true,
+				},
+			});
+		}
+	}
+
+	// Execute all operations in a single bulkWrite
+	const result = bulkOps.length > 0 ? await FocusRecordTickTick.bulkWrite(bulkOps) : {
+		upsertedCount: 0,
+		modifiedCount: 0,
+		matchedCount: 0,
+	};
+
+	// Update sync metadata with current time
+	syncMetadata.lastSyncTime = new Date();
+	await syncMetadata.save();
+
+	return {
+		message: 'TickTick focus records synced successfully',
 		upsertedCount: result.upsertedCount,
 		modifiedCount: result.modifiedCount,
 		matchedCount: result.matchedCount,

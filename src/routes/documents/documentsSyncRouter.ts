@@ -2,11 +2,9 @@ import express from 'express';
 import { CustomRequest } from '../../interfaces/CustomRequest';
 import { verifyToken } from '../../middleware/verifyToken';
 import SyncMetadata from '../../models/SyncMetadataModel';
-import { TaskTodoist, TaskTickTick } from '../../models/TaskModel';
-import { FocusRecordTickTick } from '../../models/FocusRecord';
+import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
-import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects } from '../../utils/sync.utils';
-import { fetchTickTickFocusRecords } from '../../utils/focus.utils';
+import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects } from '../../utils/sync.utils';
 
 const router = express.Router();
 
@@ -190,18 +188,20 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
     try {
         const userId = req.user!.userId;
 
-        // Run all three sync operations in parallel
-        const [tasksResult, projectsResult, projectGroupsResult] = await Promise.all([
+        // Run all sync operations in parallel
+        const [tasksResult, projectsResult, projectGroupsResult, focusRecordsResult] = await Promise.all([
             syncTickTickTasks(userId),
             syncTickTickProjects(userId),
-            syncTickTickProjectGroups(userId)
+            syncTickTickProjectGroups(userId),
+            syncTickTickFocusRecords(userId)
         ]);
 
         res.status(200).json({
             message: 'All data synced successfully',
             tasks: tasksResult,
             projects: projectsResult,
-            projectGroups: projectGroupsResult
+            projectGroups: projectGroupsResult,
+            focusRecords: focusRecordsResult
         });
     } catch (error) {
         res.status(500).json({
@@ -212,118 +212,8 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
 
 router.post('/ticktick/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
-        // Get or create sync metadata for focus records
-        let syncMetadata = await SyncMetadata.findOne({ syncType: 'focus-records-ticktick' });
-
-        if (!syncMetadata) {
-            syncMetadata = new SyncMetadata({
-                userId: req.user!.userId,
-                syncType: 'focus-records-ticktick',
-                lastSyncTime: new Date(0), // Set to epoch so all focus records are synced initially
-            });
-        }
-
-        const lastSyncTime = syncMetadata.lastSyncTime;
-        const focusRecords = await fetchTickTickFocusRecords();
-
-        // Calculate the cutoff date (30 days before last sync)
-        const thirtyDaysBeforeLastSync = new Date(lastSyncTime);
-        thirtyDaysBeforeLastSync.setDate(thirtyDaysBeforeLastSync.getDate() - 30);
-
-        // Collect all unique task IDs from focus records
-        const allTaskIds = new Set<string>();
-        for (const record of focusRecords) {
-            const recordEndTime = new Date(record.endTime);
-            if (recordEndTime >= thirtyDaysBeforeLastSync && record.tasks) {
-                record.tasks.forEach((task: any) => {
-                    if (task.taskId) {
-                        allTaskIds.add(task.taskId);
-                    }
-                });
-            }
-        }
-
-        // Fetch full task documents to get projectId and ancestorIds
-        const tasksById: Record<string, any> = {};
-        if (allTaskIds.size > 0) {
-            const fullTasks = await TaskTickTick.find({
-                id: { $in: Array.from(allTaskIds) }
-            }).select('id projectId ancestorIds').lean();
-
-            fullTasks.forEach((task: any) => {
-                tasksById[task.id] = {
-                    projectId: task.projectId,
-                    ancestorIds: task.ancestorIds || []
-                };
-            });
-        }
-
-        const bulkOps = [];
-
-        for (const record of focusRecords) {
-            const recordEndTime = new Date(record.endTime);
-
-            // Only sync if endTime is within 30 days of last sync
-            if (recordEndTime >= thirtyDaysBeforeLastSync) {
-                // Calculate duration and denormalize projectId/ancestorIds for each task
-                const tasksWithDuration = (record.tasks || []).map((task: any) => {
-                    const startTime = new Date(task.startTime);
-                    const endTime = new Date(task.endTime);
-                    const duration = (endTime.getTime() - startTime.getTime()) / 1000; // Duration in seconds
-
-                    const taskData = tasksById[task.taskId];
-                    return {
-                        ...task,
-                        duration,
-                        projectId: taskData?.projectId || null,
-                        ancestorIds: taskData?.ancestorIds || []
-                    };
-                });
-
-                // Calculate the focus record's total duration (subtract pauseDuration, in seconds)
-                const startTime = new Date(record.startTime);
-                const endTime = new Date(record.endTime);
-                const totalDurationSeconds = (endTime.getTime() - startTime.getTime()) / 1000; // Convert to seconds
-                const pauseDuration = record.pauseDuration || 0; // pauseDuration is already in seconds
-                const realFocusDuration = totalDurationSeconds - pauseDuration; // Subtract pause duration
-
-                // Normalize the focus record to match our schema
-                const normalizedRecord = {
-                    ...record,
-                    duration: realFocusDuration,
-                    tasks: tasksWithDuration,
-                };
-
-                // Add upsert operation to bulk array
-                bulkOps.push({
-                    updateOne: {
-                        filter: { id: record.id },
-                        update: { $set: normalizedRecord },
-                        upsert: true,
-                    },
-                });
-            }
-        }
-
-        // Execute all operations in a single bulkWrite
-        const result = bulkOps.length > 0 ? await FocusRecordTickTick.bulkWrite(bulkOps) : {
-            upsertedCount: 0,
-            modifiedCount: 0,
-            matchedCount: 0,
-        };
-
-        // Update sync metadata with current time
-        syncMetadata.lastSyncTime = new Date();
-        await syncMetadata.save();
-
-        res.status(200).json({
-            message: 'TickTick focus records synced successfully',
-            upsertedCount: result.upsertedCount,
-            modifiedCount: result.modifiedCount,
-            matchedCount: result.matchedCount,
-            totalOperations: bulkOps.length,
-            lastSyncTime: syncMetadata.lastSyncTime,
-        });
+        const result = await syncTickTickFocusRecords(req.user!.userId);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing TickTick focus records.',
