@@ -125,17 +125,34 @@ router.get('/', verifyToken, async (req, res) => {
 		const skip = page * limit;
 		const projects = req.query['projects-ticktick'] as string;
 		const taskId = req.query['task-id'] as string;
+		const startDate = req.query['start-date'] as string;
+		const endDate = req.query['end-date'] as string;
 
 		// Build list of project IDs to filter by
 		const projectIds: string[] = projects ? projects.split(',') : [];
-		const hasFilters = projectIds.length > 0 || !!taskId;
+		const hasTaskOrProjectFilters = projectIds.length > 0 || !!taskId;
 
-		// If no filters, use simple query
-		if (!hasFilters) {
-			const total = await FocusRecordTickTick.countDocuments();
+		// Build date range filter if provided
+		const dateRangeFilter: any = {};
+		if (startDate || endDate) {
+			dateRangeFilter.startTime = {};
+			if (startDate) {
+				dateRangeFilter.startTime.$gte = new Date(startDate);
+			}
+			if (endDate) {
+				// Add 1 day to endDate to include the entire end date
+				const endDateTime = new Date(endDate);
+				endDateTime.setDate(endDateTime.getDate() + 1);
+				dateRangeFilter.startTime.$lt = endDateTime;
+			}
+		}
+
+		// If no task/project filters, use simple query (date filters can be applied directly)
+		if (!hasTaskOrProjectFilters) {
+			const total = await FocusRecordTickTick.countDocuments(dateRangeFilter);
 			const totalPages = Math.ceil(total / limit);
 
-			const focusRecords = await FocusRecordTickTick.find()
+			const focusRecords = await FocusRecordTickTick.find(dateRangeFilter)
 				.sort({ startTime: -1 })
 				.skip(skip)
 				.limit(limit)
@@ -144,29 +161,36 @@ router.get('/', verifyToken, async (req, res) => {
 			const hasMore = skip + focusRecords.length < total;
 
 			// Calculate total durations for all focus records
-			const durationResult = await FocusRecordTickTick.aggregate([
-				{
-					$facet: {
-						baseDuration: [
-							{
-								$group: {
-									_id: null,
-									total: { $sum: "$duration" }
-								}
+			const durationPipeline: any[] = [];
+
+			// Add date range match stage if needed
+			if (Object.keys(dateRangeFilter).length > 0) {
+				durationPipeline.push({ $match: dateRangeFilter });
+			}
+
+			durationPipeline.push({
+				$facet: {
+					baseDuration: [
+						{
+							$group: {
+								_id: null,
+								total: { $sum: "$duration" }
 							}
-						],
-						tasksDuration: [
-							{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: true } },
-							{
-								$group: {
-									_id: null,
-									total: { $sum: "$tasks.duration" }
-								}
+						}
+					],
+					tasksDuration: [
+						{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: true } },
+						{
+							$group: {
+								_id: null,
+								total: { $sum: "$tasks.duration" }
 							}
-						]
-					}
+						}
+					]
 				}
-			]);
+			});
+
+			const durationResult = await FocusRecordTickTick.aggregate(durationPipeline);
 
 			const totalDuration = durationResult[0]?.baseDuration[0]?.total || 0;
 			const onlyTasksTotalDuration = durationResult[0]?.tasksDuration[0]?.total || 0;
@@ -190,6 +214,20 @@ router.get('/', verifyToken, async (req, res) => {
 		// Build match and filter conditions
 		const matchConditions: any = {};
 		const filterConditions: any[] = [];
+
+		// Add date range to match conditions
+		if (startDate || endDate) {
+			matchConditions.startTime = {};
+			if (startDate) {
+				matchConditions.startTime.$gte = new Date(startDate);
+			}
+			if (endDate) {
+				// Add 1 day to endDate to include the entire end date
+				const endDateTime = new Date(endDate);
+				endDateTime.setDate(endDateTime.getDate() + 1);
+				matchConditions.startTime.$lt = endDateTime;
+			}
+		}
 
 		if (projectIds.length > 0) {
 			matchConditions["tasks.projectId"] = { $in: projectIds };
