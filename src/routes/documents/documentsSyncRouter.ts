@@ -47,6 +47,17 @@ router.post('/ticktick/tasks', verifyToken, async (req: CustomRequest, res) => {
 
 router.post('/todoist/tasks', verifyToken, async (req: CustomRequest, res) => {
     try {
+        // Get or create sync metadata for todoist tasks
+        let syncMetadata = await SyncMetadata.findOne({ syncType: 'todoist_tasks' });
+
+        if (!syncMetadata) {
+            syncMetadata = new SyncMetadata({
+                userId: req.user!.userId,
+                syncType: 'todoist_tasks',
+                lastSyncTime: new Date(0), // Set to epoch so all tasks are synced initially
+            });
+        }
+
         const allTasks = await getAllTodoistTasks();
 
         // Step 1: Build tasksById map for quick parent lookups
@@ -123,12 +134,17 @@ router.post('/todoist/tasks', verifyToken, async (req: CustomRequest, res) => {
         // Execute all operations in a single bulkWrite
         const result = await TaskTodoist.bulkWrite(bulkOps);
 
+        // Update sync metadata with current time
+        syncMetadata.lastSyncTime = new Date();
+        await syncMetadata.save();
+
         res.status(200).json({
             message: 'Todoist tasks synced successfully',
             upsertedCount: result.upsertedCount,
             modifiedCount: result.modifiedCount,
             matchedCount: result.matchedCount,
             totalOperations: bulkOps.length,
+            lastSyncTime: syncMetadata.lastSyncTime,
         });
     } catch (error) {
         res.status(500).json({
