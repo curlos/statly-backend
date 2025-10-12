@@ -41,6 +41,11 @@ async function addAncestorAndCompletedTasks(focusRecords: any[]) {
 	// Add completed tasks to each focus record (optimized with grouping by date)
 	const offsetMs = 10 * 60 * 1000; // 10-minute buffer
 
+	// If no focus records, return early
+	if (focusRecords.length === 0) {
+		return { focusRecordsWithCompletedTasks: [], ancestorTasksById };
+	}
+
 	// Find the overall time range across all focus records
 	const allStartTimes = focusRecords.map((r: any) => new Date(r.startTime).getTime() - offsetMs);
 	const allEndTimes = focusRecords.map((r: any) => new Date(r.endTime).getTime() + offsetMs);
