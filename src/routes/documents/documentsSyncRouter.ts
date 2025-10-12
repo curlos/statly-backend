@@ -34,7 +34,7 @@ router.get('/metadata', verifyToken, async (req, res) => {
     }
 });
 
-router.post('/ticktick-tasks', verifyToken, async (req: CustomRequest, res) => {
+router.post('/ticktick/tasks', verifyToken, async (req: CustomRequest, res) => {
     try {
         const result = await syncTickTickTasks(req.user!.userId);
         res.status(200).json(result);
@@ -45,7 +45,7 @@ router.post('/ticktick-tasks', verifyToken, async (req: CustomRequest, res) => {
     }
 });
 
-router.post('/todoist-tasks', verifyToken, async (req: CustomRequest, res) => {
+router.post('/todoist/tasks', verifyToken, async (req: CustomRequest, res) => {
     try {
         const allTasks = await getAllTodoistTasks();
 
@@ -137,7 +137,7 @@ router.post('/todoist-tasks', verifyToken, async (req: CustomRequest, res) => {
     }
 });
 
-router.post('/ticktick-projects', verifyToken, async (req: CustomRequest, res) => {
+router.post('/ticktick/projects', verifyToken, async (req: CustomRequest, res) => {
     try {
         const result = await syncTickTickProjects(req.user!.userId);
         res.status(200).json(result);
@@ -148,7 +148,7 @@ router.post('/ticktick-projects', verifyToken, async (req: CustomRequest, res) =
     }
 });
 
-router.post('/ticktick-project-groups', verifyToken, async (req: CustomRequest, res) => {
+router.post('/ticktick/project-groups', verifyToken, async (req: CustomRequest, res) => {
     try {
         const result = await syncTickTickProjectGroups(req.user!.userId);
         res.status(200).json(result);
@@ -159,7 +159,7 @@ router.post('/ticktick-project-groups', verifyToken, async (req: CustomRequest, 
     }
 });
 
-router.post('/todoist-projects', verifyToken, async (req: CustomRequest, res) => {
+router.post('/todoist/projects', verifyToken, async (req: CustomRequest, res) => {
     try {
         const result = await syncTodoistProjects(req.user!.userId);
         res.status(200).json(result);
@@ -170,7 +170,7 @@ router.post('/todoist-projects', verifyToken, async (req: CustomRequest, res) =>
     }
 });
 
-router.post('/ticktick-all', verifyToken, async (req: CustomRequest, res) => {
+router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
     try {
         const userId = req.user!.userId;
 
