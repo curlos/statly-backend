@@ -162,6 +162,7 @@ router.get('/', verifyToken, async (req, res) => {
 		const startDate = req.query['start-date'] as string;
 		const endDate = req.query['end-date'] as string;
 		const sortBy = req.query['sort-by'] as string || 'Newest';
+		const taskIdIncludeFocusRecordsFromSubtasks = req.query['task-id-include-focus-records-from-subtasks'] === 'true';
 
 		// Build list of project IDs to filter by
 		const projectIds: string[] = projects ? projects.split(',') : [];
@@ -287,17 +288,23 @@ router.get('/', verifyToken, async (req, res) => {
 		}
 
 		if (taskId) {
-			// Match if taskId equals task.taskId OR taskId is in task.ancestorIds
-			matchConditions.$or = [
-				{ "tasks.taskId": taskId },
-				{ "tasks.ancestorIds": taskId }
-			];
-			filterConditions.push({
-				$or: [
-					{ $eq: ["$$task.taskId", taskId] },
-					{ $in: [taskId, "$$task.ancestorIds"] }
-				]
-			});
+			if (taskIdIncludeFocusRecordsFromSubtasks) {
+				// Match if taskId equals task.taskId OR taskId is in task.ancestorIds (includes subtasks)
+				matchConditions.$or = [
+					{ "tasks.taskId": taskId },
+					{ "tasks.ancestorIds": taskId }
+				];
+				filterConditions.push({
+					$or: [
+						{ $eq: ["$$task.taskId", taskId] },
+						{ $in: [taskId, "$$task.ancestorIds"] }
+					]
+				});
+			} else {
+				// Match only if taskId equals task.taskId exactly (excludes subtasks)
+				matchConditions["tasks.taskId"] = taskId;
+				filterConditions.push({ $eq: ["$$task.taskId", taskId] });
+			}
 		}
 
 		// Filter by project and/or task-id using denormalized data
