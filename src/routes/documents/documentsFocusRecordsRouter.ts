@@ -161,6 +161,7 @@ router.get('/', verifyToken, async (req, res) => {
 		const taskId = req.query['task-id'] as string;
 		const startDate = req.query['start-date'] as string;
 		const endDate = req.query['end-date'] as string;
+		const sortBy = req.query['sort-by'] as string || 'Newest';
 
 		// Build list of project IDs to filter by
 		const projectIds: string[] = projects ? projects.split(',') : [];
@@ -181,13 +182,30 @@ router.get('/', verifyToken, async (req, res) => {
 			}
 		}
 
+		// Build sort criteria based on sortBy parameter
+		const getSortCriteria = (): { [key: string]: 1 | -1 } => {
+			switch (sortBy) {
+				case 'Oldest':
+					return { startTime: 1 };
+				case 'Focus Hours: Most-Least':
+					return { duration: -1 };
+				case 'Focus Hours: Least-Most':
+					return { duration: 1 };
+				case 'Newest':
+				default:
+					return { startTime: -1 };
+			}
+		};
+
+		const sortCriteria = getSortCriteria();
+
 		// If no task/project filters, use simple query (date filters can be applied directly)
 		if (!hasTaskOrProjectFilters) {
 			const total = await FocusRecordTickTick.countDocuments(dateRangeFilter);
 			const totalPages = Math.ceil(total / limit);
 
 			const focusRecords = await FocusRecordTickTick.find(dateRangeFilter)
-				.sort({ startTime: -1 })
+				.sort(sortCriteria)
 				.skip(skip)
 				.limit(limit)
 				.lean();
@@ -318,7 +336,7 @@ router.get('/', verifyToken, async (req, res) => {
 					}
 				}
 			},
-			{ $sort: { startTime: -1 } },
+			{ $sort: sortCriteria },
 			{ $skip: skip },
 			{ $limit: limit }
 		];
