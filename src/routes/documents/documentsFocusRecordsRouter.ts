@@ -1,9 +1,9 @@
 import express from 'express';
 import FocusRecordTickTick from '../../models/FocusRecord';
 import { verifyToken } from '../../middleware/verifyToken';
-import { getJsonData } from '../../utils/mongoose.utils';
 import { Task } from '../../models/TaskModel';
 import { buildAncestorData } from '../../utils/task.utils';
+import { fetchTickTickFocusRecords } from '../../utils/focus.utils';
 
 const router = express.Router();
 
@@ -40,29 +40,63 @@ async function addAncestorAndCompletedTasks(focusRecords: any[]) {
 
 	// Add completed tasks to each focus record (optimized with grouping by date)
 	const offsetMs = 10 * 60 * 1000; // 10-minute buffer
+	const oneDayMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
 
 	// If no focus records, return early
 	if (focusRecords.length === 0) {
 		return { focusRecordsWithCompletedTasks: [], ancestorTasksById };
 	}
 
-	// Find the overall time range across all focus records
-	const allStartTimes = focusRecords.map((r: any) => new Date(r.startTime).getTime() - offsetMs);
-	const allEndTimes = focusRecords.map((r: any) => new Date(r.endTime).getTime() + offsetMs);
-	const minStartTime = new Date(Math.min(...allStartTimes));
-	const maxEndTime = new Date(Math.max(...allEndTimes));
+	// Create time ranges with buffer for each focus record
+	const timeRanges = focusRecords.map((r: any) => ({
+		start: new Date(r.startTime).getTime() - offsetMs,
+		end: new Date(r.endTime).getTime() + offsetMs
+	}));
 
-	// Single query to fetch all potentially relevant completed tasks
-	const allCompletedTasks = await Task.find({
-		completedTime: {
-			$exists: true,
-			$ne: null,
-			$gte: minStartTime,
-			$lte: maxEndTime
+	// Sort by start time
+	timeRanges.sort((a, b) => a.start - b.start);
+
+	// Merge ranges if gap is less than 1 day
+	const mergedRanges: { start: number, end: number }[] = [];
+	let currentRange = { start: timeRanges[0].start, end: timeRanges[0].end };
+
+	for (let i = 1; i < timeRanges.length; i++) {
+		// Calculate time gap between end of current range and start of next focus record
+		// Example: FR1 ends at 3:00 PM, FR2 starts at 5:00 PM → gap = 2 hours
+		// Example: FR1 ends at 3:00 PM, FR2 starts at 2:00 PM → gap = negative (overlap)
+		const gap = timeRanges[i].start - currentRange.end;
+
+		if (gap < oneDayMs) {
+			// Merge: extend current range to include this one
+			// Use Math.max because focus records can overlap - if a shorter session starts
+			// during a longer session, we need to keep the furthest end time
+			const furthestEndTime = Math.max(currentRange.end, timeRanges[i].end);
+			currentRange.end = furthestEndTime;
+		} else {
+			// Gap too large: save current range and start new one
+			mergedRanges.push(currentRange);
+			currentRange = { start: timeRanges[i].start, end: timeRanges[i].end };
 		}
-	})
-	.select('title completedTime')
-	.lean();
+	}
+	// Don't forget the last range
+	mergedRanges.push(currentRange);
+
+	// Query each merged range separately and combine results
+	const allCompletedTasks: any[] = [];
+	for (const range of mergedRanges) {
+		const tasks = await Task.find({
+			completedTime: {
+				$exists: true,
+				$ne: null,
+				$gte: new Date(range.start),
+				$lte: new Date(range.end)
+			}
+		})
+		.select('title completedTime')
+		.lean();
+
+		allCompletedTasks.push(...tasks);
+	}
 
 	// Group completed tasks by date (YYYY-MM-DD) for faster lookups
 	const tasksByDate = new Map<string, any[]>();
@@ -367,11 +401,17 @@ router.get('/', verifyToken, async (req, res) => {
 
 router.get('/test-json-data', verifyToken, async (req, res) => {
 	try {
-		const jsonData = await getJsonData('sorted-all-focus-data');
-		res.status(200).json(jsonData);
+		const todayOnly = req.query.today === 'true';
+
+		const sortedAllFocusData = await fetchTickTickFocusRecords({
+			todayOnly,
+			doNotUseMongoDB: false,
+		});
+
+		res.status(200).json(sortedAllFocusData);
 	} catch (error) {
 		res.status(500).json({
-			message: error instanceof Error ? error.message : 'An error occurred fetching JSON data.',
+			message: error instanceof Error ? error.message : 'An error occurred fetching focus records from TickTick API.',
 		});
 	}
 });
