@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getTodayTimeBounds, sortArrayByProperty, arrayToObjectByKey } from './helpers.utils';
-import { getJsonData } from './mongoose.utils';
+import FocusRecordTickTick from '../models/FocusRecord';
 
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
 const cookie = TICKTICK_API_COOKIE;
@@ -16,7 +16,9 @@ interface FetchFocusRecordsOptions {
 export const fetchTickTickFocusRecords = async (options: FetchFocusRecordsOptions = {}) => {
 	const { todayOnly = false, doNotUseMongoDB = false, localSortedAllFocusData = {} } = options;
 
-	const localFocusData = doNotUseMongoDB ? localSortedAllFocusData : await getJsonData('sorted-all-focus-data');
+	const localFocusData = doNotUseMongoDB
+		? localSortedAllFocusData
+		: await FocusRecordTickTick.find().sort({ startTime: -1 }).lean();
 
 	let fromMs = 0;
 	let toMs = farAwayDateInMs;
@@ -26,16 +28,23 @@ export const fetchTickTickFocusRecords = async (options: FetchFocusRecordsOption
 		fromMs = startMs;
 		toMs = endMs;
 	} else {
-		// Get the local focus data from MongoDB and since the focus records are already sorted by startTime, get the very first focus record in the array and get it's startTime and set the "toMs" variable to that startTime in MS - 1 ms.
-		const semiRecentFocusRecord = localFocusData[20];
-		const semiRecentStartTimeDate = new Date(semiRecentFocusRecord.startTime);
-		const semiRecentStartTimeInMs = semiRecentStartTimeDate.getTime();
+		// Check if localFocusData exists and has at least 21 records
+		if (localFocusData && localFocusData.length > 20) {
+			// Get the local focus data from MongoDB and since the focus records are already sorted by startTime, get the very first focus record in the array and get it's startTime and set the "toMs" variable to that startTime in MS - 1 ms.
+			const semiRecentFocusRecord = localFocusData[20];
+			const semiRecentStartTimeDate = new Date(semiRecentFocusRecord.startTime);
+			const semiRecentStartTimeInMs = semiRecentStartTimeDate.getTime();
 
-		const todayMs = new Date().getTime();
+			const todayMs = new Date().getTime();
 
-		// Subtract 1 MS to not include latest focus record in our search.
-		fromMs = semiRecentStartTimeInMs;
-		toMs = todayMs;
+			// Subtract 1 MS to not include latest focus record in our search.
+			fromMs = semiRecentStartTimeInMs;
+			toMs = todayMs;
+		} else {
+			// If no local focus records or less than 21, fetch from the beginning
+			fromMs = 0;
+			toMs = farAwayDateInMs;
+		}
 	}
 
 	const focusDataPomos = await axios.get(`https://api.ticktick.com/api/v2/pomodoros?from=${fromMs}&to=${toMs}`, {
