@@ -58,6 +58,8 @@ export async function syncTickTickTasks(userId: string) {
 	};
 
 	const bulkOps = [];
+	// Track modified tasks for focus record updates
+	const modifiedTasksMap: Record<string, { projectId: string, ancestorIds: string[] }> = {};
 
 	for (const task of tickTickTasks) {
 		// Check if task needs updating based on modifiedTime
@@ -71,6 +73,12 @@ export async function syncTickTickTasks(userId: string) {
 			ancestorIds.forEach((id: string) => {
 				ancestorSet[id] = true;
 			});
+
+			// Track this task for focus record updates
+			modifiedTasksMap[task.id] = {
+				projectId: task.projectId,
+				ancestorIds: ancestorIds
+			};
 
 			// Normalize the FULL task
 			const normalizedFullTask = {
@@ -139,6 +147,63 @@ export async function syncTickTickTasks(userId: string) {
 	// Execute all operations in a single bulkWrite
 	const result = await TaskTickTick.bulkWrite(bulkOps);
 
+	// Update focus records with modified task data
+	let focusRecordResult = null;
+	if (Object.keys(modifiedTasksMap).length > 0) {
+		const modifiedTaskIds = Object.keys(modifiedTasksMap);
+
+		// Find all focus records that contain any of the modified tasks
+		const focusRecordsToUpdate = await FocusRecordTickTick.find({
+			'tasks.taskId': { $in: modifiedTaskIds }
+		}).lean() as any[];
+
+		const focusRecordBulkOps = [];
+
+		for (const focusRecord of focusRecordsToUpdate) {
+			// Check which tasks in this focus record need updating
+			const tasksNeedingUpdate = focusRecord.tasks?.filter((task: any) => {
+				if (!modifiedTasksMap[task.taskId]) return false;
+
+				const modifiedTask = modifiedTasksMap[task.taskId];
+
+				// Compare projectId and ancestorIds
+				const projectIdChanged = task.projectId !== modifiedTask.projectId;
+				const ancestorIdsChanged = JSON.stringify(task.ancestorIds || []) !== JSON.stringify(modifiedTask.ancestorIds);
+
+				return projectIdChanged || ancestorIdsChanged;
+			}) || [];
+
+			// If any tasks need updating, create a bulk operation
+			if (tasksNeedingUpdate.length > 0) {
+				for (const taskToUpdate of tasksNeedingUpdate) {
+					const modifiedTask = modifiedTasksMap[taskToUpdate.taskId];
+
+					// Use arrayFilters to update specific task in the array
+					focusRecordBulkOps.push({
+						updateOne: {
+							filter: {
+								id: focusRecord.id,
+								'tasks.taskId': taskToUpdate.taskId
+							},
+							update: {
+								$set: {
+									'tasks.$[elem].projectId': modifiedTask.projectId,
+									'tasks.$[elem].ancestorIds': modifiedTask.ancestorIds
+								}
+							},
+							arrayFilters: [{ 'elem.taskId': taskToUpdate.taskId }]
+						}
+					});
+				}
+			}
+		}
+
+		// Execute focus record updates if there are any
+		if (focusRecordBulkOps.length > 0) {
+			focusRecordResult = await FocusRecordTickTick.bulkWrite(focusRecordBulkOps);
+		}
+	}
+
 	// Update sync metadata with current time and tasks updated count
 	syncMetadata.lastSyncTime = new Date();
 	syncMetadata.tasksUpdated = bulkOps.length;
@@ -151,6 +216,10 @@ export async function syncTickTickTasks(userId: string) {
 		matchedCount: result.matchedCount,
 		totalOperations: bulkOps.length,
 		lastSyncTime: syncMetadata.lastSyncTime,
+		focusRecordsUpdated: focusRecordResult ? {
+			modifiedCount: focusRecordResult.modifiedCount,
+			matchedCount: focusRecordResult.matchedCount
+		} : null
 	};
 }
 
