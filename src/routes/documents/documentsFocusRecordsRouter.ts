@@ -163,6 +163,16 @@ router.get('/', verifyToken, async (req, res) => {
 		const endDate = req.query['end-date'] as string;
 		const sortBy = req.query['sort-by'] as string || 'Newest';
 		const taskIdIncludeFocusRecordsFromSubtasks = req.query['task-id-include-focus-records-from-subtasks'] === 'true';
+		const searchQuery = req.query['search'] as string;
+
+		// Build regex filter for substring matching (case-insensitive)
+		const searchFilter = searchQuery && searchQuery.trim() ? {
+			$or: [
+				{ note: { $regex: searchQuery.trim(), $options: 'i' } },
+				{ tasks: { $elemMatch: { title: { $regex: searchQuery.trim(), $options: 'i' } } } },
+				{ tasks: { $elemMatch: { projectName: { $regex: searchQuery.trim(), $options: 'i' } } } }
+			]
+		} : null;
 
 		// Build list of project IDs to filter by
 		const projectIds: string[] = projects ? projects.split(',') : [];
@@ -202,19 +212,50 @@ router.get('/', verifyToken, async (req, res) => {
 
 		// If no task/project filters, use simple query (date filters can be applied directly)
 		if (!hasTaskOrProjectFilters) {
-			const total = await FocusRecordTickTick.countDocuments(dateRangeFilter);
+			// Build aggregation pipeline for simple query with search support
+			const simpleQueryPipeline: any[] = [];
+
+			// Step 1: Apply search filter (regex substring match)
+			if (searchFilter) {
+				simpleQueryPipeline.push({ $match: searchFilter });
+			}
+
+			// Step 2: Apply date range filter
+			if (Object.keys(dateRangeFilter).length > 0) {
+				simpleQueryPipeline.push({ $match: dateRangeFilter });
+			}
+
+			// Step 3: Sort
+			simpleQueryPipeline.push({ $sort: sortCriteria });
+
+			// Step 4: Paginate
+			simpleQueryPipeline.push({ $skip: skip });
+			simpleQueryPipeline.push({ $limit: limit });
+
+			const focusRecords = await FocusRecordTickTick.aggregate(simpleQueryPipeline);
+
+			// Build count pipeline
+			const countPipeline: any[] = [];
+			if (searchFilter) {
+				countPipeline.push({ $match: searchFilter });
+			}
+
+			if (Object.keys(dateRangeFilter).length > 0) {
+				countPipeline.push({ $match: dateRangeFilter });
+			}
+
+			countPipeline.push({ $count: "total" });
+
+			const countResult = await FocusRecordTickTick.aggregate(countPipeline);
+			const total = countResult[0]?.total || 0;
 			const totalPages = Math.ceil(total / limit);
-
-			const focusRecords = await FocusRecordTickTick.find(dateRangeFilter)
-				.sort(sortCriteria)
-				.skip(skip)
-				.limit(limit)
-				.lean();
-
 			const hasMore = skip + focusRecords.length < total;
 
 			// Calculate total durations for all focus records
 			const durationPipeline: any[] = [];
+			if (searchFilter) {
+				durationPipeline.push({ $match: searchFilter });
+			}
 
 			// Add date range match stage if needed
 			if (Object.keys(dateRangeFilter).length > 0) {
@@ -308,93 +349,113 @@ router.get('/', verifyToken, async (req, res) => {
 		}
 
 		// Filter by project and/or task-id using denormalized data
-		const aggregationPipeline: any[] = [
-			// Match focus records that have at least one task matching the filters
-			{ $match: matchConditions },
-			// Store original duration before filtering
-			{
-				$addFields: {
-					originalDuration: "$duration"
-				}
-			},
-			// Filter tasks array to only include tasks matching ALL conditions
-			{
-				$addFields: {
-					tasks: {
-						$filter: {
-							input: "$tasks",
-							as: "task",
-							cond: filterConditions.length > 1
-								? { $and: filterConditions }
-								: filterConditions[0]
-						}
+		const aggregationPipeline: any[] = [];
+
+		// Step 1: Apply search filter (regex substring match)
+		if (searchFilter) {
+			aggregationPipeline.push({ $match: searchFilter });
+		}
+
+		// Step 2: Match focus records that have at least one task matching the filters
+		aggregationPipeline.push({ $match: matchConditions });
+
+		// Step 3: Store original duration before filtering
+		aggregationPipeline.push({
+			$addFields: {
+				originalDuration: "$duration"
+			}
+		});
+
+		// Step 4: Filter tasks array to only include tasks matching ALL conditions
+		aggregationPipeline.push({
+			$addFields: {
+				tasks: {
+					$filter: {
+						input: "$tasks",
+						as: "task",
+						cond: filterConditions.length > 1
+							? { $and: filterConditions }
+							: filterConditions[0]
 					}
 				}
-			},
-			// Recalculate duration based on filtered tasks
-			{
-				$addFields: {
-					duration: {
-						$reduce: {
-							input: "$tasks",
-							initialValue: 0,
-							in: { $add: ["$$value", "$$this.duration"] }
-						}
+			}
+		});
+
+		// Step 5: Recalculate duration based on filtered tasks
+		aggregationPipeline.push({
+			$addFields: {
+				duration: {
+					$reduce: {
+						input: "$tasks",
+						initialValue: 0,
+						in: { $add: ["$$value", "$$this.duration"] }
 					}
 				}
-			},
-			{ $sort: sortCriteria },
-			{ $skip: skip },
-			{ $limit: limit }
-		];
+			}
+		});
+
+		// Step 6: Sort
+		aggregationPipeline.push({ $sort: sortCriteria });
+
+		// Step 7: Paginate
+		aggregationPipeline.push({ $skip: skip });
+		aggregationPipeline.push({ $limit: limit });
 
 		const focusRecords = await FocusRecordTickTick.aggregate(aggregationPipeline);
 
 		// Count and total duration pipeline using denormalized data
-		const countAndDurationPipeline: any[] = [
-			// Match focus records that have at least one task matching the filters
-			{ $match: matchConditions },
-			// Store original duration before filtering
-			{
-				$addFields: {
-					originalDuration: "$duration"
-				}
-			},
-			// Filter tasks array to only include tasks matching ALL conditions
-			{
-				$addFields: {
-					filteredTasks: {
-						$filter: {
-							input: "$tasks",
-							as: "task",
-							cond: filterConditions.length > 1
-								? { $and: filterConditions }
-								: filterConditions[0]
-						}
+		const countAndDurationPipeline: any[] = [];
+		if (searchFilter) {
+			countAndDurationPipeline.push({ $match: searchFilter });
+		}
+
+		// Match focus records that have at least one task matching the filters
+		countAndDurationPipeline.push({ $match: matchConditions });
+
+		// Store original duration before filtering
+		countAndDurationPipeline.push({
+			$addFields: {
+				originalDuration: "$duration"
+			}
+		});
+
+		// Filter tasks array to only include tasks matching ALL conditions
+		countAndDurationPipeline.push({
+			$addFields: {
+				filteredTasks: {
+					$filter: {
+						input: "$tasks",
+						as: "task",
+						cond: filterConditions.length > 1
+							? { $and: filterConditions }
+							: filterConditions[0]
 					}
-				}
-			},
-			// Calculate filtered tasks duration
-			{
-				$addFields: {
-					filteredTasksDuration: {
-						$reduce: {
-							input: "$filteredTasks",
-							initialValue: 0,
-							in: { $add: ["$$value", "$$this.duration"] }
-						}
-					}
-				}
-			},
-			{
-				$group: {
-					_id: null,
-					total: { $sum: 1 },
-					totalDuration: { $sum: "$originalDuration" },
-					onlyTasksTotalDuration: { $sum: "$filteredTasksDuration" }
 				}
 			}
-		];
+		});
+
+		// Calculate filtered tasks duration
+		countAndDurationPipeline.push({
+			$addFields: {
+				filteredTasksDuration: {
+					$reduce: {
+						input: "$filteredTasks",
+						initialValue: 0,
+						in: { $add: ["$$value", "$$this.duration"] }
+					}
+				}
+			}
+		});
+
+		// Group to get totals
+		countAndDurationPipeline.push({
+			$group: {
+				_id: null,
+				total: { $sum: 1 },
+				totalDuration: { $sum: "$originalDuration" },
+				onlyTasksTotalDuration: { $sum: "$filteredTasksDuration" }
+			}
+		});
 
 		const countAndDurationResult = await FocusRecordTickTick.aggregate(countAndDurationPipeline);
 		const total = countAndDurationResult[0]?.total || 0;
