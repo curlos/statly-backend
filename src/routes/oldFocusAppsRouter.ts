@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { getJsonData } from '../utils/mongoose.utils';
 import { verifyToken } from '../middleware/verifyToken';
 import { getAllTodoistTasks } from '../utils/task.utils';
+import { fetchSessionFocusRecordsWithNoBreaks, fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords } from '../utils/focus.utils';
 
 dotenv.config();
 
@@ -21,16 +22,12 @@ router.get('/focus-records/session-app', verifyToken, async (req, res) => {
 	try {
 		const noBreaks = req.query['no-breaks'];
 
-		const sessionAppFocusData = doNotUseMongoDB ? SESSION_DATA : await getJsonData('session-app-data');
-
 		if (noBreaks) {
-			const focusRecordsWithNoBreaks = sessionAppFocusData.filter(
-				(focusRecord: any) => focusRecord['type'] === 'fullFocus'
-			);
-
+			const focusRecordsWithNoBreaks = await fetchSessionFocusRecordsWithNoBreaks();
 			return res.status(200).json(focusRecordsWithNoBreaks);
 		}
 
+		const sessionAppFocusData = doNotUseMongoDB ? SESSION_DATA : await getJsonData('session-app-data');
 		return res.status(200).json(sessionAppFocusData);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
@@ -39,15 +36,7 @@ router.get('/focus-records/session-app', verifyToken, async (req, res) => {
 
 router.get('/focus-records/be-focused-app', verifyToken, async (req, res) => {
 	try {
-		const beFocusedAppFocusData = doNotUseMongoDB ? BE_FOCUSED_DATA : await getJsonData('be-focused-app-data');
-
-		let totalFocus = 0;
-
-		beFocusedAppFocusData.forEach((beFocusedFocusRecord: any) => {
-			const duration: any = Number(beFocusedFocusRecord['Duration']);
-			totalFocus += duration;
-		});
-
+		const beFocusedAppFocusData = await fetchBeFocusedAppFocusRecords();
 		res.status(200).json(beFocusedAppFocusData);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
@@ -56,23 +45,8 @@ router.get('/focus-records/be-focused-app', verifyToken, async (req, res) => {
 
 router.get('/focus-records/forest-app', verifyToken, async (req, res) => {
 	try {
-		const forestAppFocusData = doNotUseMongoDB ? FOREST_DATA : await getJsonData('forest-app-data');
-
-		const beforeSessionApp = req.query['before-session-app'];
-
-		if (beforeSessionApp) {
-			const cutoffDate = new Date('April 14, 2021');
-
-			const filteredData = forestAppFocusData.filter((item: any) => {
-				const itemStartDate = new Date(item['Start Time']);
-
-				// Return true if the item's start date is before the cutoff date
-				return itemStartDate < cutoffDate;
-			});
-
-			return res.status(200).json(filteredData);
-		}
-
+		const beforeSessionApp = req.query['before-session-app'] === 'true';
+		const forestAppFocusData = await fetchForestAppFocusRecords(beforeSessionApp);
 		res.status(200).json(forestAppFocusData);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
@@ -81,8 +55,8 @@ router.get('/focus-records/forest-app', verifyToken, async (req, res) => {
 
 router.get('/focus-records/tide-app', verifyToken, async (req, res) => {
 	try {
-		const sessionAppFocusData = doNotUseMongoDB ? TIDE_DATA : await getJsonData('tide-ios-app-focus-records');
-		res.status(200).json(sessionAppFocusData);
+		const tideAppFocusData = await fetchTideAppFocusRecords();
+		res.status(200).json(tideAppFocusData);
 	} catch (error) {
 		res.status(500).json({ message: 'Error fetching data', error });
 	}

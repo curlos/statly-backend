@@ -3,6 +3,7 @@ import { getTodayTimeBounds, sortArrayByProperty, arrayToObjectByKey } from './h
 import FocusRecordTickTick from '../models/FocusRecord';
 import Task from '../models/TaskModel';
 import { buildAncestorData } from './task.utils';
+import { getJsonData } from './mongoose.utils';
 
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
 const cookie = TICKTICK_API_COOKIE;
@@ -253,4 +254,46 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
 	});
 
 	return { focusRecordsWithCompletedTasks, ancestorTasksById };
+}
+
+// Helper function to fetch session app focus records with no breaks
+export const fetchSessionFocusRecordsWithNoBreaks = async () => {
+	const sessionAppFocusData = await getJsonData('session-app-data');
+
+	const focusRecordsWithNoBreaks = sessionAppFocusData.filter(
+		(focusRecord: any) => focusRecord['type'] === 'fullFocus'
+	);
+
+	return focusRecordsWithNoBreaks;
+}
+
+// Helper function to fetch be-focused app focus records
+export const fetchBeFocusedAppFocusRecords = async () => {
+	const beFocusedAppFocusData = await getJsonData('be-focused-app-data');
+	return beFocusedAppFocusData;
+}
+
+// Helper function to fetch forest app focus records with optional date filter
+export const fetchForestAppFocusRecords = async (beforeSessionApp?: boolean) => {
+	const forestAppFocusData = await getJsonData('forest-app-data');
+
+	if (beforeSessionApp) {
+		const cutoffDate = new Date('April 14, 2021');
+
+		const filteredData = forestAppFocusData.filter((item: any) => {
+			const itemStartDate = new Date(item['Start Time']);
+			// Return true if the item's start date is before the cutoff date
+			return itemStartDate < cutoffDate;
+		});
+
+		return filteredData;
+	}
+
+	return forestAppFocusData;
+}
+
+// Helper function to fetch tide app focus records
+export const fetchTideAppFocusRecords = async () => {
+	const tideAppFocusData = await getJsonData('tide-ios-app-focus-records');
+	return tideAppFocusData;
 }
