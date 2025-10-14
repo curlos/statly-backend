@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { getTodayTimeBounds, sortArrayByProperty, arrayToObjectByKey } from './helpers.utils';
 import FocusRecordTickTick from '../models/FocusRecord';
+import Task from '../models/TaskModel';
+import { buildAncestorData } from './task.utils';
 
 const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
 const cookie = TICKTICK_API_COOKIE;
@@ -88,3 +90,167 @@ export const fetchTickTickFocusRecords = async (options: FetchFocusRecordsOption
 
 	return sortedAllFocusData;
 };
+
+// Helper function to add ancestor tasks and completed tasks to focus records
+export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
+	// Extract all unique task IDs from focus records
+	const allTaskIds = new Set<string>();
+	focusRecords.forEach((record: any) => {
+		if (record.tasks && Array.isArray(record.tasks)) {
+			record.tasks.forEach((task: any) => {
+				if (task.taskId) {
+					allTaskIds.add(task.taskId);
+				}
+			});
+		}
+	});
+
+	// Fetch full task documents to get ancestorIds
+	const tasksWithAncestors = await Task.find({ id: { $in: Array.from(allTaskIds) } }).lean();
+
+	// Build ancestor data
+	const { ancestorTasksById } = await buildAncestorData(tasksWithAncestors);
+
+	// Add the child tasks themselves to the map
+	tasksWithAncestors.forEach((task: any) => {
+		ancestorTasksById[task.id] = {
+			id: task.id,
+			title: task.title,
+			parentId: task.parentId ?? null,
+			ancestorIds: task.ancestorIds,
+			projectId: task.projectId ?? null
+		};
+	});
+
+	// Add completed tasks to each focus record (optimized with grouping by date)
+	const offsetMs = 10 * 60 * 1000; // 10-minute buffer
+	const oneDayMs = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+
+	// If no focus records, return early
+	if (focusRecords.length === 0) {
+		return { focusRecordsWithCompletedTasks: [], ancestorTasksById };
+	}
+
+	// Create time ranges with buffer for each focus record
+	const timeRanges = focusRecords.map((r: any) => ({
+		start: new Date(r.startTime).getTime() - offsetMs,
+		end: new Date(r.endTime).getTime() + offsetMs
+	}));
+
+	// Sort by start time
+	timeRanges.sort((a, b) => a.start - b.start);
+
+	// Merge ranges if gap is less than 1 day
+	const mergedRanges: { start: number, end: number }[] = [];
+	let currentRange = { start: timeRanges[0].start, end: timeRanges[0].end };
+
+	for (let i = 1; i < timeRanges.length; i++) {
+		// Calculate time gap between end of current range and start of next focus record
+		// Example: FR1 ends at 3:00 PM, FR2 starts at 5:00 PM → gap = 2 hours
+		// Example: FR1 ends at 3:00 PM, FR2 starts at 2:00 PM → gap = negative (overlap)
+		const gap = timeRanges[i].start - currentRange.end;
+
+		if (gap < oneDayMs) {
+			// Merge: extend current range to include this one
+			// Use Math.max because focus records can overlap - if a shorter session starts
+			// during a longer session, we need to keep the furthest end time
+			const furthestEndTime = Math.max(currentRange.end, timeRanges[i].end);
+			currentRange.end = furthestEndTime;
+		} else {
+			// Gap too large: save current range and start new one
+			mergedRanges.push(currentRange);
+			currentRange = { start: timeRanges[i].start, end: timeRanges[i].end };
+		}
+	}
+	// Don't forget the last range
+	mergedRanges.push(currentRange);
+
+	// Query all merged ranges in a single query using $or for better performance
+	let allCompletedTasks: any[] = [];
+
+	if (mergedRanges.length === 0) {
+		// No ranges to query
+		allCompletedTasks = [];
+	} else if (mergedRanges.length === 1) {
+		// Single range - use simple query
+		const tasks = await Task.find({
+			completedTime: {
+				$exists: true,
+				$ne: null,
+				$gte: new Date(mergedRanges[0].start),
+				$lte: new Date(mergedRanges[0].end)
+			}
+		})
+		.select('title completedTime')
+		.lean();
+		allCompletedTasks = tasks;
+	} else {
+		// Multiple ranges - use $or to query all at once (single network roundtrip)
+		const orConditions = mergedRanges.map(range => ({
+			completedTime: {
+				$exists: true,
+				$ne: null,
+				$gte: new Date(range.start),
+				$lte: new Date(range.end)
+			}
+		}));
+
+		const tasks = await Task.find({ $or: orConditions })
+			.select('title completedTime')
+			.lean();
+		allCompletedTasks = tasks;
+	}
+
+	// Group completed tasks by date (YYYY-MM-DD) for faster lookups
+	const tasksByDate = new Map<string, any[]>();
+	allCompletedTasks.forEach((task: any) => {
+		const taskDate = new Date(task.completedTime);
+		const dateKey = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
+
+		if (!tasksByDate.has(dateKey)) {
+			tasksByDate.set(dateKey, []);
+		}
+		tasksByDate.get(dateKey)!.push(task);
+	});
+
+	// Map completed tasks to each focus record
+	const focusRecordsWithCompletedTasks = focusRecords.map((record: any) => {
+		const startTime = new Date(record.startTime);
+		const endTime = new Date(record.endTime);
+		const startTimeWithOffset = new Date(startTime.getTime() - offsetMs);
+		const endTimeWithOffset = new Date(endTime.getTime() + offsetMs);
+
+		// Get unique dates that this focus record spans
+		const relevantDates = new Set<string>();
+		const currentDate = new Date(startTimeWithOffset);
+		const endDate = new Date(endTimeWithOffset);
+
+		while (currentDate <= endDate) {
+			const dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+			relevantDates.add(dateKey);
+			currentDate.setDate(currentDate.getDate() + 1);
+		}
+
+		// Collect tasks only from relevant dates and filter by time
+		const completedTasks: any[] = [];
+		relevantDates.forEach(dateKey => {
+			const tasksForDate = tasksByDate.get(dateKey) || [];
+			tasksForDate.forEach((task: any) => {
+				const taskTime = new Date(task.completedTime).getTime();
+				if (taskTime >= startTimeWithOffset.getTime() && taskTime <= endTimeWithOffset.getTime()) {
+					completedTasks.push(task);
+				}
+			});
+		});
+
+		// Sort by completedTime ascending
+		completedTasks.sort((a, b) => new Date(a.completedTime).getTime() - new Date(b.completedTime).getTime());
+
+		return {
+			...record,
+			completedTasks
+		};
+	});
+
+	return { focusRecordsWithCompletedTasks, ancestorTasksById };
+}
