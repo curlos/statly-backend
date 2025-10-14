@@ -7,6 +7,21 @@ import { buildAncestorData } from '../../utils/task.utils';
 
 const router = express.Router();
 
+// Helper function to build search filter using regex (similar to focus records)
+function buildSearchFilter(searchQuery?: string) {
+	if (!searchQuery || !searchQuery.trim()) {
+		return null;
+	}
+
+	const trimmedQuery = searchQuery.trim();
+	return {
+		$or: [
+			{ title: { $regex: trimmedQuery, $options: 'i' } },
+			{ content: { $regex: trimmedQuery, $options: 'i' } },
+		]
+	};
+}
+
 // GET /days-with-completed-tasks - Returns completed tasks grouped by date with pagination
 router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 	try {
@@ -82,73 +97,22 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			matchFilter.source = { $in: appSources };
 		}
 
-		// Build search stage if query exists (reusable for all pipelines)
-		const searchStage = searchQuery && searchQuery.trim() ? {
-			$search: {
-				index: "search_tasks",
-				compound: {
-					must: [
-						{
-							text: {
-								query: searchQuery.trim(),
-								path: ["title", "content", "description"],
-								fuzzy: {
-									maxEdits: 1,
-									prefixLength: 3
-								}
-							}
-						}
-					],
-					should: [
-						{
-							text: {
-								query: searchQuery.trim(),
-								path: "title",
-								score: { boost: { value: 10 } }
-							}
-						},
-						{
-							text: {
-								query: searchQuery.trim(),
-								path: "content",
-								score: { boost: { value: 10 } }
-							}
-						},
-						{
-							text: {
-								query: searchQuery.trim(),
-								path: "description",
-								score: { boost: { value: 5 } }
-							}
-						}
-					]
-				}
-			}
-		} : null;
+		// Build search filter if query exists
+		const searchFilter = buildSearchFilter(searchQuery);
 
 		// Aggregation pipeline to group tasks by date
 		const aggregationPipeline: any[] = [];
 
-		// Step 1: If search query exists, use Atlas Search
-		if (searchStage) {
-			aggregationPipeline.push(searchStage);
-
-			// Add search score
-			aggregationPipeline.push({
-				$addFields: {
-					searchScore: { $meta: "searchScore" }
-				}
-			});
+		// Step 1: Apply search filter if it exists
+		if (searchFilter) {
+			aggregationPipeline.push({ $match: searchFilter });
 		}
 
 		// Step 2: Filter completed tasks and apply other filters
 		aggregationPipeline.push({ $match: matchFilter });
 
 		// Step 3: Sort by completedTime ascending (oldest first within each day)
-		// Skip this if searching - keep search relevance order
-		if (!searchStage) {
-			aggregationPipeline.push({ $sort: { completedTime: 1 } });
-		}
+		aggregationPipeline.push({ $sort: { completedTime: 1 } });
 
 		// Step 4: Group tasks by formatted date string (in user's timezone)
 		aggregationPipeline.push({
@@ -162,9 +126,7 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 				},
 				completedTasksForDay: { $push: "$$ROOT" },
 				firstCompletedTime: { $first: "$completedTime" },
-				taskCount: { $sum: 1 },
-				// Add day score for search relevance (sum of all task scores in this day)
-				dayTasksTotalSearchScore: searchStage ? { $sum: "$searchScore" } : { $sum: 0 }
+				taskCount: { $sum: 1 }
 			}
 		});
 
@@ -177,9 +139,6 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			aggregationPipeline.push({ $sort: { taskCount: -1 } });
 		} else if (sortBy === 'Completed Tasks: Least-Most') {
 			aggregationPipeline.push({ $sort: { taskCount: 1 } });
-		} else if (sortBy === 'Most Relevant' && searchStage) {
-			// Sort by day score (sum of all task scores in the day)
-			aggregationPipeline.push({ $sort: { dayTasksTotalSearchScore: -1 } });
 		}
 
 		// Step 6: Paginate days (not tasks)
@@ -193,7 +152,6 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 			$project: {
 				dateStr: "$_id",
 				completedTasksForDay: 1,
-				dayTasksTotalSearchScore: 1,
 				_id: 0
 			}
 		});
@@ -209,14 +167,14 @@ router.get('/days-with-completed-tasks', verifyToken, async (req, res) => {
 		// Build ancestor data for all tasks
 		const { ancestorTasksById } = await buildAncestorData(allTasksInPage);
 
-		// Build count pipelines (must include search stage if it exists)
+		// Build count pipelines
 		const countDaysPipeline: any[] = [];
 		const countTasksPipeline: any[] = [];
 
-		// Add search stage to both count pipelines if it exists
-		if (searchStage) {
-			countDaysPipeline.push(searchStage);
-			countTasksPipeline.push(searchStage);
+		// Add search filter to both count pipelines if it exists
+		if (searchFilter) {
+			countDaysPipeline.push({ $match: searchFilter });
+			countTasksPipeline.push({ $match: searchFilter });
 		}
 
 		// Add match filter to both
