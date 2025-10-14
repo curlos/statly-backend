@@ -5,8 +5,8 @@ import SyncMetadata from '../../models/SyncMetadataModel';
 import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
 import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects } from '../../utils/sync.utils';
-import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords } from '../../utils/focus.utils';
-import { FocusRecordBeFocused, FocusRecordForest } from '../../models/FocusRecord';
+import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords } from '../../utils/focus.utils';
+import { FocusRecordBeFocused, FocusRecordForest, FocusRecordTide } from '../../models/FocusRecord';
 
 const router = express.Router();
 
@@ -340,6 +340,79 @@ router.post('/forest/focus-records', verifyToken, async (req: CustomRequest, res
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing Forest focus records.',
+        });
+    }
+});
+
+router.post('/tide/focus-records', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        // Fetch raw Tide data
+        const rawTideRecords = await fetchTideAppFocusRecords();
+
+        // Helper function to parse duration string (e.g., "1h50m", "35m", "3m")
+        const parseDuration = (durationStr: string): number => {
+            let totalSeconds = 0;
+            const hourMatch = durationStr.match(/(\d+)h/);
+            const minuteMatch = durationStr.match(/(\d+)m/);
+
+            if (hourMatch) {
+                totalSeconds += parseInt(hourMatch[1]) * 3600;
+            }
+            if (minuteMatch) {
+                totalSeconds += parseInt(minuteMatch[1]) * 60;
+            }
+
+            return totalSeconds;
+        };
+
+        // Normalize each record to match TickTick format
+        const normalizedRecords = rawTideRecords.map((record: any) => {
+            const startDate = new Date(record['startTime']);
+            const durationInSeconds = parseDuration(record['duration']);
+            const endDate = new Date(startDate.getTime() + durationInSeconds * 1000);
+            const name = record['name'] || 'Untitled';
+
+            // Create custom taskId: "Name - Tide"
+            const taskId = `${name} - Tide`;
+
+            return {
+                id: `${startDate.getTime()}-tide`, // Custom ID based on start time
+                source: 'FocusRecordTide',
+                startTime: startDate, // Date object for MongoDB
+                endTime: endDate, // Date object for MongoDB
+                duration: durationInSeconds, // Duration in seconds like TickTick
+                tasks: [
+                    {
+                        taskId,
+                        title: name,
+                        startTime: startDate, // Date object for MongoDB
+                        endTime: endDate, // Date object for MongoDB
+                        duration: durationInSeconds, // Each task has the full duration since there's only one task
+                    }
+                ]
+            };
+        });
+
+        // Bulk upsert to database
+        const bulkOps = normalizedRecords.map((record: any) => ({
+            updateOne: {
+                filter: { id: record.id },
+                update: { $set: record },
+                upsert: true
+            }
+        }));
+
+        const result = await FocusRecordTide.bulkWrite(bulkOps);
+
+        res.status(200).json({
+            message: 'Tide focus records synced successfully',
+            recordsProcessed: normalizedRecords.length,
+            upsertedCount: result.upsertedCount,
+            modifiedCount: result.modifiedCount,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing Tide focus records.',
         });
     }
 });

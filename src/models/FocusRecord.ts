@@ -121,5 +121,13 @@ const ForestFocusRecordSchema = new Schema({
 // Create Forest discriminator
 const FocusRecordForest = FocusRecord.discriminator('FocusRecordForest', ForestFocusRecordSchema);
 
-export { FocusRecord, FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest };
+// Tide-specific schema (discriminator for Tide focus records)
+const TideFocusRecordSchema = new Schema({
+	tasks: [BaseFocusRecordTaskSchema],
+});
+
+// Create Tide discriminator
+const FocusRecordTide = FocusRecord.discriminator('FocusRecordTide', TideFocusRecordSchema);
+
+export { FocusRecord, FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide };
 export default FocusRecord;
