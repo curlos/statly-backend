@@ -81,21 +81,40 @@ async function addAncestorAndCompletedTasks(focusRecords: any[]) {
 	// Don't forget the last range
 	mergedRanges.push(currentRange);
 
-	// Query each merged range separately and combine results
-	const allCompletedTasks: any[] = [];
-	for (const range of mergedRanges) {
+	// Query all merged ranges in a single query using $or for better performance
+	let allCompletedTasks: any[] = [];
+
+	if (mergedRanges.length === 0) {
+		// No ranges to query
+		allCompletedTasks = [];
+	} else if (mergedRanges.length === 1) {
+		// Single range - use simple query
 		const tasks = await Task.find({
+			completedTime: {
+				$exists: true,
+				$ne: null,
+				$gte: new Date(mergedRanges[0].start),
+				$lte: new Date(mergedRanges[0].end)
+			}
+		})
+		.select('title completedTime')
+		.lean();
+		allCompletedTasks = tasks;
+	} else {
+		// Multiple ranges - use $or to query all at once (single network roundtrip)
+		const orConditions = mergedRanges.map(range => ({
 			completedTime: {
 				$exists: true,
 				$ne: null,
 				$gte: new Date(range.start),
 				$lte: new Date(range.end)
 			}
-		})
-		.select('title completedTime')
-		.lean();
+		}));
 
-		allCompletedTasks.push(...tasks);
+		const tasks = await Task.find({ $or: orConditions })
+			.select('title completedTime')
+			.lean();
+		allCompletedTasks = tasks;
 	}
 
 	// Group completed tasks by date (YYYY-MM-DD) for faster lookups
