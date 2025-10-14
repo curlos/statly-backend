@@ -2,6 +2,19 @@ import FocusRecordTickTick from '../models/FocusRecord';
 import { addAncestorAndCompletedTasks } from '../utils/focus.utils';
 
 // ============================================================================
+// App Source Mapping
+// ============================================================================
+
+// Maps frontend app names to database source discriminators
+const APP_SOURCE_MAPPING: Record<string, string> = {
+	'session-app': 'FocusRecordSession',
+	'be-focused-app': 'FocusRecordBeFocused',
+	'forest-app': 'FocusRecordForest',
+	'tide-ios-app': 'FocusRecordTide',
+	'TickTick': 'FocusRecordTickTick'
+};
+
+// ============================================================================
 // Filter Builders
 // ============================================================================
 
@@ -39,7 +52,8 @@ function buildMatchAndFilterConditions(
 	projectIds: string[],
 	startDate: string | undefined,
 	endDate: string | undefined,
-	taskIdIncludeFocusRecordsFromSubtasks: boolean
+	taskIdIncludeFocusRecordsFromSubtasks: boolean,
+	appSources: string[]
 ) {
 	const focusRecordMatchConditions: any = {};
 	const taskFilterConditions: any[] = [];
@@ -55,6 +69,11 @@ function buildMatchAndFilterConditions(
 			endDateTime.setDate(endDateTime.getDate() + 1);
 			focusRecordMatchConditions.startTime.$lt = endDateTime;
 		}
+	}
+
+	// Add app source filter
+	if (appSources.length > 0) {
+		focusRecordMatchConditions.source = { $in: appSources };
 	}
 
 	// Add project filter
@@ -282,11 +301,16 @@ export interface FocusRecordsQueryParams {
 	sortBy: string;
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
 	searchQuery?: string;
+	focusApps?: string;
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams) {
 	const skip = params.page * params.limit;
 	const projectIds: string[] = params.projects ? params.projects.split(',') : [];
+
+	// Map frontend app names to database source discriminators
+	const appNames: string[] = params.focusApps ? params.focusApps.split(',') : [];
+	const appSources: string[] = appNames.map(appName => APP_SOURCE_MAPPING[appName]).filter(Boolean);
 
 	// Build filters
 	const searchFilter = buildSearchFilter(params.searchQuery);
@@ -296,7 +320,8 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 		projectIds,
 		params.startDate,
 		params.endDate,
-		params.taskIdIncludeFocusRecordsFromSubtasks
+		params.taskIdIncludeFocusRecordsFromSubtasks,
+		appSources
 	);
 
 	// Execute unified query (conditionally adds stages based on filters)

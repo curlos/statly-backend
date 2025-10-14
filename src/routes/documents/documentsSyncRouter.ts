@@ -5,6 +5,8 @@ import SyncMetadata from '../../models/SyncMetadataModel';
 import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
 import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects } from '../../utils/sync.utils';
+import { fetchBeFocusedAppFocusRecords } from '../../utils/focus.utils';
+import { FocusRecordBeFocused } from '../../models/FocusRecord';
 
 const router = express.Router();
 
@@ -217,6 +219,64 @@ router.post('/ticktick/focus-records', verifyToken, async (req: CustomRequest, r
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing TickTick focus records.',
+        });
+    }
+});
+
+router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        // Fetch raw BeFocused data
+        const rawBeFocusedRecords = await fetchBeFocusedAppFocusRecords();
+
+        // Normalize each record to match TickTick format
+        const normalizedRecords = rawBeFocusedRecords.map((record: any) => {
+            const startDate = new Date(record['Start date']);
+            const durationInMinutes = Number(record['Duration']);
+            const durationInSeconds = durationInMinutes * 60; // Convert minutes to seconds
+            const endDate = new Date(startDate.getTime() + durationInMinutes * 60 * 1000);
+            const assignedTask = record['Assigned task'] || 'Untitled';
+
+            // Create custom taskId: "TaskName - BeFocused"
+            const taskId = `${assignedTask} - BeFocused`;
+
+            return {
+                id: `${startDate.getTime()}-befocused`, // Custom ID based on start time
+                source: 'FocusRecordBeFocused',
+                startTime: startDate, // Date object for MongoDB
+                endTime: endDate, // Date object for MongoDB
+                duration: durationInSeconds, // Duration in seconds like TickTick
+                tasks: [
+                    {
+                        taskId,
+                        title: assignedTask,
+                        startTime: startDate, // Date object for MongoDB
+                        endTime: endDate, // Date object for MongoDB
+                        duration: durationInSeconds, // Each task has the full duration since there's only one task
+                    }
+                ]
+            };
+        });
+
+        // Bulk upsert to database
+        const bulkOps = normalizedRecords.map((record: any) => ({
+            updateOne: {
+                filter: { id: record.id },
+                update: { $set: record },
+                upsert: true
+            }
+        }));
+
+        const result = await FocusRecordBeFocused.bulkWrite(bulkOps);
+
+        res.status(200).json({
+            message: 'BeFocused focus records synced successfully',
+            recordsProcessed: normalizedRecords.length,
+            upsertedCount: result.upsertedCount,
+            modifiedCount: result.modifiedCount,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing BeFocused focus records.',
         });
     }
 });

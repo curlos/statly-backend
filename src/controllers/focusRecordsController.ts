@@ -17,6 +17,7 @@ export async function getFocusRecordsHandler(req: Request, res: Response) {
 			sortBy: req.query['sort-by'] as string || 'Newest',
 			taskIdIncludeFocusRecordsFromSubtasks: req.query['task-id-include-focus-records-from-subtasks'] === 'true',
 			searchQuery: req.query['search'] as string,
+			focusApps: req.query['focus-apps'] as string,
 		};
 
 		// Call service to get focus records
