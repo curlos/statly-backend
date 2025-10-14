@@ -8,6 +8,7 @@ import { getAllTodoistTasks } from '../../utils/task.utils';
 import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects } from '../../utils/sync.utils';
 import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks } from '../../utils/focus.utils';
 import { FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from '../../models/FocusRecord';
+import { ProjectSession } from '../../models/projectModel';
 
 const router = express.Router();
 
@@ -183,6 +184,73 @@ router.post('/todoist/projects', verifyToken, async (req: CustomRequest, res) =>
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing Todoist projects.',
+        });
+    }
+});
+
+router.post('/session/projects', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        // Fetch raw Session focus records (includes full category data)
+        const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
+
+        // Extract unique categories/projects
+        const categoriesMap = new Map();
+
+        for (const record of rawSessionRecords) {
+            const category = record['category'];
+
+            if (category) {
+                const categoryId = category['id'] || 'general-session';
+                const categoryTitle = category['title'] || 'General';
+                const hexColor = category['hex_color'] || '';
+
+                // Skip if already processed
+                if (!categoriesMap.has(categoryId)) {
+                    categoriesMap.set(categoryId, {
+                        id: categoryId === '' ? 'general-session' : categoryId,
+                        name: categoryTitle,
+                        color: hexColor,
+                    });
+                }
+            }
+        }
+
+        // Convert map to array and prepare bulk operations
+        const uniqueCategories = Array.from(categoriesMap.values());
+        const bulkOps = [];
+
+        for (const category of uniqueCategories) {
+            const normalizedProject = {
+                id: category.id,
+                source: 'ProjectSession',
+                name: category.name,
+                color: category.color,
+            };
+
+            bulkOps.push({
+                updateOne: {
+                    filter: { id: category.id },
+                    update: { $set: normalizedProject },
+                    upsert: true,
+                },
+            });
+        }
+
+        // Execute bulk operations if there are any
+        const result = bulkOps.length > 0
+            ? await ProjectSession.bulkWrite(bulkOps)
+            : { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
+
+        res.status(200).json({
+            message: 'Session projects synced successfully',
+            recordsProcessed: uniqueCategories.length,
+            upsertedCount: result.upsertedCount,
+            modifiedCount: result.modifiedCount,
+            matchedCount: result.matchedCount,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing Session projects.',
         });
     }
 });

@@ -295,6 +295,7 @@ export interface FocusRecordsQueryParams {
 	page: number;
 	limit: number;
 	projects?: string;
+	categories?: string;
 	taskId?: string;
 	startDate?: string;
 	endDate?: string;
@@ -306,7 +307,12 @@ export interface FocusRecordsQueryParams {
 
 export async function getFocusRecords(params: FocusRecordsQueryParams) {
 	const skip = params.page * params.limit;
-	const projectIds: string[] = params.projects ? params.projects.split(',') : [];
+
+	// Combine projects and categories into a single array
+	const projectIds: string[] = [
+		...(params.projects ? params.projects.split(',') : []),
+		...(params.categories ? params.categories.split(',') : [])
+	];
 
 	// Map frontend app names to database source discriminators
 	const appNames: string[] = params.focusApps ? params.focusApps.split(',') : [];

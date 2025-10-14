@@ -11,6 +11,7 @@ export async function getFocusRecordsHandler(req: Request, res: Response) {
 			page: parseInt(req.query.page as string) || 0,
 			limit: parseInt(req.query.limit as string) || 25,
 			projects: req.query['projects-ticktick'] as string,
+			categories: req.query['categories'] as string,
 			taskId: req.query['task-id'] as string,
 			startDate: req.query['start-date'] as string,
 			endDate: req.query['end-date'] as string,

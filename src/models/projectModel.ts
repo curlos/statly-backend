@@ -191,8 +191,15 @@ const TodoistProjectSchema = new Schema({
 	}
 });
 
+// Session-specific schema (discriminator for Session projects/categories)
+const SessionProjectSchema = new Schema({
+	// Session categories map entirely to base schema fields
+	// No additional fields needed
+});
+
 const ProjectTickTick = Project.discriminator('ProjectTickTick', TickTickProjectSchema);
 const ProjectTodoist = Project.discriminator('ProjectTodoist', TodoistProjectSchema);
+const ProjectSession = Project.discriminator('ProjectSession', SessionProjectSchema);
 
-export { Project, ProjectTickTick, ProjectTodoist };
+export { Project, ProjectTickTick, ProjectTodoist, ProjectSession };
 export default Project;
