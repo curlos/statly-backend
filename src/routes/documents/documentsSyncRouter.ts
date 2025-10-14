@@ -1,12 +1,13 @@
 import express from 'express';
+import { randomUUID } from 'crypto';
 import { CustomRequest } from '../../interfaces/CustomRequest';
 import { verifyToken } from '../../middleware/verifyToken';
 import SyncMetadata from '../../models/SyncMetadataModel';
 import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
 import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects } from '../../utils/sync.utils';
-import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords } from '../../utils/focus.utils';
-import { FocusRecordBeFocused, FocusRecordForest, FocusRecordTide } from '../../models/FocusRecord';
+import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks } from '../../utils/focus.utils';
+import { FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from '../../models/FocusRecord';
 
 const router = express.Router();
 
@@ -240,7 +241,7 @@ router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest,
             const taskId = `${assignedTask} - BeFocused`;
 
             return {
-                id: `${startDate.getTime()}-befocused`, // Custom ID based on start time
+                id: randomUUID(),
                 source: 'FocusRecordBeFocused',
                 startTime: startDate, // Date object for MongoDB
                 endTime: endDate, // Date object for MongoDB
@@ -300,7 +301,7 @@ router.post('/forest/focus-records', verifyToken, async (req: CustomRequest, res
             const taskId = `${tag} - Forest`;
 
             return {
-                id: `${startDate.getTime()}-forest`, // Custom ID based on start time
+                id: randomUUID(),
                 source: 'FocusRecordForest',
                 startTime: startDate, // Date object for MongoDB
                 endTime: endDate, // Date object for MongoDB
@@ -413,6 +414,112 @@ router.post('/tide/focus-records', verifyToken, async (req: CustomRequest, res) 
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing Tide focus records.',
+        });
+    }
+});
+
+router.post('/session/focus-records', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        // Fetch raw Session data
+        const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
+
+        // Normalize each record to match TickTick format
+        const normalizedRecords = rawSessionRecords.map((record: any) => {
+            const startDate = new Date(record['start_date']);
+            const endDate = new Date(record['end_date']);
+            const totalDurationInSeconds = record['duration_second'];
+            const pauseDurationInSeconds = record['pause_second'] || 0;
+            const actualDurationInSeconds = totalDurationInSeconds - pauseDurationInSeconds;
+
+            const categoryTitle = record['category']?.['title'] || 'General';
+            const categoryId = record['category']?.['id'] || 'general-session';
+            const title = record['title'] || categoryTitle;
+            const note = record['notes'] || '';
+
+            // Normalize "General" category
+            const projectId = categoryId === '' ? 'general-session' : categoryId;
+            const projectName = categoryTitle;
+
+            // Parse meta array to get pause periods
+            const metaPauses = (record['meta'] || [])
+                .filter((m: any) => m.type === 'PAUSE')
+                .map((m: any) => ({
+                    start: new Date(m['start_date']),
+                    end: new Date(m['end_date'])
+                }))
+                .sort((a: any, b: any) => a.start.getTime() - b.start.getTime());
+
+            // Build tasks array by splitting based on pauses
+            const tasks = [];
+            let currentStart = startDate;
+
+            for (const pause of metaPauses) {
+                // Task before this pause
+                const taskEnd = pause.start;
+                const taskDuration = Math.floor((taskEnd.getTime() - currentStart.getTime()) / 1000);
+
+                if (taskDuration > 0) {
+                    tasks.push({
+                        taskId: `${title} - Session`,
+                        title,
+                        startTime: currentStart,
+                        endTime: taskEnd,
+                        duration: taskDuration,
+                        projectId,
+                        projectName,
+                    });
+                }
+
+                // Move start to after pause
+                currentStart = pause.end;
+            }
+
+            // Final task (after last pause or entire session if no pauses)
+            const finalTaskDuration = Math.floor((endDate.getTime() - currentStart.getTime()) / 1000);
+            if (finalTaskDuration > 0) {
+                tasks.push({
+                    taskId: `${title} - Session`,
+                    title,
+                    startTime: currentStart,
+                    endTime: endDate,
+                    duration: finalTaskDuration,
+                    projectId,
+                    projectName,
+                });
+            }
+
+            return {
+                id: randomUUID(),
+                source: 'FocusRecordSession',
+                startTime: startDate,
+                endTime: endDate,
+                duration: actualDurationInSeconds, // Total duration minus pauses
+                note,
+                pauseDuration: pauseDurationInSeconds,
+                tasks
+            };
+        });
+
+        // Bulk upsert to database
+        const bulkOps = normalizedRecords.map((record: any) => ({
+            updateOne: {
+                filter: { id: record.id },
+                update: { $set: record },
+                upsert: true
+            }
+        }));
+
+        const result = await FocusRecordSession.bulkWrite(bulkOps);
+
+        res.status(200).json({
+            message: 'Session focus records synced successfully',
+            recordsProcessed: normalizedRecords.length,
+            upsertedCount: result.upsertedCount,
+            modifiedCount: result.modifiedCount,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing Session focus records.',
         });
     }
 });

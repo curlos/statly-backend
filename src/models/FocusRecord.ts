@@ -43,6 +43,20 @@ const TickTickFocusRecordTaskSchema = new Schema({
 	},
 }, { _id: false });
 
+// Extended schema for Session tasks (inherits base fields and adds project-related fields)
+const SessionFocusRecordTaskSchema = new Schema({
+	...BaseFocusRecordTaskSchema.obj,
+	projectId: {
+		type: String,
+		required: true,
+		index: true, // Index for fast filtering
+	},
+	projectName: {
+		type: String,
+		required: true,
+	},
+}, { _id: false });
+
 // Base schema with shared fields for ALL focus records
 const BaseFocusRecordSchema = new Schema({
 	id: {
@@ -129,5 +143,21 @@ const TideFocusRecordSchema = new Schema({
 // Create Tide discriminator
 const FocusRecordTide = FocusRecord.discriminator('FocusRecordTide', TideFocusRecordSchema);
 
-export { FocusRecord, FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide };
+// Session-specific schema (discriminator for Session focus records)
+const SessionFocusRecordSchema = new Schema({
+	note: {
+		type: String,
+		default: '',
+	},
+	pauseDuration: {
+		type: Number,
+		default: 0,
+	},
+	tasks: [SessionFocusRecordTaskSchema],
+});
+
+// Create Session discriminator
+const FocusRecordSession = FocusRecord.discriminator('FocusRecordSession', SessionFocusRecordSchema);
+
+export { FocusRecord, FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession };
 export default FocusRecord;
