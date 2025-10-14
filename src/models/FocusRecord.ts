@@ -101,5 +101,25 @@ const BeFocusedFocusRecordSchema = new Schema({
 // Create BeFocused discriminator
 const FocusRecordBeFocused = FocusRecord.discriminator('FocusRecordBeFocused', BeFocusedFocusRecordSchema);
 
-export { FocusRecord, FocusRecordTickTick, FocusRecordBeFocused };
+// Forest-specific schema (discriminator for Forest focus records)
+const ForestFocusRecordSchema = new Schema({
+	note: {
+		type: String,
+		default: '',
+	},
+	treeType: {
+		type: String,
+		default: '',
+	},
+	isSuccess: {
+		type: Boolean,
+		required: true,
+	},
+	tasks: [BaseFocusRecordTaskSchema],
+});
+
+// Create Forest discriminator
+const FocusRecordForest = FocusRecord.discriminator('FocusRecordForest', ForestFocusRecordSchema);
+
+export { FocusRecord, FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest };
 export default FocusRecord;

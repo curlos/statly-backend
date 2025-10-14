@@ -5,8 +5,8 @@ import SyncMetadata from '../../models/SyncMetadataModel';
 import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
 import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects } from '../../utils/sync.utils';
-import { fetchBeFocusedAppFocusRecords } from '../../utils/focus.utils';
-import { FocusRecordBeFocused } from '../../models/FocusRecord';
+import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords } from '../../utils/focus.utils';
+import { FocusRecordBeFocused, FocusRecordForest } from '../../models/FocusRecord';
 
 const router = express.Router();
 
@@ -277,6 +277,69 @@ router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest,
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing BeFocused focus records.',
+        });
+    }
+});
+
+router.post('/forest/focus-records', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        // Fetch raw Forest data
+        const rawForestRecords = await fetchForestAppFocusRecords(true);
+
+        // Normalize each record to match TickTick format
+        const normalizedRecords = rawForestRecords.map((record: any) => {
+            const startDate = new Date(record['Start Time']);
+            const endDate = new Date(record['End Time']);
+            const durationInSeconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
+            const tag = record['Tag'] || '';
+            const note = record['Note'] || '';
+            const treeType = record['Tree Type'] || '';
+            const isSuccess = record['Is Success'] === 'True';
+
+            // Create custom taskId: "Tag - Forest"
+            const taskId = `${tag} - Forest`;
+
+            return {
+                id: `${startDate.getTime()}-forest`, // Custom ID based on start time
+                source: 'FocusRecordForest',
+                startTime: startDate, // Date object for MongoDB
+                endTime: endDate, // Date object for MongoDB
+                duration: durationInSeconds, // Duration in seconds like TickTick
+                note,
+                treeType,
+                isSuccess,
+                tasks: [
+                    {
+                        taskId,
+                        title: tag,
+                        startTime: startDate, // Date object for MongoDB
+                        endTime: endDate, // Date object for MongoDB
+                        duration: durationInSeconds, // Each task has the full duration since there's only one task
+                    }
+                ]
+            };
+        });
+
+        // Bulk upsert to database
+        const bulkOps = normalizedRecords.map((record: any) => ({
+            updateOne: {
+                filter: { id: record.id },
+                update: { $set: record },
+                upsert: true
+            }
+        }));
+
+        const result = await FocusRecordForest.bulkWrite(bulkOps);
+
+        res.status(200).json({
+            message: 'Forest focus records synced successfully',
+            recordsProcessed: normalizedRecords.length,
+            upsertedCount: result.upsertedCount,
+            modifiedCount: result.modifiedCount,
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing Forest focus records.',
         });
     }
 });
