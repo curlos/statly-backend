@@ -2,10 +2,13 @@ import express from 'express';
 import { verifyToken } from '../../middleware/verifyToken';
 import { fetchSessionFocusRecordsWithNoBreaks, fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords } from '../../utils/focus.utils';
 import { getFocusRecordsHandler } from '../../controllers/focusRecordsController';
+import { getFocusMedalsHandler } from '../../controllers/medalsController';
 
 const router = express.Router();
 
 router.get('/', verifyToken, getFocusRecordsHandler);
+
+router.get('/medals', verifyToken, getFocusMedalsHandler);
 
 router.get('/test-json-data', verifyToken, async (req, res) => {
 	try {

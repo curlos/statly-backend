@@ -4,8 +4,11 @@ import { verifyToken } from '../../middleware/verifyToken';
 import { getJsonData } from '../../utils/mongoose.utils';
 import { fetchAllTickTickTasks } from '../../utils/ticktick.utils';
 import { buildAncestorData } from '../../utils/task.utils';
+import { getTasksMedalsHandler } from '../../controllers/medalsController';
 
 const router = express.Router();
+
+router.get('/medals', verifyToken, getTasksMedalsHandler);
 
 // Helper function to build search filter using regex (similar to focus records)
 function buildSearchFilter(searchQuery?: string) {
