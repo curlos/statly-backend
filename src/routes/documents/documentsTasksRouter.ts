@@ -5,10 +5,13 @@ import { getJsonData } from '../../utils/mongoose.utils';
 import { fetchAllTickTickTasks } from '../../utils/ticktick.utils';
 import { buildAncestorData } from '../../utils/task.utils';
 import { getTasksMedalsHandler } from '../../controllers/medalsController';
+import { getTasksChallengesHandler } from '../../controllers/challengesController';
 
 const router = express.Router();
 
 router.get('/medals', verifyToken, getTasksMedalsHandler);
+
+router.get('/challenges', verifyToken, getTasksChallengesHandler);
 
 // Helper function to build search filter using regex (similar to focus records)
 function buildSearchFilter(searchQuery?: string) {

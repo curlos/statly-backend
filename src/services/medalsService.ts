@@ -187,6 +187,7 @@ export interface MedalsQueryParams {
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
 	searchQuery?: string;
 	focusApps?: string;
+	toDoListApps?: string;
 	timezone: string;
 	type: 'focus' | 'tasks';
 	interval: 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -219,11 +220,12 @@ export async function getFocusHoursMedals(params: MedalsQueryParams) {
 
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
 
-	// Apply task filtering if needed
+	// Calculate task-based duration (to match onlyTasksTotalDuration from focus records)
 	if (hasTaskOrProjectFilters) {
+		// Filter tasks based on conditions
 		pipeline.push({
 			$addFields: {
-				tasks: {
+				filteredTasks: {
 					$filter: {
 						input: "$tasks",
 						as: "task",
@@ -235,10 +237,23 @@ export async function getFocusHoursMedals(params: MedalsQueryParams) {
 			}
 		});
 
-		// Recalculate duration based on filtered tasks
+		// Calculate duration from filtered tasks
 		pipeline.push({
 			$addFields: {
-				duration: {
+				tasksDuration: {
+					$reduce: {
+						input: "$filteredTasks",
+						initialValue: 0,
+						in: { $add: ["$$value", "$$this.duration"] }
+					}
+				}
+			}
+		});
+	} else {
+		// No filters: calculate duration from all tasks (to match onlyTasksTotalDuration)
+		pipeline.push({
+			$addFields: {
+				tasksDuration: {
 					$reduce: {
 						input: "$tasks",
 						initialValue: 0,
@@ -249,11 +264,11 @@ export async function getFocusHoursMedals(params: MedalsQueryParams) {
 		});
 	}
 
-	// Group by period and sum durations
+	// Group by period and sum task durations
 	pipeline.push({
 		$group: {
 			_id: getDateGroupingExpression(params.interval, params.timezone),
-			totalDuration: { $sum: "$duration" }
+			totalDuration: { $sum: "$tasksDuration" }
 		}
 	});
 
@@ -280,6 +295,12 @@ export async function getCompletedTasksMedals(params: MedalsQueryParams) {
 	const matchFilter: any = {
 		completedTime: { $exists: true, $ne: null }
 	};
+
+	// Filter by to-do list apps (TaskTickTick or TaskTodoist)
+	if (params.toDoListApps) {
+		const appSources = params.toDoListApps.split(',').map(app => `Task${app.trim()}`);
+		matchFilter.source = { $in: appSources };
+	}
 
 	// Add date range filter
 	if (params.startDate && params.endDate) {

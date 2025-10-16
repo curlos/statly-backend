@@ -21,6 +21,7 @@ function parseMedalsQueryParams(req: Request, type: 'focus' | 'tasks'): MedalsQu
 		taskIdIncludeFocusRecordsFromSubtasks: req.query['task-id-include-focus-records-from-subtasks'] === 'true',
 		searchQuery: req.query['search'] as string,
 		focusApps: req.query['focus-apps'] as string,
+		toDoListApps: req.query['to-do-list-apps'] as string,
 		timezone: (req.query.timezone as string) || 'UTC',
 		type,
 		interval: (req.query['interval'] as 'daily' | 'weekly' | 'monthly' | 'yearly') || 'daily',
