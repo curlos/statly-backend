@@ -99,3 +99,126 @@ export function buildBasePipeline(searchFilter: any, focusRecordMatchConditions:
 
 	return pipeline;
 }
+
+// ============================================================================
+// Shared Aggregation Pipeline Functions
+// ============================================================================
+
+/**
+ * Adds task duration calculation stages to the pipeline.
+ * This is shared logic for both challenges and medals services.
+ */
+export function addTaskDurationCalculation(
+	pipeline: any[],
+	taskFilterConditions: any[]
+) {
+	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
+
+	if (hasTaskOrProjectFilters) {
+		// Filter tasks based on conditions
+		pipeline.push({
+			$addFields: {
+				filteredTasks: {
+					$filter: {
+						input: "$tasks",
+						as: "task",
+						cond: taskFilterConditions.length > 1
+							? { $and: taskFilterConditions }
+							: taskFilterConditions[0]
+					}
+				}
+			}
+		});
+
+		// Calculate duration from filtered tasks
+		pipeline.push({
+			$addFields: {
+				tasksDuration: {
+					$reduce: {
+						input: "$filteredTasks",
+						initialValue: 0,
+						in: { $add: ["$$value", "$$this.duration"] }
+					}
+				}
+			}
+		});
+	} else {
+		// No filters: calculate duration from all tasks
+		pipeline.push({
+			$addFields: {
+				tasksDuration: {
+					$reduce: {
+						input: "$tasks",
+						initialValue: 0,
+						in: { $add: ["$$value", "$$this.duration"] }
+					}
+				}
+			}
+		});
+	}
+}
+
+/**
+ * Builds date grouping expression for MongoDB aggregation.
+ * Used to group by day, week, month, or year.
+ */
+export function getDateGroupingExpression(
+	interval: string,
+	timezone: string,
+	dateField: string = '$startTime'
+) {
+	switch (interval) {
+		case 'daily':
+			return {
+				$dateToString: {
+					format: "%B %d, %Y",
+					date: dateField,
+					timezone: timezone
+				}
+			};
+		case 'weekly':
+			// Get the Monday of the week (ISO week)
+			return {
+				$dateToString: {
+					format: "%B %d, %Y",
+					date: {
+						$dateSubtract: {
+							startDate: dateField,
+							unit: "day",
+							amount: {
+								$subtract: [
+									{ $isoDayOfWeek: { date: dateField, timezone: timezone } },
+									1
+								]
+							}
+						}
+					},
+					timezone: timezone
+				}
+			};
+		case 'monthly':
+			return {
+				$dateToString: {
+					format: "%B %Y",
+					date: dateField,
+					timezone: timezone
+				}
+			};
+		case 'yearly':
+			return {
+				$dateToString: {
+					format: "%Y",
+					date: dateField,
+					timezone: timezone
+				}
+			};
+		default:
+			return {
+				$dateToString: {
+					format: "%B %d, %Y",
+					date: dateField,
+					timezone: timezone
+				}
+			};
+	}
+}

@@ -15,69 +15,13 @@ import {
 	buildSearchFilter,
 	buildMatchAndFilterConditions,
 	buildBasePipeline,
+	addTaskDurationCalculation,
+	getDateGroupingExpression,
 } from '../utils/filterBuilders.utils';
 
 // ============================================================================
-// Date Grouping Helpers
+// Date Formatting Helpers
 // ============================================================================
-
-function getDateGroupingExpression(interval: string, timezone: string, dateField: string = '$startTime') {
-	switch (interval) {
-		case 'daily':
-			return {
-				$dateToString: {
-					format: "%B %d, %Y",
-					date: dateField,
-					timezone: timezone
-				}
-			};
-		case 'weekly':
-			// Get the Monday of the week (ISO week)
-			// Important: Calculate day of week in the user's timezone, not UTC
-			return {
-				$dateToString: {
-					format: "%B %d, %Y",
-					date: {
-						$dateSubtract: {
-							startDate: dateField,
-							unit: "day",
-							amount: {
-								$subtract: [
-									{ $isoDayOfWeek: { date: dateField, timezone: timezone } },
-									1
-								]
-							}
-						}
-					},
-					timezone: timezone
-				}
-			};
-		case 'monthly':
-			return {
-				$dateToString: {
-					format: "%B %Y",
-					date: dateField,
-					timezone: timezone
-				}
-			};
-		case 'yearly':
-			return {
-				$dateToString: {
-					format: "%Y",
-					date: dateField,
-					timezone: timezone
-				}
-			};
-		default:
-			return {
-				$dateToString: {
-					format: "%B %d, %Y",
-					date: dateField,
-					timezone: timezone
-				}
-			};
-	}
-}
 
 // Helper function to remove leading zero from day in date string
 // Converts "October 03, 2024" to "October 3, 2024"
@@ -218,51 +162,8 @@ export async function getFocusHoursMedals(params: MedalsQueryParams) {
 	// Build aggregation pipeline
 	const pipeline = buildBasePipeline(searchFilter, focusRecordMatchConditions);
 
-	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
-
-	// Calculate task-based duration (to match onlyTasksTotalDuration from focus records)
-	if (hasTaskOrProjectFilters) {
-		// Filter tasks based on conditions
-		pipeline.push({
-			$addFields: {
-				filteredTasks: {
-					$filter: {
-						input: "$tasks",
-						as: "task",
-						cond: taskFilterConditions.length > 1
-							? { $and: taskFilterConditions }
-							: taskFilterConditions[0]
-					}
-				}
-			}
-		});
-
-		// Calculate duration from filtered tasks
-		pipeline.push({
-			$addFields: {
-				tasksDuration: {
-					$reduce: {
-						input: "$filteredTasks",
-						initialValue: 0,
-						in: { $add: ["$$value", "$$this.duration"] }
-					}
-				}
-			}
-		});
-	} else {
-		// No filters: calculate duration from all tasks (to match onlyTasksTotalDuration)
-		pipeline.push({
-			$addFields: {
-				tasksDuration: {
-					$reduce: {
-						input: "$tasks",
-						initialValue: 0,
-						in: { $add: ["$$value", "$$this.duration"] }
-					}
-				}
-			}
-		});
-	}
+	// Add task duration calculation (shared logic)
+	addTaskDurationCalculation(pipeline, taskFilterConditions);
 
 	// Group by period and sum task durations
 	pipeline.push({

@@ -9,6 +9,8 @@ import {
 	buildSearchFilter,
 	buildMatchAndFilterConditions,
 	buildBasePipeline,
+	addTaskDurationCalculation,
+	getDateGroupingExpression,
 } from '../utils/filterBuilders.utils';
 
 // ============================================================================
@@ -120,62 +122,13 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 	// Build aggregation pipeline
 	const pipeline = buildBasePipeline(searchFilter, focusRecordMatchConditions);
 
-	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
-
-	// Calculate task-based duration (to match onlyTasksTotalDuration from focus records)
-	if (hasTaskOrProjectFilters) {
-		// Filter tasks based on conditions
-		pipeline.push({
-			$addFields: {
-				filteredTasks: {
-					$filter: {
-						input: "$tasks",
-						as: "task",
-						cond: taskFilterConditions.length > 1
-							? { $and: taskFilterConditions }
-							: taskFilterConditions[0]
-					}
-				}
-			}
-		});
-
-		// Calculate duration from filtered tasks
-		pipeline.push({
-			$addFields: {
-				tasksDuration: {
-					$reduce: {
-						input: "$filteredTasks",
-						initialValue: 0,
-						in: { $add: ["$$value", "$$this.duration"] }
-					}
-				}
-			}
-		});
-	} else {
-		// No filters: calculate duration from all tasks (to match onlyTasksTotalDuration)
-		pipeline.push({
-			$addFields: {
-				tasksDuration: {
-					$reduce: {
-						input: "$tasks",
-						initialValue: 0,
-						in: { $add: ["$$value", "$$this.duration"] }
-					}
-				}
-			}
-		});
-	}
+	// Add task duration calculation (shared logic)
+	addTaskDurationCalculation(pipeline, taskFilterConditions);
 
 	// Group by day and sum task durations
 	pipeline.push({
 		$group: {
-			_id: {
-				$dateToString: {
-					format: "%B %d, %Y",
-					date: "$startTime",
-					timezone: params.timezone
-				}
-			},
+			_id: getDateGroupingExpression('daily', params.timezone),
 			totalDuration: { $sum: "$tasksDuration" }
 		}
 	});
@@ -188,10 +141,6 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 		date: result._id,
 		total: result.totalDuration
 	}));
-
-	// Debug: Log total records and cumulative total
-	const totalSeconds = dailyTotals.reduce((sum, day) => sum + day.total, 0);
-	const totalHours = (totalSeconds / 3600).toFixed(2);
 
 	// Calculate challenges
 	return calculateChallengesFromDailyTotals(
