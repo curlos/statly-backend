@@ -37,30 +37,27 @@ function calculateChallengesFromDailyTotals(
 		return new Date(a.date).getTime() - new Date(b.date).getTime();
 	});
 
-	// Clone challenges array with null completion dates
-	const challengeResults = challenges.map(challenge => ({
+	// Clone and sort challenges by threshold (smallest first)
+	const sortedChallenges = challenges.map(challenge => ({
 		...challenge,
-		completedDate: null
-	}));
+		completedDate: null,
+		threshold: challenge.requiredDuration || challenge.requiredCompletedTasks
+	})).sort((a, b) => a.threshold - b.threshold);
 
-	// Accumulate totals day by day and mark completion dates
+	// Track which challenge we're currently trying to complete
+	let currentChallengeIndex = 0;
 	let cumulativeTotal = 0;
+
+	// Process each day
 	for (const { date, total } of sortedDailyTotals) {
 		cumulativeTotal += total;
 
-		// Debug logging for dates around July 13, 2025
-		if (date.includes('July') && date.includes('2025')) {
-			const hoursFromSeconds = (cumulativeTotal / 3600).toFixed(2);
-			console.log(`[DEBUG] Date: ${date}, Day Total: ${(total / 3600).toFixed(2)}h, Cumulative: ${hoursFromSeconds}h (${cumulativeTotal}s)`);
-		}
+		// Check challenges starting from the current uncompleted one
+		while (currentChallengeIndex < sortedChallenges.length) {
+			const challenge = sortedChallenges[currentChallengeIndex];
 
-		// Check each challenge threshold
-		for (const challenge of challengeResults) {
-			const threshold = challenge.requiredDuration || challenge.requiredCompletedTasks;
-
-			// Mark completion date if threshold reached and not yet completed
-			if (!challenge.completedDate && cumulativeTotal >= threshold) {
-				// Format the date string
+			if (cumulativeTotal >= challenge.threshold) {
+				// Mark this challenge as complete
 				const dateObj = new Date(date);
 				const formattedDate = dateObj.toLocaleDateString('en-US', {
 					month: 'long',
@@ -69,16 +66,28 @@ function calculateChallengesFromDailyTotals(
 				});
 				challenge.completedDate = formatDateWithoutLeadingZero(formattedDate);
 
-				// Debug log when 6500 hour challenge is completed
-				if (threshold === 23400000) {
-					const hoursFromSeconds = (cumulativeTotal / 3600).toFixed(2);
-					console.log(`[DEBUG] 6500 Hour Challenge Completed! Date: ${date}, Cumulative: ${hoursFromSeconds}h (${cumulativeTotal}s), Threshold: ${(threshold / 3600).toFixed(2)}h (${threshold}s)`);
-				}
+				// Move to next challenge
+				currentChallengeIndex++;
+			} else {
+				// Haven't reached this threshold yet, stop checking higher ones
+				break;
 			}
+		}
+
+		// If all challenges are complete, no need to process more days
+		if (currentChallengeIndex >= sortedChallenges.length) {
+			break;
 		}
 	}
 
-	return challengeResults;
+	// Remove the temporary threshold field and return in original order
+	return challenges.map(challenge => {
+		const completedChallenge = sortedChallenges.find(sc => sc.name === challenge.name);
+		return {
+			...challenge,
+			completedDate: completedChallenge?.completedDate || null
+		};
+	});
 }
 
 // ============================================================================
