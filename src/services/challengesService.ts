@@ -12,6 +12,7 @@ import {
 	addTaskDurationCalculation,
 	getDateGroupingExpression,
 } from '../utils/filterBuilders.utils';
+import { ChallengesQueryParams } from '../utils/queryParams.utils';
 
 // ============================================================================
 // Helper Functions
@@ -83,19 +84,6 @@ function calculateChallengesFromDailyTotals(
 // ============================================================================
 // Main Service Methods
 // ============================================================================
-
-export interface ChallengesQueryParams {
-	projects?: string;
-	categories?: string;
-	taskId?: string;
-	startDate?: string;
-	endDate?: string;
-	taskIdIncludeFocusRecordsFromSubtasks: boolean;
-	searchQuery?: string;
-	focusApps?: string;
-	toDoListApps?: string;
-	timezone: string;
-}
 
 export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 	// Combine projects and categories into a single array

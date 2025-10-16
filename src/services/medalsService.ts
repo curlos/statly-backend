@@ -18,6 +18,7 @@ import {
 	addTaskDurationCalculation,
 	getDateGroupingExpression,
 } from '../utils/filterBuilders.utils';
+import { MedalsQueryParams } from '../utils/queryParams.utils';
 
 // ============================================================================
 // Date Formatting Helpers
@@ -121,21 +122,6 @@ function calculateMedalsFromPeriodTotals(
 // ============================================================================
 // Main Service Methods
 // ============================================================================
-
-export interface MedalsQueryParams {
-	projects?: string;
-	categories?: string;
-	taskId?: string;
-	startDate?: string;
-	endDate?: string;
-	taskIdIncludeFocusRecordsFromSubtasks: boolean;
-	searchQuery?: string;
-	focusApps?: string;
-	toDoListApps?: string;
-	timezone: string;
-	type: 'focus' | 'tasks';
-	interval: 'daily' | 'weekly' | 'monthly' | 'yearly';
-}
 
 export async function getFocusHoursMedals(params: MedalsQueryParams) {
 	// Combine projects and categories into a single array
