@@ -5,13 +5,13 @@ import {
 	DEFAULT_TOTAL_COMPLETED_TASKS_CHALLENGES,
 } from '../utils/constants/challenges.utils';
 import {
-	APP_SOURCE_MAPPING,
-	buildSearchFilter,
-	buildMatchAndFilterConditions,
-	buildBasePipeline,
-	addTaskDurationCalculation,
-	getDateGroupingExpression,
-} from '../utils/filterBuilders.utils';
+	buildFocusSearchFilter,
+	buildFocusMatchAndFilterConditions,
+	buildFocusBasePipeline,
+	addFocusTaskDurationCalculation,
+} from '../utils/focusFilterBuilders.utils';
+import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
+import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { ChallengesQueryParams } from '../utils/queryParams.utils';
 
 // ============================================================================
@@ -95,32 +95,22 @@ function calculateChallengesFromDailyTotals(
 // ============================================================================
 
 export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
-	// Combine projects and categories into a single array
-	const projectIds: string[] = [
-		...(params.projects ? params.projects.split(',') : []),
-		...(params.categories ? params.categories.split(',') : [])
-	];
-
-	// Map frontend app names to database source discriminators
-	const appNames: string[] = params.focusApps ? params.focusApps.split(',') : [];
-	const appSources: string[] = appNames.map(appName => APP_SOURCE_MAPPING[appName]).filter(Boolean);
-
 	// Build filters
-	const searchFilter = buildSearchFilter(params.searchQuery);
-	const { focusRecordMatchConditions, taskFilterConditions } = buildMatchAndFilterConditions(
+	const searchFilter = buildFocusSearchFilter(params.searchQuery);
+	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
 		params.taskId,
-		projectIds,
+		params.projectIds,
 		params.startDate,
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
-		appSources
+		params.focusAppSources
 	);
 
 	// Build aggregation pipeline
-	const pipeline = buildBasePipeline(searchFilter, focusRecordMatchConditions);
+	const pipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
 
 	// Add task duration calculation (shared logic)
-	addTaskDurationCalculation(pipeline, taskFilterConditions);
+	addFocusTaskDurationCalculation(pipeline, taskFilterConditions);
 
 	// Group by day and sum task durations
 	pipeline.push({
@@ -147,63 +137,16 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 }
 
 export async function getCompletedTasksChallenges(params: ChallengesQueryParams) {
-	// Build match filter for completed tasks
-	const matchFilter: any = {
-		completedTime: { $exists: true, $ne: null }
-	};
-
-	// Filter by to-do list apps (TaskTickTick or TaskTodoist)
-	if (params.toDoListApps) {
-		const appSources = params.toDoListApps.split(',').map(app => `Task${app.trim()}`);
-		matchFilter.source = { $in: appSources };
-	}
-
-	// Add date range filter
-	if (params.startDate && params.endDate) {
-		const startDateObj = new Date(params.startDate);
-		const endDateObj = new Date(params.endDate);
-
-		startDateObj.setHours(0, 0, 0, 0);
-		endDateObj.setHours(23, 59, 59, 999);
-
-		matchFilter.completedTime = {
-			...matchFilter.completedTime,
-			$gte: startDateObj,
-			$lte: endDateObj
-		};
-	}
-
-	// Filter by multiple project IDs
-	if (params.projects || params.categories) {
-		const allProjectIds = [];
-		if (params.projects) {
-			allProjectIds.push(...params.projects.split(','));
-		}
-		if (params.categories) {
-			allProjectIds.push(...params.categories.split(','));
-		}
-		matchFilter.projectId = { $in: allProjectIds };
-	}
-
-	// Filter by taskId
-	if (params.taskId) {
-		if (params.taskIdIncludeFocusRecordsFromSubtasks) {
-			matchFilter[`ancestorSet.${params.taskId}`] = true;
-		} else {
-			matchFilter.$or = [
-				{ id: params.taskId },
-				{ parentId: params.taskId }
-			];
-		}
-	}
-
-	// Build search filter
-	const searchFilter = params.searchQuery && params.searchQuery.trim() ? {
-		$or: [
-			{ title: { $regex: params.searchQuery.trim(), $options: 'i' } },
-			{ content: { $regex: params.searchQuery.trim(), $options: 'i' } },
-		]
-	} : null;
+	// Build filters using shared builder
+	const searchFilter = buildTaskSearchFilter(params.searchQuery);
+	const matchFilter = buildTaskMatchConditions(
+		params.taskId,
+		params.projectIds,
+		params.startDate,
+		params.endDate,
+		params.taskIdIncludeFocusRecordsFromSubtasks,
+		params.toDoListAppSources
+	);
 
 	// Build aggregation pipeline
 	const pipeline: any[] = [];

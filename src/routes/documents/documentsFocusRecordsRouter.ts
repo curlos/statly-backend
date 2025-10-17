@@ -8,9 +8,7 @@ import { getFocusChallengesHandler } from '../../controllers/challengesControlle
 const router = express.Router();
 
 router.get('/', verifyToken, getFocusRecordsHandler);
-
 router.get('/medals', verifyToken, getFocusMedalsHandler);
-
 router.get('/challenges', verifyToken, getFocusChallengesHandler);
 
 router.get('/test-json-data', verifyToken, async (req, res) => {

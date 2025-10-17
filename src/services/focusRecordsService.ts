@@ -1,11 +1,10 @@
 import FocusRecordTickTick from '../models/FocusRecord';
 import { addAncestorAndCompletedTasks } from '../utils/focus.utils';
 import {
-	APP_SOURCE_MAPPING,
-	buildSearchFilter,
-	buildMatchAndFilterConditions,
-	buildBasePipeline,
-} from '../utils/filterBuilders.utils';
+	buildFocusSearchFilter,
+	buildFocusMatchAndFilterConditions,
+	buildFocusBasePipeline,
+} from '../utils/focusFilterBuilders.utils';
 
 // ============================================================================
 // Sort Criteria Builder
@@ -40,7 +39,7 @@ async function executeQuery(
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
 
 	// Build main query pipeline
-	const queryPipeline = buildBasePipeline(searchFilter, focusRecordMatchConditions);
+	const queryPipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
 
 	// Conditionally add task filtering stages (only when filtering tasks array)
 	if (hasTaskOrProjectFilters) {
@@ -89,7 +88,7 @@ async function executeQuery(
 	const focusRecords = await FocusRecordTickTick.aggregate(queryPipeline);
 
 	// Build count and duration pipeline
-	const countAndDurationPipeline = buildBasePipeline(searchFilter, focusRecordMatchConditions);
+	const countAndDurationPipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
 
 	// Conditionally add task filtering for complex queries
 	if (hasTaskOrProjectFilters) {
@@ -201,40 +200,29 @@ async function executeQuery(
 export interface FocusRecordsQueryParams {
 	page: number;
 	limit: number;
-	projects?: string;
-	categories?: string;
+	projectIds: string[]; // Combined projects and categories, already split
 	taskId?: string;
 	startDate?: string;
 	endDate?: string;
 	sortBy: string;
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
 	searchQuery?: string;
-	focusApps?: string;
+	focusAppSources: string[]; // Mapped focus app sources
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams) {
 	const skip = params.page * params.limit;
 
-	// Combine projects and categories into a single array
-	const projectIds: string[] = [
-		...(params.projects ? params.projects.split(',') : []),
-		...(params.categories ? params.categories.split(',') : [])
-	];
-
-	// Map frontend app names to database source discriminators
-	const appNames: string[] = params.focusApps ? params.focusApps.split(',') : [];
-	const appSources: string[] = appNames.map(appName => APP_SOURCE_MAPPING[appName]).filter(Boolean);
-
 	// Build filters
-	const searchFilter = buildSearchFilter(params.searchQuery);
+	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 	const sortCriteria = buildSortCriteria(params.sortBy);
-	const { focusRecordMatchConditions, taskFilterConditions } = buildMatchAndFilterConditions(
+	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
 		params.taskId,
-		projectIds,
+		params.projectIds,
 		params.startDate,
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
-		appSources
+		params.focusAppSources
 	);
 
 	// Execute unified query (conditionally adds stages based on filters)
