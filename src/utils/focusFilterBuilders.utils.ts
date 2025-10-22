@@ -46,15 +46,39 @@ export function buildFocusMatchAndFilterConditions(
 	const taskFilterConditions: any[] = [];
 
 	// Add date range to match conditions
+	// Include records where EITHER startTime OR endTime falls within the date range
+	// This ensures records that cross midnight are included on both days
 	if (startDate || endDate) {
-		focusRecordMatchConditions.startTime = {};
-		if (startDate) {
-			focusRecordMatchConditions.startTime.$gte = new Date(startDate);
-		}
+		const startBoundary = startDate ? new Date(startDate) : null;
+		let endBoundary = null;
 		if (endDate) {
-			const endDateTime = new Date(endDate);
-			endDateTime.setDate(endDateTime.getDate() + 1);
-			focusRecordMatchConditions.startTime.$lt = endDateTime;
+			endBoundary = new Date(endDate);
+			endBoundary.setDate(endBoundary.getDate() + 1);
+		}
+
+		// Build $or condition: record is included if it starts OR ends within the range
+		const dateConditions = [];
+
+		if (startBoundary && endBoundary) {
+			// Both start and end date specified
+			dateConditions.push({
+				startTime: { $gte: startBoundary, $lt: endBoundary }
+			});
+			dateConditions.push({
+				endTime: { $gt: startBoundary, $lte: endBoundary }
+			});
+		} else if (startBoundary) {
+			// Only start date specified
+			dateConditions.push({ startTime: { $gte: startBoundary } });
+			dateConditions.push({ endTime: { $gt: startBoundary } });
+		} else if (endBoundary) {
+			// Only end date specified
+			dateConditions.push({ startTime: { $lt: endBoundary } });
+			dateConditions.push({ endTime: { $lte: endBoundary } });
+		}
+
+		if (dateConditions.length > 0) {
+			focusRecordMatchConditions.$or = dateConditions;
 		}
 	}
 
