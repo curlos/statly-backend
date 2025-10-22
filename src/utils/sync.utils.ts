@@ -6,6 +6,7 @@ import { FocusRecordTickTick } from '../models/FocusRecord';
 import { fetchAllTickTickTasks, fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from './ticktick.utils';
 import { getAllTodoistProjects } from './task.utils';
 import { fetchTickTickFocusRecords } from './focus.utils';
+import { crossesMidnightInTimezone } from './timezone.utils';
 
 export async function syncTickTickTasks(userId: string) {
 	// Get or create sync metadata
@@ -385,7 +386,7 @@ export async function syncTodoistProjects(userId: string) {
 	};
 }
 
-export async function syncTickTickFocusRecords(userId: string) {
+export async function syncTickTickFocusRecords(userId: string, timezone: string = 'UTC') {
 	// Get or create sync metadata for focus records
 	let syncMetadata = await SyncMetadata.findOne({ syncType: 'focus-records-ticktick' });
 
@@ -461,11 +462,15 @@ export async function syncTickTickFocusRecords(userId: string) {
 			const pauseDuration = record.pauseDuration || 0; // pauseDuration is already in seconds
 			const realFocusDuration = totalDurationSeconds - pauseDuration; // Subtract pause duration
 
+			// Check if record crosses midnight in user's timezone
+			const crossesMidnight = crossesMidnightInTimezone(startTime, endTime, timezone);
+
 			// Normalize the focus record to match our schema
 			const normalizedRecord = {
 				...record,
 				duration: realFocusDuration,
 				tasks: tasksWithDuration,
+				crossesMidnight,
 			};
 
 			// Add upsert operation to bulk array

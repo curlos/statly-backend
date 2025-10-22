@@ -103,7 +103,8 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 		params.startDate,
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
-		params.focusAppSources
+		params.focusAppSources,
+		params.crossesMidnight
 	);
 
 	// Build aggregation pipeline

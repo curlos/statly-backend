@@ -39,7 +39,8 @@ export function buildFocusMatchAndFilterConditions(
 	startDate: string | undefined,
 	endDate: string | undefined,
 	taskIdIncludeFocusRecordsFromSubtasks: boolean,
-	appSources: string[]
+	appSources: string[],
+	crossesMidnight?: boolean
 ) {
 	const focusRecordMatchConditions: any = {};
 	const taskFilterConditions: any[] = [];
@@ -60,6 +61,11 @@ export function buildFocusMatchAndFilterConditions(
 	// Add app source filter
 	if (appSources.length > 0) {
 		focusRecordMatchConditions.source = { $in: appSources };
+	}
+
+	// Add crossesMidnight filter (only when explicitly true)
+	if (crossesMidnight === true) {
+		focusRecordMatchConditions.crossesMidnight = true;
 	}
 
 	// Add project filter

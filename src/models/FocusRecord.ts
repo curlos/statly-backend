@@ -83,6 +83,11 @@ const BaseFocusRecordSchema = new Schema({
 		type: Number,
 		required: true,
 	},
+	crossesMidnight: {
+		type: Boolean,
+		default: false,
+		index: true, // Index for fast filtering
+	},
 }, {
 	collection: 'focus-records',
 	discriminatorKey: 'source',

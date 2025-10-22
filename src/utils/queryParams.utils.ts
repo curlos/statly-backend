@@ -16,6 +16,7 @@ export interface BaseQueryParams {
 	focusAppSources: string[]; // Mapped focus app sources
 	toDoListAppSources: string[]; // Mapped to-do list app sources
 	timezone: string;
+	crossesMidnight?: boolean; // Filter for focus records that cross midnight
 }
 
 export interface MedalsQueryParams extends BaseQueryParams {
@@ -61,6 +62,10 @@ function parseBaseQueryParams(req: Request): BaseQueryParams {
 	const toDoListAppNames: string[] = req.query['to-do-list-apps'] ? (req.query['to-do-list-apps'] as string).split(',') : [];
 	const toDoListAppSources: string[] = toDoListAppNames.map(appName => TASK_APP_SOURCE_MAPPING[appName]).filter(Boolean);
 
+	// Parse crossesMidnight query param
+	const crossesMidnightParam = req.query['crosses-midnight'] as string;
+	const crossesMidnight = crossesMidnightParam === 'true' ? true : crossesMidnightParam === 'false' ? false : undefined;
+
 	return {
 		projectIds,
 		taskId: req.query['task-id'] as string,
@@ -71,6 +76,7 @@ function parseBaseQueryParams(req: Request): BaseQueryParams {
 		focusAppSources,
 		toDoListAppSources,
 		timezone: (req.query.timezone as string) || 'UTC',
+		crossesMidnight,
 	};
 }
 

@@ -208,6 +208,7 @@ export interface FocusRecordsQueryParams {
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
 	searchQuery?: string;
 	focusAppSources: string[]; // Mapped focus app sources
+	crossesMidnight?: boolean;
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams) {
@@ -222,7 +223,8 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 		params.startDate,
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
-		params.focusAppSources
+		params.focusAppSources,
+		params.crossesMidnight
 	);
 
 	// Execute unified query (conditionally adds stages based on filters)

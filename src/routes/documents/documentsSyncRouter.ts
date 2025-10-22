@@ -9,6 +9,7 @@ import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syn
 import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks } from '../../utils/focus.utils';
 import { FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from '../../models/FocusRecord';
 import { ProjectSession } from '../../models/projectModel';
+import { crossesMidnightInTimezone } from '../../utils/timezone.utils';
 
 const router = express.Router();
 
@@ -258,13 +259,15 @@ router.post('/session/projects', verifyToken, async (req: CustomRequest, res) =>
 router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
     try {
         const userId = req.user!.userId;
+        // Get timezone from request body (defaults to UTC)
+        const timezone = req.body.timezone || 'UTC';
 
         // Run all sync operations in parallel
         const [tasksResult, projectsResult, projectGroupsResult, focusRecordsResult] = await Promise.all([
             syncTickTickTasks(userId),
             syncTickTickProjects(userId),
             syncTickTickProjectGroups(userId),
-            syncTickTickFocusRecords(userId)
+            syncTickTickFocusRecords(userId, timezone)
         ]);
 
         res.status(200).json({
@@ -283,7 +286,9 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
 
 router.post('/ticktick/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
-        const result = await syncTickTickFocusRecords(req.user!.userId);
+        // Get timezone from request body (defaults to UTC)
+        const timezone = req.body.timezone || 'UTC';
+        const result = await syncTickTickFocusRecords(req.user!.userId, timezone);
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
@@ -294,6 +299,9 @@ router.post('/ticktick/focus-records', verifyToken, async (req: CustomRequest, r
 
 router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
+        // Get timezone from request body (defaults to UTC)
+        const timezone = req.body.timezone || 'UTC';
+
         // Fetch raw BeFocused data
         const rawBeFocusedRecords = await fetchBeFocusedAppFocusRecords();
 
@@ -308,12 +316,16 @@ router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest,
             // Create custom taskId: "TaskName - BeFocused"
             const taskId = `${assignedTask} - BeFocused`;
 
+            // Check if record crosses midnight in user's timezone
+            const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
+
             return {
                 id: randomUUID(),
                 source: 'FocusRecordBeFocused',
                 startTime: startDate, // Date object for MongoDB
                 endTime: endDate, // Date object for MongoDB
                 duration: durationInSeconds, // Duration in seconds like TickTick
+                crossesMidnight,
                 tasks: [
                     {
                         taskId,
@@ -352,6 +364,9 @@ router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest,
 
 router.post('/forest/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
+        // Get timezone from request body (defaults to UTC)
+        const timezone = req.body.timezone || 'UTC';
+
         // Fetch raw Forest data
         const rawForestRecords = await fetchForestAppFocusRecords(true);
 
@@ -368,12 +383,16 @@ router.post('/forest/focus-records', verifyToken, async (req: CustomRequest, res
             // Create custom taskId: "Tag - Forest"
             const taskId = `${tag} - Forest`;
 
+            // Check if record crosses midnight in user's timezone
+            const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
+
             return {
                 id: randomUUID(),
                 source: 'FocusRecordForest',
                 startTime: startDate, // Date object for MongoDB
                 endTime: endDate, // Date object for MongoDB
                 duration: durationInSeconds, // Duration in seconds like TickTick
+                crossesMidnight,
                 note,
                 treeType,
                 isSuccess,
@@ -415,6 +434,9 @@ router.post('/forest/focus-records', verifyToken, async (req: CustomRequest, res
 
 router.post('/tide/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
+        // Get timezone from request body (defaults to UTC)
+        const timezone = req.body.timezone || 'UTC';
+
         // Fetch raw Tide data
         const rawTideRecords = await fetchTideAppFocusRecords();
 
@@ -444,12 +466,16 @@ router.post('/tide/focus-records', verifyToken, async (req: CustomRequest, res) 
             // Create custom taskId: "Name - Tide"
             const taskId = `${name} - Tide`;
 
+            // Check if record crosses midnight in user's timezone
+            const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
+
             return {
                 id: `${startDate.getTime()}-tide`, // Custom ID based on start time
                 source: 'FocusRecordTide',
                 startTime: startDate, // Date object for MongoDB
                 endTime: endDate, // Date object for MongoDB
                 duration: durationInSeconds, // Duration in seconds like TickTick
+                crossesMidnight,
                 tasks: [
                     {
                         taskId,
@@ -488,6 +514,9 @@ router.post('/tide/focus-records', verifyToken, async (req: CustomRequest, res) 
 
 router.post('/session/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
+        // Get timezone from request body (defaults to UTC)
+        const timezone = req.body.timezone || 'UTC';
+
         // Fetch raw Session data
         const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
 
@@ -556,12 +585,16 @@ router.post('/session/focus-records', verifyToken, async (req: CustomRequest, re
                 });
             }
 
+            // Check if record crosses midnight in user's timezone
+            const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
+
             return {
                 id: randomUUID(),
                 source: 'FocusRecordSession',
                 startTime: startDate,
                 endTime: endDate,
                 duration: actualDurationInSeconds, // Total duration minus pauses
+                crossesMidnight,
                 note,
                 pauseDuration: pauseDurationInSeconds,
                 tasks
