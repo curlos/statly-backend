@@ -1,5 +1,5 @@
 import FocusRecordTickTick from '../models/FocusRecord';
-import { addAncestorAndCompletedTasks } from '../utils/focus.utils';
+import { addAncestorAndCompletedTasks, addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
 import {
 	buildFocusSearchFilter,
 	buildFocusMatchAndFilterConditions,
@@ -22,115 +22,6 @@ function buildSortCriteria(sortBy: string): { [key: string]: 1 | -1 } {
 		default:
 			return { startTime: -1 };
 	}
-}
-
-// ============================================================================
-// Duration Adjustment Helper for Midnight-Crossing Records
-// ============================================================================
-
-/**
- * Adds duration adjustment stages to a pipeline for records that cross midnight beyond date boundaries.
- * Only adjusts records where crossesMidnight === true.
- */
-function addMidnightRecordDurationAdjustment(pipeline: any[], startDateBoundary: Date | null, endDateBoundary: Date | null) {
-	// Only process records that cross midnight - everything inside uses conditional logic
-	// based on the crossesMidnight field
-	pipeline.push({
-		$addFields: {
-			// Calculate effective start and end times (only for crossesMidnight records)
-			effectiveStartTime: {
-				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
-					then: startDateBoundary
-						? { $max: ["$startTime", startDateBoundary] }
-						: "$startTime",
-					else: "$startTime"
-				}
-			},
-			effectiveEndTime: {
-				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
-					then: endDateBoundary
-						? { $min: ["$endTime", endDateBoundary] }
-						: "$endTime",
-					else: "$endTime"
-				}
-			}
-		}
-	});
-
-	pipeline.push({
-		$addFields: {
-			// Calculate adjusted duration based on effective start/end times
-			adjustedDuration: {
-				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
-					then: {
-						// Calculate seconds between effective start and end
-						$divide: [
-							{ $subtract: ["$effectiveEndTime", "$effectiveStartTime"] },
-							1000
-						]
-					},
-					else: "$duration"
-				}
-			},
-			// Also adjust each task's duration using its actual start/end times
-			adjustedTasks: {
-				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
-					then: {
-						$map: {
-							input: "$tasks",
-							as: "task",
-							in: {
-								$mergeObjects: [
-									"$$task",
-									{
-										duration: {
-											// Calculate task's effective time range within the date boundaries
-											$let: {
-												vars: {
-													taskEffectiveStart: startDateBoundary
-														? { $max: ["$$task.startTime", startDateBoundary] }
-														: "$$task.startTime",
-													taskEffectiveEnd: endDateBoundary
-														? { $min: ["$$task.endTime", endDateBoundary] }
-														: "$$task.endTime"
-												},
-												in: {
-													// Only count duration if task overlaps with the date range
-													$cond: {
-														if: { $gte: ["$$taskEffectiveEnd", "$$taskEffectiveStart"] },
-														then: {
-															$divide: [
-																{ $subtract: ["$$taskEffectiveEnd", "$$taskEffectiveStart"] },
-																1000
-															]
-														},
-														else: 0
-													}
-												}
-											}
-										}
-									}
-								]
-							}
-						}
-					},
-					else: "$tasks"
-				}
-			}
-		}
-	});
-
-	// Replace duration and tasks with adjusted versions
-	pipeline.push({
-		$addFields: {
-			duration: "$adjustedDuration",
-			tasks: "$adjustedTasks"
-		}
-	});
 }
 
 // ============================================================================

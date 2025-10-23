@@ -13,6 +13,7 @@ import {
 import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { ChallengesQueryParams } from '../utils/queryParams.utils';
+import { addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
 
 // ============================================================================
 // Helper Functions
@@ -107,8 +108,21 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 		params.crossesMidnight
 	);
 
+	// Calculate date boundaries for duration adjustment
+	const startDateBoundary = params.startDate ? new Date(params.startDate) : null;
+	let endDateBoundary: Date | null = null;
+	if (params.endDate) {
+		endDateBoundary = new Date(params.endDate);
+		endDateBoundary.setDate(endDateBoundary.getDate() + 1);
+	}
+
 	// Build aggregation pipeline
 	const pipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
+
+	// Add duration adjustment for midnight-crossing records
+	if (startDateBoundary || endDateBoundary) {
+		addMidnightRecordDurationAdjustment(pipeline, startDateBoundary, endDateBoundary);
+	}
 
 	// Add task duration calculation (shared logic)
 	addFocusTaskDurationCalculation(pipeline, taskFilterConditions);

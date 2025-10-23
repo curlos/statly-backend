@@ -120,6 +120,207 @@ function calculateMedalsFromPeriodTotals(
 }
 
 // ============================================================================
+// Split Midnight-Crossing Records for Medals
+// ============================================================================
+
+/**
+ * Splits midnight-crossing records into multiple documents (one per period) for accurate
+ * duration attribution when grouping by intervals (daily/weekly/monthly/yearly).
+ *
+ * For records where crossesMidnight === true:
+ * - Generates multiple documents, one for each period the record spans
+ * - Each split document has adjusted startTime, duration, and tasks for that period
+ *
+ * For records where crossesMidnight === false:
+ * - Pass through unchanged
+ */
+function splitMidnightCrossingRecordsForMedals(
+	pipeline: any[],
+	interval: string,
+	timezone: string
+) {
+	// Step 1: Generate split documents for midnight-crossing records
+	pipeline.push({
+		$addFields: {
+			splitDocuments: {
+				$cond: {
+					if: { $eq: ["$crossesMidnight", true] },
+					then: {
+						// For daily interval: split by days
+						$let: {
+							vars: {
+								// Calculate how many days this record spans
+								startDate: {
+									$dateTrunc: {
+										date: "$startTime",
+										unit: "day",
+										timezone: timezone
+									}
+								},
+								endDate: {
+									$dateTrunc: {
+										date: "$endTime",
+										unit: "day",
+										timezone: timezone
+									}
+								}
+							},
+							in: {
+								// Generate array of split documents
+								// $map: Loop over an array and create a split document for each day
+								$map: {
+									// input: The array to loop over - creates [0, 1] for a 2-day span, [0, 1, 2] for 3-day span, etc.
+									input: {
+										$range: [
+											0,
+											{
+												// Number of days touched = dateDiff + 1
+												// Example: Oct 16 11:22 PM → Oct 17 12:38 AM
+												// - dateDiff = 1 (Oct 16 midnight to Oct 17 midnight = 1 day difference)
+												// - But touches 2 days (Oct 16 AND Oct 17), so: 1 + 1 = 2
+												$add: [
+													{
+														$dateDiff: {
+															startDate: "$$startDate",
+															endDate: "$$endDate",
+															unit: "day",
+															timezone: timezone
+														}
+													},
+													1 // Converts "days of difference" to "number of days touched"
+												]
+											}
+										]
+									},
+									as: "dayOffset",
+									in: {
+										$let: {
+											vars: {
+												// For each dayOffset, calculate when that day starts and ends (midnight to midnight)
+												// Example: dayOffset=0 → Oct 16 midnight to Oct 17 midnight
+												//          dayOffset=1 → Oct 17 midnight to Oct 18 midnight
+												// These boundaries are independent of the record's actual start/end times
+												periodStart: {
+													$dateAdd: {
+														startDate: "$$startDate",
+														unit: "day",
+														amount: "$$dayOffset",
+														timezone: timezone
+													}
+												},
+												periodEnd: {
+													$dateAdd: {
+														startDate: "$$startDate",
+														unit: "day",
+														amount: { $add: ["$$dayOffset", 1] },
+														timezone: timezone
+													}
+												}
+											},
+											in: {
+												$let: {
+													vars: {
+														// Clip record boundaries to this period
+														effectiveStart: { $max: ["$startTime", "$$periodStart"] },
+														effectiveEnd: { $min: ["$endTime", "$$periodEnd"] }
+													},
+													in: {
+														// Build the split document
+														startTime: "$$periodStart", // Use period start for grouping
+														endTime: "$endTime",
+														duration: {
+															// Calculate duration for this period only
+															$divide: [
+																{ $subtract: ["$$effectiveEnd", "$$effectiveStart"] },
+																1000
+															]
+														},
+														tasks: {
+															// Adjust each task's duration for this period (same clipping logic as record, but per task)
+															$map: {
+																input: "$tasks",
+																as: "task",
+																in: {
+																	$mergeObjects: [
+																		"$$task",
+																		{
+																			duration: {
+																				$let: {
+																					vars: {
+																						// Clip task times to period boundaries
+																						// Example: Task 11:50 PM → 12:10 AM, Period Oct 16
+																						taskEffectiveStart: { $max: ["$$task.startTime", "$$periodStart"] }, // max(11:50 PM, Oct 16 midnight) = 11:50 PM
+																						taskEffectiveEnd: { $min: ["$$task.endTime", "$$periodEnd"] }          // min(12:10 AM, Oct 17 midnight) = midnight
+																					},
+																					in: {
+																						$cond: {
+																							// Check if task overlaps with this period
+																							// If task is entirely on Oct 17 but we're evaluating Oct 16:
+																							//   effectiveStart = max(12:05 AM, Oct 16 midnight) = 12:05 AM
+																							//   effectiveEnd = min(12:10 AM, Oct 17 midnight) = midnight
+																							//   midnight < 12:05 AM → no overlap
+																							if: { $gte: ["$$taskEffectiveEnd", "$$taskEffectiveStart"] },
+																							then: {
+																								// Task overlaps: calculate duration for this period only
+																								// Example: midnight - 11:50 PM = 10 minutes
+																								$divide: [
+																									{ $subtract: ["$$taskEffectiveEnd", "$$taskEffectiveStart"] },
+																									1000
+																								]
+																							},
+																							// Task doesn't overlap: return 0 (it'll get proper duration on Oct 17 split)
+																							else: 0
+																						}
+																					}
+																				}
+																			}
+																		}
+																	]
+																}
+															}
+														},
+														// Preserve other fields
+														crossesMidnight: "$crossesMidnight",
+														_id: "$_id"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					else: [
+						{
+							// For non-midnight-crossing records, keep as single document
+							startTime: "$startTime",
+							endTime: "$endTime",
+							duration: "$duration",
+							tasks: "$tasks",
+							crossesMidnight: "$crossesMidnight",
+							_id: "$_id"
+						}
+					]
+				}
+			}
+		}
+	});
+
+	// Step 2: Unwind split documents into separate records
+	pipeline.push({
+		$unwind: "$splitDocuments"
+	});
+
+	// Step 3: Replace root with split document
+	pipeline.push({
+		$replaceRoot: {
+			newRoot: "$splitDocuments"
+		}
+	});
+}
+
+// ============================================================================
 // Main Service Methods
 // ============================================================================
 
@@ -138,6 +339,9 @@ export async function getFocusHoursMedals(params: MedalsQueryParams) {
 
 	// Build aggregation pipeline
 	const pipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
+
+	// Split midnight-crossing records into separate documents for accurate period attribution
+	splitMidnightCrossingRecordsForMedals(pipeline, params.interval, params.timezone);
 
 	// Add task duration calculation (shared logic)
 	addFocusTaskDurationCalculation(pipeline, taskFilterConditions);
