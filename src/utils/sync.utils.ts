@@ -23,6 +23,10 @@ export async function syncTickTickTasks(userId: string) {
 	const lastSyncTime = syncMetadata.lastSyncTime;
 	const tickTickTasks = await fetchAllTickTickTasks();
 
+	// Calculate threshold for recently completed tasks (3 days ago)
+	const threeDaysAgo = new Date();
+	threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
 	// Step 1: Build tasksById map for quick parent lookups
 	const tasksById: Record<string, any> = {};
 	tickTickTasks.forEach((task: any) => {
@@ -65,7 +69,15 @@ export async function syncTickTickTasks(userId: string) {
 	for (const task of tickTickTasks) {
 		// Check if task needs updating based on modifiedTime
 		const taskModifiedTime = task.modifiedTime ? new Date(task.modifiedTime) : null;
-		const shouldUpdateTask = !taskModifiedTime || taskModifiedTime >= lastSyncTime;
+
+		// Update task if:
+		// 1. No modifiedTime exists, OR
+		// 2. Task was modified after last sync, OR
+		// 3. Task was modified within the last 3 days
+		const shouldUpdateTask =
+			!taskModifiedTime ||
+			taskModifiedTime >= lastSyncTime ||
+			taskModifiedTime >= threeDaysAgo;
 
 		if (shouldUpdateTask) {
 			// Build ancestor data for full task
