@@ -10,6 +10,7 @@ import {
 	addTaskFilteringAndDurationRecalculation,
 } from '../utils/focusFilterBuilders.utils';
 import { buildAncestorData } from '../utils/task.utils';
+import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
 
 // ============================================================================
 // Stats Aggregation Service
@@ -26,6 +27,7 @@ export interface FocusRecordsStatsQueryParams {
 	searchQuery?: string;
 	focusAppSources: string[];
 	toDoListAppSources: string[];
+	timezone: string;
 	crossesMidnight?: boolean;
 	groupBy: string; // 'day' | 'project' | 'task' | 'hour' | 'timeline'
 	nested?: boolean; // If true, include ancestorTasksById for nested display
@@ -74,7 +76,11 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 
 	switch (params.groupBy) {
 		case 'day':
-			return await groupByDay(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions);
+			return await groupByDay(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
+		case 'week':
+			return await groupByWeek(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
+		case 'month':
+			return await groupByMonth(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
 		case 'project':
 			return await groupByProject(basePipeline, taskFilterConditions, nested);
 		case 'task':
@@ -179,7 +185,7 @@ async function aggregateTaskData(pipeline: any[], totalDuration: number) {
 	return { byTask, ancestorTasksById };
 }
 
-async function groupByDay(pipeline: any[], startDate?: string, endDate?: string, taskFilterConditions: any[] = []) {
+async function groupByDay(pipeline: any[], startDate?: string, endDate?: string, taskFilterConditions: any[] = [], timezone: string = 'UTC') {
 	// Calculate totals using task-level durations (not focus record durations)
 	const { totalRecords, totalDuration } = await calculateTotals(pipeline, taskFilterConditions);
 
@@ -191,10 +197,10 @@ async function groupByDay(pipeline: any[], startDate?: string, endDate?: string,
 	aggPipeline.push({
 		$group: {
 			_id: {
-				$dateToString: { format: "%Y-%m-%d", date: "$startTime" }
+				$dateToString: { format: "%Y-%m-%d", date: "$startTime", timezone: timezone }
 			},
 			duration: { $sum: "$tasks.duration" },
-			count: { $sum: 1 }
+			uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
 		}
 	});
 
@@ -211,7 +217,111 @@ async function groupByDay(pipeline: any[], startDate?: string, endDate?: string,
 		byDay: results.map(r => ({
 			date: r._id,
 			duration: r.duration,
-			count: r.count
+			count: r.uniqueRecords.length // Count unique focus records
+		}))
+	};
+}
+
+async function groupByWeek(pipeline: any[], startDate?: string, endDate?: string, taskFilterConditions: any[] = [], timezone: string = 'UTC') {
+	// Calculate totals using task-level durations
+	const { totalRecords, totalDuration } = await calculateTotals(pipeline, taskFilterConditions);
+
+	// Group by week (Monday of each week)
+	const aggPipeline = [...pipeline];
+	aggPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
+
+	// Add a field to get the Monday of the week for sorting purposes
+	aggPipeline.push({
+		$addFields: {
+			weekStartDate: {
+				$dateSubtract: {
+					startDate: "$startTime",
+					unit: "day",
+					amount: {
+						$subtract: [
+							{ $isoDayOfWeek: { date: "$startTime", timezone: timezone } },
+							1
+						]
+					},
+					timezone: timezone
+				}
+			}
+		}
+	});
+
+	aggPipeline.push({
+		$group: {
+			_id: getDateGroupingExpression('weekly', timezone),
+			weekStartDate: { $first: "$weekStartDate" }, // Keep for sorting
+			duration: { $sum: "$tasks.duration" },
+			uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
+		}
+	});
+
+	// Sort by actual date, not the formatted string
+	aggPipeline.push({ $sort: { weekStartDate: 1 } });
+
+	const results = await FocusRecordTickTick.aggregate(aggPipeline);
+
+	return {
+		summary: {
+			totalDuration,
+			totalRecords,
+			dateRange: { start: startDate || null, end: endDate || null }
+		},
+		byWeek: results.map(r => ({
+			date: r._id, // Format: "January 1, 2025" (Monday of the week)
+			duration: r.duration,
+			count: r.uniqueRecords.length // Count unique focus records
+		}))
+	};
+}
+
+async function groupByMonth(pipeline: any[], startDate?: string, endDate?: string, taskFilterConditions: any[] = [], timezone: string = 'UTC') {
+	// Calculate totals using task-level durations
+	const { totalRecords, totalDuration } = await calculateTotals(pipeline, taskFilterConditions);
+
+	// Group by month
+	const aggPipeline = [...pipeline];
+	aggPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
+
+	// Add a field to get the first day of the month for sorting purposes
+	aggPipeline.push({
+		$addFields: {
+			monthStartDate: {
+				$dateTrunc: {
+					date: "$startTime",
+					unit: "month",
+					timezone: timezone
+				}
+			}
+		}
+	});
+
+	aggPipeline.push({
+		$group: {
+			_id: getDateGroupingExpression('monthly', timezone),
+			monthStartDate: { $first: "$monthStartDate" }, // Keep for sorting
+			duration: { $sum: "$tasks.duration" },
+			uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
+		}
+	});
+
+	// Sort by actual date, not the formatted string
+	aggPipeline.push({ $sort: { monthStartDate: 1 } });
+
+	const results = await FocusRecordTickTick.aggregate(aggPipeline);
+
+	return {
+		summary: {
+			totalDuration,
+			totalRecords,
+			dateRange: { start: startDate || null, end: endDate || null }
+		},
+		byMonth: results.map(r => ({
+			date: r._id, // Format: "January 2025"
+			duration: r.duration,
+			count: r.uniqueRecords.length // Count unique focus records
 		}))
 	};
 }
