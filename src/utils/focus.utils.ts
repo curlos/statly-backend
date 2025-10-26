@@ -335,21 +335,7 @@ export function addMidnightRecordDurationAdjustment(pipeline: any[], startDateBo
 
 	pipeline.push({
 		$addFields: {
-			// Calculate adjusted duration based on effective start/end times
-			adjustedDuration: {
-				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
-					then: {
-						// Calculate seconds between effective start and end
-						$divide: [
-							{ $subtract: ["$effectiveEndTime", "$effectiveStartTime"] },
-							1000
-						]
-					},
-					else: "$duration"
-				}
-			},
-			// Also adjust each task's duration using its actual start/end times
+			// First, adjust each task's duration using its actual start/end times
 			adjustedTasks: {
 				$cond: {
 					if: { $eq: ["$crossesMidnight", true] },
@@ -393,6 +379,28 @@ export function addMidnightRecordDurationAdjustment(pipeline: any[], startDateBo
 						}
 					},
 					else: "$tasks"
+				}
+			}
+		}
+	});
+
+	pipeline.push({
+		$addFields: {
+			// Calculate adjusted duration as sum of adjusted task durations
+			// This is better than using effectiveStartTime/effectiveEndTime because:
+			// 1. Task durations already account for pauses (pauseDuration is for entire record, not clipped portion)
+			// 2. Tasks may not span the entire clipped time range
+			adjustedDuration: {
+				$cond: {
+					if: { $eq: ["$crossesMidnight", true] },
+					then: {
+						$reduce: {
+							input: "$adjustedTasks",
+							initialValue: 0,
+							in: { $add: ["$$value", "$$this.duration"] }
+						}
+					},
+					else: "$duration"
 				}
 			}
 		}
