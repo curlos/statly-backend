@@ -18,8 +18,10 @@ import { buildAncestorData } from '../utils/task.utils';
 export interface FocusRecordsStatsQueryParams {
 	projectIds: string[];
 	taskId?: string;
-	startDate?: string;
-	endDate?: string;
+	startDate?: string; // Filter Sidebar dates (first tier filter)
+	endDate?: string; // Filter Sidebar dates (first tier filter)
+	intervalStartDate?: string; // Interval Dropdown dates (second tier filter)
+	intervalEndDate?: string; // Interval Dropdown dates (second tier filter)
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
 	searchQuery?: string;
 	focusAppSources: string[];
@@ -39,14 +41,20 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.focusAppSources,
-		params.crossesMidnight
+		params.crossesMidnight,
+		params.intervalStartDate,
+		params.intervalEndDate
 	);
 
 	// Calculate the date boundaries for duration adjustment
-	const startDateBoundary = params.startDate ? new Date(params.startDate) : null;
+	// Use interval dates if provided (second tier), otherwise use filter sidebar dates (first tier)
+	const effectiveStartDate = params.intervalStartDate || params.startDate;
+	const effectiveEndDate = params.intervalEndDate || params.endDate;
+
+	const startDateBoundary = effectiveStartDate ? new Date(effectiveStartDate) : null;
 	let endDateBoundary: Date | null = null;
-	if (params.endDate) {
-		endDateBoundary = new Date(params.endDate);
+	if (effectiveEndDate) {
+		endDateBoundary = new Date(effectiveEndDate);
 		endDateBoundary.setDate(endDateBoundary.getDate() + 1);
 	}
 
@@ -66,7 +74,7 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 
 	switch (params.groupBy) {
 		case 'day':
-			return await groupByDay(basePipeline, params.startDate, params.endDate, taskFilterConditions);
+			return await groupByDay(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions);
 		case 'project':
 			return await groupByProject(basePipeline, taskFilterConditions, nested);
 		case 'task':

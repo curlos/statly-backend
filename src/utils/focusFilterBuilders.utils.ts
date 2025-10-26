@@ -40,12 +40,18 @@ export function buildFocusMatchAndFilterConditions(
 	endDate: string | undefined,
 	taskIdIncludeFocusRecordsFromSubtasks: boolean,
 	appSources: string[],
-	crossesMidnight?: boolean
+	crossesMidnight?: boolean,
+	intervalStartDate?: string,
+	intervalEndDate?: string
 ) {
 	const focusRecordMatchConditions: any = {};
 	const taskFilterConditions: any[] = [];
 
-	// Add date range to match conditions
+	// Two-tier date filtering:
+	// 1. First tier: Filter Sidebar dates (startDate, endDate) - broad filter at MongoDB level
+	// 2. Second tier: Interval Dropdown dates (intervalStartDate, intervalEndDate) - will be applied later in pipeline
+
+	// Add first tier date range to match conditions (Filter Sidebar)
 	// Include records where EITHER startTime OR endTime falls within the date range
 	// This ensures records that cross midnight are included on both days
 	if (startDate || endDate) {
@@ -79,6 +85,52 @@ export function buildFocusMatchAndFilterConditions(
 
 		if (dateConditions.length > 0) {
 			focusRecordMatchConditions.$or = dateConditions;
+		}
+	}
+
+	// Add second tier date range filter (Interval Dropdown)
+	// This will be applied after the first tier filter
+	if (intervalStartDate || intervalEndDate) {
+		const intervalStartBoundary = intervalStartDate ? new Date(intervalStartDate) : null;
+		let intervalEndBoundary = null;
+		if (intervalEndDate) {
+			intervalEndBoundary = new Date(intervalEndDate);
+			intervalEndBoundary.setDate(intervalEndBoundary.getDate() + 1);
+		}
+
+		// Build interval date conditions
+		const intervalDateConditions = [];
+
+		if (intervalStartBoundary && intervalEndBoundary) {
+			// Both interval start and end date specified
+			intervalDateConditions.push({
+				startTime: { $gte: intervalStartBoundary, $lt: intervalEndBoundary }
+			});
+			intervalDateConditions.push({
+				endTime: { $gt: intervalStartBoundary, $lte: intervalEndBoundary }
+			});
+		} else if (intervalStartBoundary) {
+			// Only interval start date specified
+			intervalDateConditions.push({ startTime: { $gte: intervalStartBoundary } });
+			intervalDateConditions.push({ endTime: { $gt: intervalStartBoundary } });
+		} else if (intervalEndBoundary) {
+			// Only interval end date specified
+			intervalDateConditions.push({ startTime: { $lt: intervalEndBoundary } });
+			intervalDateConditions.push({ endTime: { $lte: intervalEndBoundary } });
+		}
+
+		if (intervalDateConditions.length > 0) {
+			// Combine with existing $or conditions if they exist
+			if (focusRecordMatchConditions.$or) {
+				// If we already have $or conditions (from first tier), we need to AND them together
+				focusRecordMatchConditions.$and = [
+					{ $or: focusRecordMatchConditions.$or },
+					{ $or: intervalDateConditions }
+				];
+				delete focusRecordMatchConditions.$or;
+			} else {
+				focusRecordMatchConditions.$or = intervalDateConditions;
+			}
 		}
 	}
 

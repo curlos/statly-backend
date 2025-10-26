@@ -9,8 +9,10 @@ import { TASK_APP_SOURCE_MAPPING } from './taskFilterBuilders.utils';
 export interface BaseQueryParams {
 	projectIds: string[]; // Combined projects and categories, already split
 	taskId?: string;
-	startDate?: string;
-	endDate?: string;
+	startDate?: string; // Filter Sidebar dates (first tier filter)
+	endDate?: string; // Filter Sidebar dates (first tier filter)
+	intervalStartDate?: string; // Interval Dropdown dates (second tier filter)
+	intervalEndDate?: string; // Interval Dropdown dates (second tier filter)
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
 	searchQuery?: string;
 	focusAppSources: string[]; // Mapped focus app sources
@@ -71,6 +73,8 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 		taskId: req.query['task-id'] as string,
 		startDate: req.query['start-date'] as string,
 		endDate: req.query['end-date'] as string,
+		intervalStartDate: req.query['interval-start-date'] as string,
+		intervalEndDate: req.query['interval-end-date'] as string,
 		taskIdIncludeFocusRecordsFromSubtasks: req.query['task-id-include-focus-records-from-subtasks'] === 'true',
 		searchQuery: req.query['search'] as string,
 		focusAppSources,
