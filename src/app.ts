@@ -41,15 +41,12 @@ app.use(
 // ✅ Handle preflight
 app.options('*', cors());
 
-app.use(async (req, res, next) => {
-  try {
-    await connectDB(); // will use cached.conn or cached.promise
-    next();
-  } catch (err) {
-    console.error('❌ Failed to connect to DB:', err);
-    res.status(500).json({ error: 'Database connection failed' });
-  }
-});
+// ✅ Connect to database once on startup
+connectDB()
+  .then(() => {
+    return
+  })
+  .catch((err) => console.error('❌ Failed to connect to DB:', err));
 
 app.use(express.json()); // Middleware to parse JSON bodies
 

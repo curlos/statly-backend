@@ -42,7 +42,7 @@ export interface DaysWithCompletedTasksQueryParams extends BaseQueryParams {
 /**
  * Helper function to parse base query parameters shared by both medals and challenges
  */
-function parseBaseQueryParams(req: Request): BaseQueryParams {
+export function parseBaseQueryParams(req: Request): BaseQueryParams {
 	// Combine projects from both TickTick and Todoist, plus categories
 	const ticktickProjects = req.query['projects-ticktick'] as string || '';
 	const todoistProjects = req.query['projects-todoist'] as string || '';

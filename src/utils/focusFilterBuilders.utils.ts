@@ -195,3 +195,174 @@ export function addFocusTaskDurationCalculation(
 		});
 	}
 }
+
+/**
+ * Filters tasks array and recalculates duration based on filtered tasks.
+ * Replaces the original tasks array and duration in-place.
+ * Used by focusRecordsService and statsFocusService.
+ *
+ * @param pipeline - The aggregation pipeline to add stages to
+ * @param taskFilterConditions - Conditions to filter tasks by
+ * @param preserveOriginalDuration - If true, stores original duration before filtering
+ */
+export function addTaskFilteringAndDurationRecalculation(
+	pipeline: any[],
+	taskFilterConditions: any[],
+	preserveOriginalDuration: boolean = false
+) {
+	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
+
+	if (hasTaskOrProjectFilters) {
+		// Optionally preserve original duration before filtering
+		if (preserveOriginalDuration) {
+			pipeline.push({
+				$addFields: {
+					originalDuration: "$duration"
+				}
+			});
+		}
+
+		// Filter the tasks array to only include tasks that match our conditions
+		// Example: if filtering by projectId 'abc', only keep tasks with projectId 'abc'
+		pipeline.push({
+			$addFields: {
+				tasks: {
+					$filter: {
+						input: "$tasks",
+						as: "task",
+						cond: taskFilterConditions.length > 1
+							? { $and: taskFilterConditions }
+							: taskFilterConditions[0]
+					}
+				}
+			}
+		});
+
+		// Recalculate duration based on filtered tasks only
+		// Sums up the duration of each remaining task in the filtered array
+		pipeline.push({
+			$addFields: {
+				duration: {
+					$reduce: {
+						input: "$tasks",
+						initialValue: 0,
+						in: { $add: ["$$value", "$$this.duration"] }
+					}
+				}
+			}
+		});
+	}
+}
+
+// ============================================================================
+// Focus Records - Totals Calculation Pipeline
+// ============================================================================
+
+/**
+ * Builds a pipeline to calculate total counts and durations.
+ * Returns both focus-record-level totals and task-level totals.
+ * Extracted from focusRecordsService lines 97-182.
+ */
+export function buildFocusTotalsCalculationPipeline(
+	basePipeline: any[],
+	taskFilterConditions: any[]
+): any[] {
+	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
+	const pipeline = [...basePipeline];
+
+	if (hasTaskOrProjectFilters) {
+		// Step 1: Store original duration and create a filtered tasks array
+		pipeline.push({
+			$addFields: {
+				originalDuration: "$duration",
+				filteredTasks: {
+					$filter: {
+						input: "$tasks",
+						as: "task",
+						cond: taskFilterConditions.length > 1
+							? { $and: taskFilterConditions }
+							: taskFilterConditions[0]
+					}
+				}
+			}
+		});
+
+		// Step 2: Calculate the total duration of just the filtered tasks
+		pipeline.push({
+			$addFields: {
+				filteredTasksDuration: {
+					$reduce: {
+						input: "$filteredTasks",
+						initialValue: 0,
+						in: { $add: ["$$value", "$$this.duration"] }
+					}
+				}
+			}
+		});
+
+		// Step 3: Aggregate across ALL focus records to get totals
+		pipeline.push({
+			$group: {
+				_id: null,
+				total: { $sum: 1 },
+				totalDuration: { $sum: "$originalDuration" },
+				onlyTasksTotalDuration: { $sum: "$filteredTasksDuration" }
+			}
+		});
+	} else {
+		// Simple case (no task/project filters): use $facet to calculate 3 things in parallel
+		pipeline.push({
+			$facet: {
+				// Pipeline 1: Count total number of focus records
+				count: [{ $count: "total" }],
+
+				// Pipeline 2: Sum up all focus record durations
+				baseDuration: [
+					{
+						$group: {
+							_id: null,
+							total: { $sum: "$duration" }
+						}
+					}
+				],
+
+				// Pipeline 3: Sum up individual task durations
+				tasksDuration: [
+					{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: true } },
+					{
+						$group: {
+							_id: null,
+							total: { $sum: "$tasks.duration" }
+						}
+					}
+				]
+			}
+		});
+	}
+
+	return pipeline;
+}
+
+/**
+ * Extracts totals from the aggregation result.
+ * Handles both filtered and non-filtered cases.
+ * Extracted from focusRecordsService lines 186-198.
+ */
+export function extractFocusTotalsFromResult(
+	result: any[],
+	hasTaskOrProjectFilters: boolean
+): { total: number; totalDuration: number; onlyTasksTotalDuration: number } {
+	if (hasTaskOrProjectFilters) {
+		return {
+			total: result[0]?.total || 0,
+			totalDuration: result[0]?.totalDuration || 0,
+			onlyTasksTotalDuration: result[0]?.onlyTasksTotalDuration || 0
+		};
+	} else {
+		return {
+			total: result[0]?.count[0]?.total || 0,
+			totalDuration: result[0]?.baseDuration[0]?.total || 0,
+			onlyTasksTotalDuration: result[0]?.tasksDuration[0]?.total || 0
+		};
+	}
+}
