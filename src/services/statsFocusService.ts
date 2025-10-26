@@ -86,9 +86,9 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 		case 'task':
 			return await groupByTask(basePipeline, taskFilterConditions, nested);
 		// case 'hour':
-		// 	return await groupByHour(basePipeline, taskFilterConditions);
-		// case 'timeline':
-		// 	return await getTimeline(basePipeline);
+		// 	return await groupByHour(basePipeline, taskFilterConditions, params.timezone);
+		case 'timeline':
+			return await getTimeline(basePipeline, params.timezone);
 		default:
 			throw new Error(`Invalid group-by parameter: ${params.groupBy}`);
 	}
@@ -404,7 +404,7 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 	return response;
 }
 
-// async function groupByHour(pipeline: any[], taskFilterConditions: any[] = []) {
+// async function groupByHour(pipeline: any[], taskFilterConditions: any[] = [], timezone: string = 'UTC') {
 // 	// Calculate totals using task-level durations
 // 	const { totalRecords, totalDuration } = await calculateTotals(pipeline, taskFilterConditions);
 
@@ -413,10 +413,10 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 // 	// Unwind tasks array to use task-level durations
 // 	aggPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
 
-// 	// Extract hour from startTime
+// 	// Extract hour from startTime in the user's timezone
 // 	aggPipeline.push({
 // 		$addFields: {
-// 			hour: { $hour: "$startTime" }
+// 			hour: { $hour: { date: "$startTime", timezone: timezone } }
 // 		}
 // 	});
 
@@ -425,7 +425,7 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 // 		$group: {
 // 			_id: "$hour",
 // 			duration: { $sum: "$tasks.duration" },
-// 			count: { $sum: 1 }
+// 			uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
 // 		}
 // 	});
 
@@ -439,7 +439,7 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 // 		return {
 // 			hour: i,
 // 			duration: hourData?.duration || 0,
-// 			count: hourData?.count || 0
+// 			count: hourData?.uniqueRecords?.length || 0 // Count unique focus records
 // 		};
 // 	});
 
@@ -453,39 +453,41 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 // 	};
 // }
 
-// async function getTimeline(pipeline: any[]) {
-// 	const aggPipeline = [...pipeline];
+async function getTimeline(pipeline: any[], timezone: string = 'UTC') {
+	const aggPipeline = [...pipeline];
 
-// 	// Sort by start time
-// 	aggPipeline.push({ $sort: { startTime: 1 } });
+	// Sort by start time
+	aggPipeline.push({ $sort: { startTime: 1 } });
 
-// 	const focusRecords = await FocusRecordTickTick.aggregate(aggPipeline);
+	const focusRecords = await FocusRecordTickTick.aggregate(aggPipeline);
 
-// 	// Calculate summary
-// 	const totalDuration = focusRecords.reduce((sum, record) => sum + (record.duration || 0), 0);
-// 	const totalRecords = focusRecords.length;
+	// Calculate summary
+	const totalDuration = focusRecords.reduce((sum, record) => sum + (record.duration || 0), 0);
+	const totalRecords = focusRecords.length;
 
-// 	// Format records for timeline view
-// 	const records = focusRecords.flatMap(record => {
-// 		return (record.tasks || []).map((task: any) => ({
-// 			id: record.id || record._id.toString(),
-// 			taskId: task.taskId,
-// 			taskName: task.title,
-// 			projectId: task.projectId,
-// 			projectName: task.projectName,
-// 			projectColor: '#808080', // Default color
-// 			startTime: task.startTime,
-// 			endTime: task.endTime,
-// 			duration: task.duration
-// 		}));
-// 	});
+	// Format records for timeline view
+	// Note: Times are already stored in UTC in the database and will be displayed
+	// according to the user's timezone on the frontend
+	const records = focusRecords.flatMap(record => {
+		return (record.tasks || []).map((task: any) => ({
+			id: record.id || record._id.toString(),
+			taskId: task.taskId,
+			taskName: task.title,
+			projectId: task.projectId,
+			projectName: task.projectName,
+			projectColor: '#808080', // Default color
+			startTime: task.startTime,
+			endTime: task.endTime,
+			duration: task.duration
+		}));
+	});
 
-// 	return {
-// 		summary: {
-// 			totalDuration,
-// 			totalRecords,
-// 			dateRange: { start: null, end: null }
-// 		},
-// 		records
-// 	};
-// }
+	return {
+		summary: {
+			totalDuration,
+			totalRecords,
+			dateRange: { start: null, end: null }
+		},
+		records
+	};
+}
