@@ -81,6 +81,8 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 			return await groupByWeek(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
 		case 'month':
 			return await groupByMonth(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
+		case 'year':
+			return await groupByYear(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
 		case 'project':
 			return await groupByProject(basePipeline, taskFilterConditions, nested);
 		case 'task':
@@ -320,6 +322,57 @@ async function groupByMonth(pipeline: any[], startDate?: string, endDate?: strin
 		},
 		byMonth: results.map(r => ({
 			date: r._id, // Format: "January 2025"
+			duration: r.duration,
+			count: r.uniqueRecords.length // Count unique focus records
+		}))
+	};
+}
+
+async function groupByYear(pipeline: any[], startDate?: string, endDate?: string, taskFilterConditions: any[] = [], timezone: string = 'UTC') {
+	// Calculate totals using task-level durations
+	const { totalRecords, totalDuration } = await calculateTotals(pipeline, taskFilterConditions);
+
+	// Group by year
+	const aggPipeline = [...pipeline];
+	aggPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
+
+	// Add a field to get the first day of the year for sorting purposes
+	aggPipeline.push({
+		$addFields: {
+			yearStartDate: {
+				$dateTrunc: {
+					date: "$startTime",
+					unit: "year",
+					timezone: timezone
+				}
+			}
+		}
+	});
+
+	aggPipeline.push({
+		$group: {
+			_id: {
+				$dateToString: { format: "%Y", date: "$tasks.startTime", timezone: timezone }
+			},
+			yearStartDate: { $first: "$yearStartDate" }, // Keep for sorting
+			duration: { $sum: "$tasks.duration" },
+			uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
+		}
+	});
+
+	// Sort by actual date, not the formatted string
+	aggPipeline.push({ $sort: { yearStartDate: 1 } });
+
+	const results = await FocusRecordTickTick.aggregate(aggPipeline);
+
+	return {
+		summary: {
+			totalDuration,
+			totalRecords,
+			dateRange: { start: startDate || null, end: endDate || null }
+		},
+		byYear: results.map(r => ({
+			date: r._id, // Format: "2025"
 			duration: r.duration,
 			count: r.uniqueRecords.length // Count unique focus records
 		}))
