@@ -197,7 +197,7 @@ async function groupByDay(pipeline: any[], startDate?: string, endDate?: string,
 	aggPipeline.push({
 		$group: {
 			_id: {
-				$dateToString: { format: "%Y-%m-%d", date: "$startTime", timezone: timezone }
+				$dateToString: { format: "%Y-%m-%d", date: "$tasks.startTime", timezone: timezone }
 			},
 			duration: { $sum: "$tasks.duration" },
 			uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
