@@ -35,26 +35,30 @@ export function buildTaskMatchConditions(
 	startDate: string | undefined,
 	endDate: string | undefined,
 	taskIdIncludeSubtasks: boolean,
-	appSources: string[]
+	appSources: string[],
+	timeField: 'completedTime' | 'createdTime' = 'completedTime'
 ) {
-	const matchFilter: any = {
-		completedTime: { $exists: true, $ne: null }
-	};
+	const matchFilter: any = {};
 
-	// Add date range filter
-	if (startDate && endDate) {
-		const startDateObj = new Date(startDate);
-		const endDateObj = new Date(endDate);
+	// Only apply completedTime requirement and date filter if timeField is 'completedTime'. Otherwise, if timeField is 'createdTime', skip date filtering entirely.
+	if (timeField === 'completedTime') {
+		matchFilter.completedTime = { $exists: true, $ne: null };
 
-		// Set start to beginning of day and end to end of day
-		startDateObj.setHours(0, 0, 0, 0);
-		endDateObj.setHours(23, 59, 59, 999);
+		// Add date range filter for completedTime
+		if (startDate && endDate) {
+			const startDateObj = new Date(startDate);
+			const endDateObj = new Date(endDate);
 
-		matchFilter.completedTime = {
-			...matchFilter.completedTime,
-			$gte: startDateObj,
-			$lte: endDateObj
-		};
+			// Set start to beginning of day and end to end of day
+			startDateObj.setHours(0, 0, 0, 0);
+			endDateObj.setHours(23, 59, 59, 999);
+
+			matchFilter.completedTime = {
+				...matchFilter.completedTime,
+				$gte: startDateObj,
+				$lte: endDateObj
+			};
+		}
 	}
 
 	// Filter by multiple project IDs

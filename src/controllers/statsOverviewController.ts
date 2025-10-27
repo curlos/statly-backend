@@ -8,8 +8,11 @@ import { parseBaseQueryParams } from '../utils/queryParams.utils';
  */
 export async function getOverviewStatsHandler(req: Request, res: Response) {
 	try {
-		// Call service to get overview stats
-		const result = await getOverviewStats();
+		// Parse base query parameters (filters)
+		const params = parseBaseQueryParams(req);
+
+		// Call service to get overview stats with filters
+		const result = await getOverviewStats(params);
 
 		// Return success response
 		res.status(200).json(result);
