@@ -85,8 +85,8 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 			return await groupByProject(basePipeline, taskFilterConditions, nested);
 		case 'task':
 			return await groupByTask(basePipeline, taskFilterConditions, nested);
-		// case 'hour':
-		// 	return await groupByHour(basePipeline, taskFilterConditions, params.timezone);
+		case 'hour':
+			return await groupByHour(basePipeline, taskFilterConditions, params.timezone);
 		case 'timeline':
 			return await getTimeline(basePipeline, params.timezone);
 		default:
@@ -404,54 +404,119 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 	return response;
 }
 
-// async function groupByHour(pipeline: any[], taskFilterConditions: any[] = [], timezone: string = 'UTC') {
-// 	// Calculate totals using task-level durations
-// 	const { totalRecords, totalDuration } = await calculateTotals(pipeline, taskFilterConditions);
+async function groupByHour(pipeline: any[], taskFilterConditions: any[] = [], timezone: string = 'UTC') {
+	// Calculate totals using task-level durations
+	const { totalRecords, totalDuration } = await calculateTotals(pipeline, taskFilterConditions);
 
-// 	const aggPipeline = [...pipeline];
+	const aggPipeline = [...pipeline];
 
-// 	// Unwind tasks array to use task-level durations
-// 	aggPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
+	// Unwind tasks array to use task-level durations
+	aggPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
 
-// 	// Extract hour from startTime in the user's timezone
-// 	aggPipeline.push({
-// 		$addFields: {
-// 			hour: { $hour: { date: "$startTime", timezone: timezone } }
-// 		}
-// 	});
+	// Split each task across the hours it spans
+	aggPipeline.push({
+		$addFields: {
+			taskHourSplits: {
+				$let: {
+					vars: {
+						startHour: { $hour: { date: "$tasks.startTime", timezone: timezone } },
+						endHour: { $hour: { date: "$tasks.endTime", timezone: timezone } },
+						startMinute: { $minute: { date: "$tasks.startTime", timezone: timezone } },
+						endMinute: { $minute: { date: "$tasks.endTime", timezone: timezone } },
+						startSecond: { $second: { date: "$tasks.startTime", timezone: timezone } },
+						endSecond: { $second: { date: "$tasks.endTime", timezone: timezone } }
+					},
+					in: {
+						$cond: {
+							// If start and end are in the same hour
+							if: { $eq: ["$$startHour", "$$endHour"] },
+							then: [{
+								hour: "$$startHour",
+								duration: "$tasks.duration"
+							}],
+							else: {
+								// Task spans multiple hours - need to split it
+								$map: {
+									input: {
+										$range: [
+											"$$startHour",
+											{ $add: ["$$endHour", 1] }
+										]
+									},
+									as: "hour",
+									in: {
+										hour: "$$hour",
+										duration: {
+											$let: {
+												vars: {
+													// Seconds from start of current hour
+													hourStartSeconds: {
+														$cond: {
+															if: { $eq: ["$$hour", "$$startHour"] },
+															then: { $add: [{ $multiply: ["$$startMinute", 60] }, "$$startSecond"] },
+															else: 0
+														}
+													},
+													// Seconds to end of current hour
+													hourEndSeconds: {
+														$cond: {
+															if: { $eq: ["$$hour", "$$endHour"] },
+															then: { $add: [{ $multiply: ["$$endMinute", 60] }, "$$endSecond"] },
+															else: 3600
+														}
+													}
+												},
+												in: {
+													// Duration for this hour = (end - start) seconds
+													$subtract: ["$$hourEndSeconds", "$$hourStartSeconds"]
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	});
 
-// 	// Group by hour
-// 	aggPipeline.push({
-// 		$group: {
-// 			_id: "$hour",
-// 			duration: { $sum: "$tasks.duration" },
-// 			uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
-// 		}
-// 	});
+	// Unwind the hour splits so each becomes a separate document
+	aggPipeline.push({ $unwind: { path: "$taskHourSplits", preserveNullAndEmptyArrays: false } });
 
-// 	aggPipeline.push({ $sort: { _id: 1 } });
+	// Group by hour
+	aggPipeline.push({
+		$group: {
+			_id: "$taskHourSplits.hour",
+			duration: { $sum: "$taskHourSplits.duration" },
+			uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
+		}
+	});
 
-// 	const results = await FocusRecordTickTick.aggregate(aggPipeline);
+	aggPipeline.push({ $sort: { _id: 1 } });
 
-// 	// Fill in missing hours with 0
-// 	const byHour = Array.from({ length: 24 }, (_, i) => {
-// 		const hourData = results.find(r => r._id === i);
-// 		return {
-// 			hour: i,
-// 			duration: hourData?.duration || 0,
-// 			count: hourData?.uniqueRecords?.length || 0 // Count unique focus records
-// 		};
-// 	});
+	const results = await FocusRecordTickTick.aggregate(aggPipeline);
 
-// 	return {
-// 		summary: {
-// 			totalDuration,
-// 			totalRecords,
-// 			dateRange: { start: null, end: null }
-// 		},
-// 		byHour
-// 	};
-// }
+	// Fill in missing hours with 0
+	const byHour = Array.from({ length: 24 }, (_, i) => {
+		const hourData = results.find(r => r._id === i);
+		return {
+			hour: i,
+			duration: hourData?.duration || 0,
+			count: hourData?.uniqueRecords?.length || 0 // Count unique focus records
+		};
+	});
+
+	return {
+		summary: {
+			totalDuration,
+			totalRecords,
+			dateRange: { start: null, end: null }
+		},
+		byHour
+	};
+}
 
 async function getTimeline(pipeline: any[], timezone: string = 'UTC') {
 	const aggPipeline = [...pipeline];
