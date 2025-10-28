@@ -26,6 +26,38 @@ export function buildTaskSearchFilter(searchQuery?: string) {
 }
 
 // ============================================================================
+// Tasks - Date Filter Helper
+// ============================================================================
+
+/**
+ * Helper function to build date range filter conditions
+ * @param startDate - Start date string (optional)
+ * @param endDate - End date string (optional)
+ * @returns Date filter object or null if no dates provided
+ */
+function buildDateRangeFilter(startDate?: string, endDate?: string) {
+	if (!startDate && !endDate) {
+		return null;
+	}
+
+	const dateFilter: any = {};
+
+	if (startDate) {
+		const startBoundary = new Date(startDate);
+		startBoundary.setHours(0, 0, 0, 0); // Beginning of day
+		dateFilter.$gte = startBoundary;
+	}
+
+	if (endDate) {
+		const endBoundary = new Date(endDate);
+		endBoundary.setHours(23, 59, 59, 999); // End of day
+		dateFilter.$lte = endBoundary;
+	}
+
+	return dateFilter;
+}
+
+// ============================================================================
 // Tasks - Match Conditions
 // ============================================================================
 
@@ -36,7 +68,9 @@ export function buildTaskMatchConditions(
 	endDate: string | undefined,
 	taskIdIncludeSubtasks: boolean,
 	appSources: string[],
-	timeField: 'completedTime' | 'createdTime' = 'completedTime'
+	timeField: 'completedTime' | 'createdTime' = 'completedTime',
+	intervalStartDate?: string,
+	intervalEndDate?: string
 ) {
 	const matchFilter: any = {};
 
@@ -44,20 +78,35 @@ export function buildTaskMatchConditions(
 	if (timeField === 'completedTime') {
 		matchFilter.completedTime = { $exists: true, $ne: null };
 
-		// Add date range filter for completedTime
-		if (startDate && endDate) {
-			const startDateObj = new Date(startDate);
-			const endDateObj = new Date(endDate);
+		// Two-tier date filtering:
+		// 1. First tier: Filter Sidebar dates (startDate, endDate) - broad filter
+		// 2. Second tier: Interval Dropdown dates (intervalStartDate, intervalEndDate) - narrower filter
+		// Both filters must be satisfied (AND logic)
 
-			// Set start to beginning of day and end to end of day
-			startDateObj.setHours(0, 0, 0, 0);
-			endDateObj.setHours(23, 59, 59, 999);
+		const dateConditions: any[] = [];
 
+		// Add first tier date range filter (Filter Sidebar)
+		const firstTierFilter = buildDateRangeFilter(startDate, endDate);
+		if (firstTierFilter) {
+			dateConditions.push({ completedTime: firstTierFilter });
+		}
+
+		// Add second tier date range filter (Interval Dropdown)
+		const secondTierFilter = buildDateRangeFilter(intervalStartDate, intervalEndDate);
+		if (secondTierFilter) {
+			dateConditions.push({ completedTime: secondTierFilter });
+		}
+
+		// Apply date filters
+		if (dateConditions.length === 1) {
+			// Only one tier provided, apply directly
 			matchFilter.completedTime = {
 				...matchFilter.completedTime,
-				$gte: startDateObj,
-				$lte: endDateObj
+				...dateConditions[0].completedTime
 			};
+		} else if (dateConditions.length === 2) {
+			// Both tiers provided, use $and to ensure both are satisfied
+			matchFilter.$and = dateConditions;
 		}
 	}
 
