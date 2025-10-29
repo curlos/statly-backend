@@ -448,11 +448,7 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 	// Use shared helper to aggregate task data
 	const { byTask, ancestorTasksById } = await aggregateTaskData(pipeline, totalDuration);
 	response.byTask = byTask;
-
-	// Only include ancestorTasksById if nested=true
-	if (nested) {
-		response.ancestorTasksById = ancestorTasksById;
-	}
+	response.ancestorTasksById = ancestorTasksById;
 
 	return response;
 }
