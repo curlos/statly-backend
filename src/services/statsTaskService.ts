@@ -64,10 +64,10 @@ export async function getCompletedTasksStats(params: CompletedTasksStatsQueryPar
 			return await groupByMonth(basePipeline, effectiveStartDate, effectiveEndDate, params.timezone);
 		case 'year':
 			return await groupByYear(basePipeline, effectiveStartDate, effectiveEndDate, params.timezone);
-		// case 'project':
-		// 	return await groupByProject(basePipeline, nested);
-		// case 'task':
-		// 	return await groupByTask(basePipeline, nested);
+		case 'project':
+			return await groupByProject(basePipeline, nested);
+		case 'task':
+			return await groupByTask(basePipeline, nested);
 		default:
 			throw new Error(`Invalid group-by parameter: ${params.groupBy}`);
 	}
@@ -98,60 +98,44 @@ async function calculateTotals(pipeline: any[]) {
 /**
  * Shared helper to aggregate task-level data and fetch ancestor information.
  */
-// async function aggregateTaskData(pipeline: any[], totalCount: number) {
-// 	// Build task-level aggregation
-// 	const taskPipeline = [...pipeline];
-// 	taskPipeline.push({
-// 		$group: {
-// 			_id: '$id',
-// 			taskName: { $first: '$title' },
-// 			projectId: { $first: '$projectId' },
-// 			source: { $first: '$source' },
-// 			count: { $sum: 1 }
-// 		}
-// 	});
-// 	taskPipeline.push({ $sort: { count: -1 } });
+async function aggregateTaskData(pipeline: any[], totalCount: number) {
+	const taskResults = await Task.aggregate(pipeline);
 
-// 	const taskResults = await Task.aggregate(taskPipeline);
+	let ancestorTasksById: Record<string, any> = {};
 
-// 	// Fetch actual task data from MongoDB
-// 	const taskIds = taskResults.map(r => r._id);
+	if (taskResults.length > 0) {
+		const ancestorData = await buildAncestorData(taskResults);
+		ancestorTasksById = ancestorData.ancestorTasksById;
 
-// 	let ancestorTasksById: Record<string, any> = {};
+		taskResults.forEach((task: any) => {
+			ancestorTasksById[task.id] = {
+				id: task.id,
+				title: task.title,
+				parentId: task.parentId ?? null,
+				ancestorIds: task.ancestorIds,
+				projectId: task.projectId ?? null
+			};
+		});
+	}
 
-// 	if (taskIds.length > 0) {
-// 		const tasks = await Task.find({ id: { $in: taskIds } }).lean();
+	// Calculate percentage once for all tasks (since each task appears exactly once)
+	const percentage = totalCount > 0 ? (1 / totalCount) * 100 : 0;
+	const formattedPercentage = Number(percentage.toFixed(2));
 
-// 		const ancestorData = await buildAncestorData(tasks);
-// 		ancestorTasksById = ancestorData.ancestorTasksById;
+	// Map results to formatted task data
+	const byTask = taskResults.map(r => {
+		return {
+			id: r.id,
+			name: r.title || 'Unknown Task',
+			projectId: r.projectId,
+			count: 1,
+			percentage: formattedPercentage,
+			type: 'task'
+		};
+	});
 
-// 		tasks.forEach((task: any) => {
-// 			ancestorTasksById[task.id] = {
-// 				id: task.id,
-// 				title: task.title,
-// 				parentId: task.parentId ?? null,
-// 				ancestorIds: task.ancestorIds,
-// 				projectId: task.projectId ?? null
-// 			};
-// 		});
-// 	}
-
-// 	// Map results to formatted task data
-// 	const byTask = taskResults.map(r => {
-// 		const percentage = totalCount > 0 ? (r.count / totalCount) * 100 : 0;
-
-// 		return {
-// 			id: r._id,
-// 			name: r.taskName || 'Unknown Task',
-// 			projectId: r.projectId,
-// 			count: r.count,
-// 			percentage: Number(percentage.toFixed(2)),
-// 			type: 'task'
-// 		};
-// 	});
-
-// 	return { byTask, ancestorTasksById };
-// }
+	return { byTask, ancestorTasksById };
+}
 
 // ============================================================================
 // Grouping Functions
@@ -331,74 +315,72 @@ async function groupByYear(pipeline: any[], startDate?: string, endDate?: string
 	};
 }
 
-// async function groupByProject(pipeline: any[], nested: boolean = false) {
-// 	// Calculate totals
-// 	const { totalCount } = await calculateTotals(pipeline);
+async function groupByProject(pipeline: any[], nested: boolean = false) {
+	// Calculate totals
+	const { totalCount } = await calculateTotals(pipeline);
 
-// 	const aggPipeline = [...pipeline];
+	const aggPipeline = [...pipeline];
 
-// 	// Group by project
-// 	aggPipeline.push({
-// 		$group: {
-// 			_id: {
-// 				projectId: "$projectId",
-// 				source: "$source"
-// 			},
-// 			count: { $sum: 1 }
-// 		}
-// 	});
+	// Group by both projectId and source (composite key)
+	aggPipeline.push({
+		$group: {
+			_id: {
+				projectId: "$projectId",
+				source: "$source"
+			},
+			count: { $sum: 1 }
+		}
+	});
 
-// 	aggPipeline.push({ $sort: { count: -1 } });
+	aggPipeline.push({ $sort: { count: -1 } });
 
-// 	const results = await Task.aggregate(aggPipeline);
+	const results = await Task.aggregate(aggPipeline);
 
-// 	const response: any = {
-// 		summary: {
-// 			totalCount,
-// 			dateRange: { start: null, end: null }
-// 		},
-// 		byProject: results.map(r => {
-// 			const percentage = totalCount > 0 ? (r.count / totalCount) * 100 : 0;
-// 			const projectId = r._id.projectId || r._id.source;
+	const response: any = {
+		summary: {
+			totalCount,
+			dateRange: { start: null, end: null }
+		},
+		byProject: results.map(r => {
+			const percentage = totalCount > 0 ? (r.count / totalCount) * 100 : 0;
+			const projectId = r._id.projectId || r._id.source;
 
-// 			return {
-// 				id: projectId,
-// 				count: r.count,
-// 				percentage: Number(percentage.toFixed(2)),
-// 				type: 'project'
-// 			};
-// 		})
-// 	};
+			return {
+				id: projectId,
+				count: r.count,
+				percentage: Number(percentage.toFixed(2)),
+				type: 'project'
+			};
+		})
+	};
 
-// 	// If nested, also fetch task-level data and ancestorTasksById
-// 	if (nested) {
-// 		const { byTask, ancestorTasksById } = await aggregateTaskData(pipeline, totalCount);
-// 		response.byTask = byTask;
-// 		response.ancestorTasksById = ancestorTasksById;
-// 	}
+	// If nested, also fetch task-level data and ancestorTasksById
+	if (nested) {
+		const { byTask, ancestorTasksById } = await aggregateTaskData(pipeline, totalCount);
+		response.byTask = byTask;
+		response.ancestorTasksById = ancestorTasksById;
+	}
 
-// 	return response;
-// }
+	return response;
+}
 
-// async function groupByTask(pipeline: any[], nested: boolean = false) {
-// 	// Calculate totals
-// 	const { totalCount } = await calculateTotals(pipeline);
+async function groupByTask(pipeline: any[], nested: boolean = false) {
+	// Calculate totals
+	const { totalCount } = await calculateTotals(pipeline);
 
-// 	const response: any = {
-// 		summary: {
-// 			totalCount,
-// 			dateRange: { start: null, end: null }
-// 		}
-// 	};
+	const response: any = {
+		summary: {
+			totalCount,
+			dateRange: { start: null, end: null }
+		}
+	};
 
-// 	// Use shared helper to aggregate task data
-// 	const { byTask, ancestorTasksById } = await aggregateTaskData(pipeline, totalCount);
-// 	response.byTask = byTask;
+	// Use shared helper to aggregate task data
+	const { byTask, ancestorTasksById } = await aggregateTaskData(pipeline, totalCount);
+	response.byTask = byTask;
 
-// 	// Only include ancestorTasksById if nested=true
-// 	if (nested) {
-// 		response.ancestorTasksById = ancestorTasksById;
-// 	}
+	// Always include ancestorTasksById for task grouping on frontend
+	response.ancestorTasksById = ancestorTasksById;
 
-// 	return response;
-// }
+	return response;
+}
