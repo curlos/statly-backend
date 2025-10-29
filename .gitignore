@@ -1,8 +1,10 @@
 node_modules
 package-lock.json
 .env
+.env.local
 src/focus-data
 dist
 .vercel
 .DS_Store
 todoist-data-fetcher/data
+mongo-backups/
