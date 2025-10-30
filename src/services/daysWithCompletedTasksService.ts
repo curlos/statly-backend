@@ -34,7 +34,10 @@ export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQu
 		params.startDate,
 		params.endDate,
 		params.taskIdIncludeSubtasks,
-		params.toDoListAppSources
+		params.toDoListAppSources,
+		'completedTime',
+		params.intervalStartDate,
+		params.intervalEndDate
 	);
 
 	// Build aggregation pipeline

@@ -95,8 +95,10 @@ export interface FocusRecordsQueryParams {
 	limit: number;
 	projectIds: string[]; // Combined projects and categories, already split
 	taskId?: string;
-	startDate?: string;
-	endDate?: string;
+	startDate?: string; // Filter Sidebar dates (first tier filter)
+	endDate?: string; // Filter Sidebar dates (first tier filter)
+	intervalStartDate?: string; // Interval Dropdown dates (second tier filter)
+	intervalEndDate?: string; // Interval Dropdown dates (second tier filter)
 	sortBy: string;
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
 	searchQuery?: string;
@@ -117,14 +119,20 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.focusAppSources,
-		params.crossesMidnight
+		params.crossesMidnight,
+		params.intervalStartDate,
+		params.intervalEndDate
 	);
 
 	// Calculate the date boundaries for duration adjustment
-	const startDateBoundary = params.startDate ? new Date(params.startDate) : null;
+	// Use interval dates if provided (second tier), otherwise use filter sidebar dates (first tier)
+	const effectiveStartDate = params.intervalStartDate || params.startDate;
+	const effectiveEndDate = params.intervalEndDate || params.endDate;
+
+	const startDateBoundary = effectiveStartDate ? new Date(effectiveStartDate) : null;
 	let endDateBoundary: Date | null = null;
-	if (params.endDate) {
-		endDateBoundary = new Date(params.endDate);
+	if (effectiveEndDate) {
+		endDateBoundary = new Date(effectiveEndDate);
 		endDateBoundary.setDate(endDateBoundary.getDate() + 1);
 	}
 
