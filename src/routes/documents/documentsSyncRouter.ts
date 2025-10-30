@@ -1,15 +1,12 @@
 import express from 'express';
-import { randomUUID } from 'crypto';
 import { CustomRequest } from '../../interfaces/CustomRequest';
 import { verifyToken } from '../../middleware/verifyToken';
 import SyncMetadata from '../../models/SyncMetadataModel';
 import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
-import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects } from '../../utils/sync.utils';
-import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks } from '../../utils/focus.utils';
-import { FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from '../../models/FocusRecord';
+import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../../utils/sync.utils';
+import { fetchSessionFocusRecordsWithNoBreaks } from '../../utils/focus.utils';
 import { ProjectSession } from '../../models/projectModel';
-import { crossesMidnightInTimezone } from '../../utils/timezone.utils';
 
 const router = express.Router();
 
@@ -301,60 +298,8 @@ router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest,
     try {
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
-
-        // Fetch raw BeFocused data
-        const rawBeFocusedRecords = await fetchBeFocusedAppFocusRecords();
-
-        // Normalize each record to match TickTick format
-        const normalizedRecords = rawBeFocusedRecords.map((record: any) => {
-            const startDate = new Date(record['Start date']);
-            const durationInMinutes = Number(record['Duration']);
-            const durationInSeconds = durationInMinutes * 60; // Convert minutes to seconds
-            const endDate = new Date(startDate.getTime() + durationInMinutes * 60 * 1000);
-            const assignedTask = record['Assigned task'] || 'Untitled';
-
-            // Create custom taskId: "TaskName - BeFocused"
-            const taskId = `${assignedTask} - BeFocused`;
-
-            // Check if record crosses midnight in user's timezone
-            const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
-
-            return {
-                id: randomUUID(),
-                source: 'FocusRecordBeFocused',
-                startTime: startDate, // Date object for MongoDB
-                endTime: endDate, // Date object for MongoDB
-                duration: durationInSeconds, // Duration in seconds like TickTick
-                crossesMidnight,
-                tasks: [
-                    {
-                        taskId,
-                        title: assignedTask,
-                        startTime: startDate, // Date object for MongoDB
-                        endTime: endDate, // Date object for MongoDB
-                        duration: durationInSeconds, // Each task has the full duration since there's only one task
-                    }
-                ]
-            };
-        });
-
-        // Bulk upsert to database
-        const bulkOps = normalizedRecords.map((record: any) => ({
-            updateOne: {
-                filter: { id: record.id },
-                update: { $set: record },
-                upsert: true
-            }
-        }));
-
-        const result = await FocusRecordBeFocused.bulkWrite(bulkOps);
-
-        res.status(200).json({
-            message: 'BeFocused focus records synced successfully',
-            recordsProcessed: normalizedRecords.length,
-            upsertedCount: result.upsertedCount,
-            modifiedCount: result.modifiedCount,
-        });
+        const result = await syncBeFocusedFocusRecords(timezone);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing BeFocused focus records.',
@@ -366,65 +311,8 @@ router.post('/forest/focus-records', verifyToken, async (req: CustomRequest, res
     try {
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
-
-        // Fetch raw Forest data
-        const rawForestRecords = await fetchForestAppFocusRecords(true);
-
-        // Normalize each record to match TickTick format
-        const normalizedRecords = rawForestRecords.map((record: any) => {
-            const startDate = new Date(record['Start Time']);
-            const endDate = new Date(record['End Time']);
-            const durationInSeconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
-            const tag = record['Tag'] || '';
-            const note = record['Note'] || '';
-            const treeType = record['Tree Type'] || '';
-            const isSuccess = record['Is Success'] === 'True';
-
-            // Create custom taskId: "Tag - Forest"
-            const taskId = `${tag} - Forest`;
-
-            // Check if record crosses midnight in user's timezone
-            const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
-
-            return {
-                id: randomUUID(),
-                source: 'FocusRecordForest',
-                startTime: startDate, // Date object for MongoDB
-                endTime: endDate, // Date object for MongoDB
-                duration: durationInSeconds, // Duration in seconds like TickTick
-                crossesMidnight,
-                note,
-                treeType,
-                isSuccess,
-                tasks: [
-                    {
-                        taskId,
-                        title: tag,
-                        startTime: startDate, // Date object for MongoDB
-                        endTime: endDate, // Date object for MongoDB
-                        duration: durationInSeconds, // Each task has the full duration since there's only one task
-                    }
-                ]
-            };
-        });
-
-        // Bulk upsert to database
-        const bulkOps = normalizedRecords.map((record: any) => ({
-            updateOne: {
-                filter: { id: record.id },
-                update: { $set: record },
-                upsert: true
-            }
-        }));
-
-        const result = await FocusRecordForest.bulkWrite(bulkOps);
-
-        res.status(200).json({
-            message: 'Forest focus records synced successfully',
-            recordsProcessed: normalizedRecords.length,
-            upsertedCount: result.upsertedCount,
-            modifiedCount: result.modifiedCount,
-        });
+        const result = await syncForestFocusRecords(timezone);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing Forest focus records.',
@@ -436,75 +324,8 @@ router.post('/tide/focus-records', verifyToken, async (req: CustomRequest, res) 
     try {
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
-
-        // Fetch raw Tide data
-        const rawTideRecords = await fetchTideAppFocusRecords();
-
-        // Helper function to parse duration string (e.g., "1h50m", "35m", "3m")
-        const parseDuration = (durationStr: string): number => {
-            let totalSeconds = 0;
-            const hourMatch = durationStr.match(/(\d+)h/);
-            const minuteMatch = durationStr.match(/(\d+)m/);
-
-            if (hourMatch) {
-                totalSeconds += parseInt(hourMatch[1]) * 3600;
-            }
-            if (minuteMatch) {
-                totalSeconds += parseInt(minuteMatch[1]) * 60;
-            }
-
-            return totalSeconds;
-        };
-
-        // Normalize each record to match TickTick format
-        const normalizedRecords = rawTideRecords.map((record: any) => {
-            const startDate = new Date(record['startTime']);
-            const durationInSeconds = parseDuration(record['duration']);
-            const endDate = new Date(startDate.getTime() + durationInSeconds * 1000);
-            const name = record['name'] || 'Untitled';
-
-            // Create custom taskId: "Name - Tide"
-            const taskId = `${name} - Tide`;
-
-            // Check if record crosses midnight in user's timezone
-            const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
-
-            return {
-                id: `${startDate.getTime()}-tide`, // Custom ID based on start time
-                source: 'FocusRecordTide',
-                startTime: startDate, // Date object for MongoDB
-                endTime: endDate, // Date object for MongoDB
-                duration: durationInSeconds, // Duration in seconds like TickTick
-                crossesMidnight,
-                tasks: [
-                    {
-                        taskId,
-                        title: name,
-                        startTime: startDate, // Date object for MongoDB
-                        endTime: endDate, // Date object for MongoDB
-                        duration: durationInSeconds, // Each task has the full duration since there's only one task
-                    }
-                ]
-            };
-        });
-
-        // Bulk upsert to database
-        const bulkOps = normalizedRecords.map((record: any) => ({
-            updateOne: {
-                filter: { id: record.id },
-                update: { $set: record },
-                upsert: true
-            }
-        }));
-
-        const result = await FocusRecordTide.bulkWrite(bulkOps);
-
-        res.status(200).json({
-            message: 'Tide focus records synced successfully',
-            recordsProcessed: normalizedRecords.length,
-            upsertedCount: result.upsertedCount,
-            modifiedCount: result.modifiedCount,
-        });
+        const result = await syncTideFocusRecords(timezone);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing Tide focus records.',
@@ -516,111 +337,38 @@ router.post('/session/focus-records', verifyToken, async (req: CustomRequest, re
     try {
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
-
-        // Fetch raw Session data
-        const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
-
-        // Normalize each record to match TickTick format
-        const normalizedRecords = rawSessionRecords.map((record: any) => {
-            const startDate = new Date(record['start_date']);
-            const endDate = new Date(record['end_date']);
-            const totalDurationInSeconds = record['duration_second'];
-            const pauseDurationInSeconds = record['pause_second'] || 0;
-            const actualDurationInSeconds = totalDurationInSeconds - pauseDurationInSeconds;
-
-            const categoryTitle = record['category']?.['title'] || 'General';
-            const categoryId = record['category']?.['id'] || 'general-session';
-            const title = record['title'] || categoryTitle;
-            const note = record['notes'] || '';
-
-            // Normalize "General" category
-            const projectId = categoryId === '' ? 'general-session' : categoryId;
-            const projectName = categoryTitle;
-
-            // Parse meta array to get pause periods
-            const metaPauses = (record['meta'] || [])
-                .filter((m: any) => m.type === 'PAUSE')
-                .map((m: any) => ({
-                    start: new Date(m['start_date']),
-                    end: new Date(m['end_date'])
-                }))
-                .sort((a: any, b: any) => a.start.getTime() - b.start.getTime());
-
-            // Build tasks array by splitting based on pauses
-            const tasks = [];
-            let currentStart = startDate;
-
-            for (const pause of metaPauses) {
-                // Task before this pause
-                const taskEnd = pause.start;
-                const taskDuration = Math.floor((taskEnd.getTime() - currentStart.getTime()) / 1000);
-
-                if (taskDuration > 0) {
-                    tasks.push({
-                        taskId: `${title} - Session`,
-                        title,
-                        startTime: currentStart,
-                        endTime: taskEnd,
-                        duration: taskDuration,
-                        projectId,
-                        projectName,
-                    });
-                }
-
-                // Move start to after pause
-                currentStart = pause.end;
-            }
-
-            // Final task (after last pause or entire session if no pauses)
-            const finalTaskDuration = Math.floor((endDate.getTime() - currentStart.getTime()) / 1000);
-            if (finalTaskDuration > 0) {
-                tasks.push({
-                    taskId: `${title} - Session`,
-                    title,
-                    startTime: currentStart,
-                    endTime: endDate,
-                    duration: finalTaskDuration,
-                    projectId,
-                    projectName,
-                });
-            }
-
-            // Check if record crosses midnight in user's timezone
-            const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
-
-            return {
-                id: randomUUID(),
-                source: 'FocusRecordSession',
-                startTime: startDate,
-                endTime: endDate,
-                duration: actualDurationInSeconds, // Total duration minus pauses
-                crossesMidnight,
-                note,
-                pauseDuration: pauseDurationInSeconds,
-                tasks
-            };
-        });
-
-        // Bulk upsert to database
-        const bulkOps = normalizedRecords.map((record: any) => ({
-            updateOne: {
-                filter: { id: record.id },
-                update: { $set: record },
-                upsert: true
-            }
-        }));
-
-        const result = await FocusRecordSession.bulkWrite(bulkOps);
-
-        res.status(200).json({
-            message: 'Session focus records synced successfully',
-            recordsProcessed: normalizedRecords.length,
-            upsertedCount: result.upsertedCount,
-            modifiedCount: result.modifiedCount,
-        });
+        const result = await syncSessionFocusRecords(timezone);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing Session focus records.',
+        });
+    }
+});
+
+router.post('/old-focus-apps/focus-records', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        // Get timezone from request body (defaults to UTC)
+        const timezone = req.body.timezone || 'UTC';
+
+        // Run all old focus app sync operations in parallel
+        const [beFocusedResult, forestResult, tideResult, sessionResult] = await Promise.all([
+            syncBeFocusedFocusRecords(timezone),
+            syncForestFocusRecords(timezone),
+            syncTideFocusRecords(timezone),
+            syncSessionFocusRecords(timezone)
+        ]);
+
+        res.status(200).json({
+            message: 'All old focus apps synced successfully',
+            beFocused: beFocusedResult,
+            forest: forestResult,
+            tide: tideResult,
+            session: sessionResult
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'An error occurred syncing old focus apps.',
         });
     }
 });

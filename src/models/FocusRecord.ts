@@ -22,11 +22,6 @@ const BaseFocusRecordTaskSchema = new Schema({
 		type: Number,
 		required: true,
 	},
-}, { _id: false }); // Disable _id for embedded documents
-
-// Extended schema for TickTick tasks (inherits base fields and adds project-related fields)
-const TickTickFocusRecordTaskSchema = new Schema({
-	...BaseFocusRecordTaskSchema.obj,
 	projectId: {
 		type: String,
 		required: true,
@@ -36,6 +31,11 @@ const TickTickFocusRecordTaskSchema = new Schema({
 		type: String,
 		required: true,
 	},
+}, { _id: false }); // Disable _id for embedded documents
+
+// Extended schema for TickTick tasks (inherits base fields and adds project-related fields)
+const TickTickFocusRecordTaskSchema = new Schema({
+	...BaseFocusRecordTaskSchema.obj,
 	ancestorIds: {
 		type: [String],
 		default: [],
@@ -46,15 +46,6 @@ const TickTickFocusRecordTaskSchema = new Schema({
 // Extended schema for Session tasks (inherits base fields and adds project-related fields)
 const SessionFocusRecordTaskSchema = new Schema({
 	...BaseFocusRecordTaskSchema.obj,
-	projectId: {
-		type: String,
-		required: true,
-		index: true, // Index for fast filtering
-	},
-	projectName: {
-		type: String,
-		required: true,
-	},
 }, { _id: false });
 
 // Base schema with shared fields for ALL focus records
