@@ -82,6 +82,7 @@ function calculateMedalsFromPeriodTotals(
 	// Initialize all medals with empty arrays
 	medals.forEach(medal => {
 		medalResults[medal.name] = {
+			type: type,
 			intervalsEarned: []
 		};
 	});

@@ -23,8 +23,7 @@ const UserSettingsSchema = new Schema(
 		},
 		theme: {
 			color: { type: String },
-			fontFamily: { type: String, default: 'Default' },
-			loaderCardImage: { type: String }
+			fontFamily: { type: String, default: 'Default' }
 		},
 		tickTickOne: {
 			pages: {

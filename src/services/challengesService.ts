@@ -31,7 +31,8 @@ function formatDateWithoutLeadingZero(dateStr: string): string {
 
 function calculateChallengesFromDailyTotals(
 	dailyTotals: Array<{ date: string; total: number }>,
-	challenges: any[]
+	challenges: any[],
+	type: 'focus' | 'tasks'
 ) {
 	// Sort dailyTotals chronologically (oldest first)
 	const sortedDailyTotals = [...dailyTotals].sort((a, b) => {
@@ -86,6 +87,7 @@ function calculateChallengesFromDailyTotals(
 		const completedChallenge = sortedChallenges.find(sc => sc.name === challenge.name);
 		return {
 			...challenge,
+			type: type,
 			completedDate: completedChallenge?.completedDate || null
 		};
 	});
@@ -147,7 +149,8 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 	// Calculate challenges
 	return calculateChallengesFromDailyTotals(
 		dailyTotals,
-		DEFAULT_TOTAL_FOCUS_HOURS_CHALLENGES
+		DEFAULT_TOTAL_FOCUS_HOURS_CHALLENGES,
+		'focus'
 	);
 }
 
@@ -198,6 +201,7 @@ export async function getCompletedTasksChallenges(params: ChallengesQueryParams)
 	// Calculate challenges
 	return calculateChallengesFromDailyTotals(
 		dailyTotals,
-		DEFAULT_TOTAL_COMPLETED_TASKS_CHALLENGES
+		DEFAULT_TOTAL_COMPLETED_TASKS_CHALLENGES,
+		'tasks'
 	);
 }
