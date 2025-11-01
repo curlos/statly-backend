@@ -91,6 +91,8 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 			return await groupByHour(basePipeline, taskFilterConditions, params.timezone);
 		case 'timeline':
 			return await getTimeline(basePipeline, params.timezone);
+		case 'record':
+			return await groupByRecord(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
 		default:
 			throw new Error(`Invalid group-by parameter: ${params.groupBy}`);
 	}
@@ -564,6 +566,32 @@ async function groupByHour(pipeline: any[], taskFilterConditions: any[] = [], ti
 			dateRange: { start: null, end: null }
 		},
 		byHour
+	};
+}
+
+async function groupByRecord(pipeline: any[], startDate?: string, endDate?: string, taskFilterConditions: any[] = [], timezone: string = 'UTC') {
+	// Calculate totals using task-level durations
+	const { totalRecords, totalDuration } = await calculateTotals(pipeline, taskFilterConditions);
+
+	// Get individual records sorted by start time (oldest to newest)
+	const aggPipeline = [...pipeline];
+	aggPipeline.push({ $sort: { startTime: 1 } });
+
+	const results = await FocusRecordTickTick.aggregate(aggPipeline);
+
+	return {
+		summary: {
+			totalDuration,
+			totalRecords,
+			dateRange: { start: startDate || null, end: endDate || null }
+		},
+		byRecord: results.map(r => ({
+			date: r.startTime, // Use startTime as the date identifier
+			duration: r.duration,
+			count: 1, // Each record is its own group
+			startTime: r.startTime,
+			endTime: r.endTime
+		}))
 	};
 }
 
