@@ -1,5 +1,105 @@
 export const DEFAULT_TOTAL_FOCUS_HOURS_CHALLENGES = [
 	{
+		name: 'Focus 20,000 Hours',
+		requiredDuration: 72000000, // 20,000 hours * 3600 = 72,000,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 19,500 Hours',
+		requiredDuration: 70200000, // 19,500 hours * 3600 = 70,200,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 19,000 Hours',
+		requiredDuration: 68400000, // 19,000 hours * 3600 = 68,400,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 18,500 Hours',
+		requiredDuration: 66600000, // 18,500 hours * 3600 = 66,600,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 18,000 Hours',
+		requiredDuration: 64800000, // 18,000 hours * 3600 = 64,800,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 17,500 Hours',
+		requiredDuration: 63000000, // 17,500 hours * 3600 = 63,000,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 17,000 Hours',
+		requiredDuration: 61200000, // 17,000 hours * 3600 = 61,200,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 16,500 Hours',
+		requiredDuration: 59400000, // 16,500 hours * 3600 = 59,400,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 16,000 Hours',
+		requiredDuration: 57600000, // 16,000 hours * 3600 = 57,600,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 15,500 Hours',
+		requiredDuration: 55800000, // 15,500 hours * 3600 = 55,800,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 15,000 Hours',
+		requiredDuration: 54000000, // 15,000 hours * 3600 = 54,000,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 14,500 Hours',
+		requiredDuration: 52200000, // 14,500 hours * 3600 = 52,200,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 14,000 Hours',
+		requiredDuration: 50400000, // 14,000 hours * 3600 = 50,400,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 13,500 Hours',
+		requiredDuration: 48600000, // 13,500 hours * 3600 = 48,600,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 13,000 Hours',
+		requiredDuration: 46800000, // 13,000 hours * 3600 = 46,800,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 12,500 Hours',
+		requiredDuration: 45000000, // 12,500 hours * 3600 = 45,000,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 12,000 Hours',
+		requiredDuration: 43200000, // 12,000 hours * 3600 = 43,200,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 11,500 Hours',
+		requiredDuration: 41400000, // 11,500 hours * 3600 = 41,400,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 11,000 Hours',
+		requiredDuration: 39600000, // 11,000 hours * 3600 = 39,600,000 seconds
+		completedDate: null,
+	},
+	{
+		name: 'Focus 10,500 Hours',
+		requiredDuration: 37800000, // 10,500 hours * 3600 = 37,800,000 seconds
+		completedDate: null,
+	},
+	{
 		name: 'Focus 10,000 Hours',
 		requiredDuration: 36000000, // 10,000 hours * 3600 = 36,000,000 seconds
 		completedDate: null,
