@@ -63,7 +63,9 @@ const UserSettingsSchema = new Schema(
 					selectedMedalCardImage: {
 						focus: { type: String, default: "https://i.imgur.com/dIvJYlX.png" },
 						tasks: { type: String, default: "https://i.imgur.com/91AMzBS.png" },
-					}
+					},
+					defaultMedalInterval: { type: String, default: "All" },
+					customMedalStartDate: { type: String, default: "" }
 				}
 			},
 		},

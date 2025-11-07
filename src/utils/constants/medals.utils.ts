@@ -20,11 +20,6 @@ export const DEFAULT_DAILY_FOCUS_HOURS_MEDALS = [
 		interval: 'daily',
 	},
 	{
-		name: 'Focus 6h40m',
-		requiredDuration: 24000, // 6 hours 40 minutes = (6 * 3600) + (40 * 60) = 24000 seconds
-		interval: 'daily',
-	},
-	{
 		name: 'Focus 6h',
 		requiredDuration: 21600, // 6 hours * 3600 = 21600 seconds
 		interval: 'daily',
