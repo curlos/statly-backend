@@ -139,3 +139,29 @@ export function parseFocusRecordsQueryParams(req: Request) {
 		sortBy: (req.query['sort-by'] as string) || 'Newest',
 	};
 }
+
+/**
+ * Parse query parameters for focus records export endpoint
+ */
+export async function parseExportFocusRecordsQueryParams(req: Request) {
+	const baseParams = parseBaseQueryParams(req);
+
+	// Get user settings for export preferences
+	const UserSettings = (await import('../models/UserSettingsModel')).default;
+	const userId = (req as any).user?.userId;
+
+	let onlyExportTasksWithNoParent = true; // Default value
+	if (userId) {
+		const userSettings = await UserSettings.findOne({ userId }).lean();
+		const settingValue = userSettings?.tickTickOne?.pages?.focusRecords?.onlyExportTasksWithNoParent;
+		// Only use default if the setting is undefined/null, not if it's explicitly false
+		onlyExportTasksWithNoParent = settingValue !== undefined && settingValue !== null ? settingValue : true;
+	}
+
+	return {
+		...baseParams,
+		sortBy: (req.query['sort-by'] as string) || 'Newest',
+		groupBy: (req.query['group-by'] as 'none' | 'project' | 'task') || 'none',
+		onlyExportTasksWithNoParent,
+	};
+}

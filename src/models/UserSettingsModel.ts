@@ -1,7 +1,68 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 interface IUserSettings extends Document {
-	habit: Object;
+	habit?: {
+		showInTimedSmartLists?: boolean;
+	};
+	calendarViewOptions?: {
+		colorsType?: string;
+		shownTasksFilters?: {
+			showCompleted?: boolean;
+			showCheckItem?: boolean;
+			showAllRepeatCycle?: boolean;
+			showHabit?: boolean;
+			showFocusRecords?: boolean;
+			showWeekends?: boolean;
+		};
+	};
+	theme?: {
+		color?: string;
+		fontFamily?: string;
+	};
+	tickTickOne?: {
+		pages?: {
+			focusRecords?: {
+				showFocusNotes?: boolean;
+				showTotalFocusDuration?: boolean;
+				showCompletedTasks?: boolean;
+				showTaskAncestors?: boolean;
+				showTaskProjectName?: boolean;
+				taskIdIncludeFocusRecordsFromSubtasks?: boolean;
+				filterOutUnrelatedTasksWhenTaskIdIsApplied?: boolean;
+				maxFocusRecordsPerPage?: number;
+				onlyExportTasksWithNoParent?: boolean;
+				showMedals?: boolean;
+				selectedMedalImage?: string;
+				medalImageSizePx?: number;
+				showMedalGlow?: boolean;
+			};
+			completedTasks?: {
+				taskIdIncludeCompletedTasksFromSubtasks?: boolean;
+				filterOutUnrelatedTasksWhenTaskIdIsApplied?: boolean;
+				groupedTasksCollapsedByDefault?: boolean;
+				showIndentedTasks?: boolean;
+				onlyExportTasksWithNoParent?: boolean;
+				maxDaysPerPage?: number;
+			};
+			focusHoursGoal?: {
+				projects?: Record<string, any>;
+			};
+			challenges?: {
+				selectedChallengeCardImage?: {
+					focus?: string;
+					tasks?: string;
+				};
+			};
+			medals?: {
+				selectedMedalCardImage?: {
+					focus?: string;
+					tasks?: string;
+				};
+				defaultMedalInterval?: string;
+				customMedalStartDate?: string;
+			};
+		};
+	};
 }
 
 const UserSettingsSchema = new Schema(
