@@ -37,6 +37,13 @@ export interface DaysWithCompletedTasksQueryParams extends BaseQueryParams {
 	taskIdIncludeSubtasks: boolean;
 }
 
+export interface ExportDaysWithCompletedTasksQueryParams extends BaseQueryParams {
+	sortBy: string;
+	groupBy: 'none' | 'project' | 'task';
+	taskIdIncludeSubtasks: boolean;
+	onlyExportTasksWithNoParent: boolean;
+}
+
 // ============================================================================
 // Query Parser Functions
 // ============================================================================
@@ -163,5 +170,20 @@ export async function parseExportFocusRecordsQueryParams(req: Request) {
 		sortBy: (req.query['sort-by'] as string) || 'Newest',
 		groupBy: (req.query['group-by'] as 'none' | 'project' | 'task') || 'none',
 		onlyExportTasksWithNoParent,
+	};
+}
+
+/**
+ * Parse query parameters for days with completed tasks export endpoint
+ */
+export function parseExportDaysWithCompletedTasksQueryParams(req: Request): ExportDaysWithCompletedTasksQueryParams {
+	const baseParams = parseBaseQueryParams(req);
+
+	return {
+		...baseParams,
+		sortBy: (req.query['sort-by'] as string) || 'Newest',
+		groupBy: (req.query['group-by'] as 'none' | 'project' | 'task') || 'none',
+		taskIdIncludeSubtasks: req.query['task-id-include-completed-tasks-from-subtasks'] === 'true',
+		onlyExportTasksWithNoParent: req.query['only-export-tasks-with-no-parent'] === 'true',
 	};
 }

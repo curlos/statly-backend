@@ -284,8 +284,15 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 					});
 				}
 
-				// Join breadcrumbs and append project name
-				let fullTaskTitle = taskNamesPath.join(' - ');
+				// Wrap the actual task name (first element) with ** for markdown bold
+				if (taskNamesPath.length > 0) {
+					taskNamesPath[0] = `**${taskNamesPath[0]}**`;
+				}
+
+				// Join breadcrumbs with > for hierarchy
+				let fullTaskTitle = taskNamesPath.join(' > ');
+
+				// Append project name with - separator
 				if (taskProjectId) {
 					// Get current project name from lookup
 					const currentProject = projectsById[taskProjectId];
@@ -293,7 +300,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 
 					// Map special source IDs to friendly app names, or use current project name, or fall back to old project name
 					const displayName = sourceToAppName[taskProjectId] || currentProjectName || task.projectName || taskProjectId;
-					fullTaskTitle += ` (${displayName})`;
+					fullTaskTitle += ` - (${displayName})`;
 				}
 
 				// Update the task with current data
