@@ -23,10 +23,13 @@ function buildSortStage(sortBy: string) {
 }
 
 // ============================================================================
-// Main Service Method
+// Reusable Aggregation Pipeline Function
 // ============================================================================
 
-export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQueryParams) {
+async function executeCompletedTasksAggregation(
+	params: DaysWithCompletedTasksQueryParams | ExportDaysWithCompletedTasksQueryParams,
+	pagination?: { page: number; maxDaysPerPage: number }
+) {
 	// Build filters using shared builder
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
 	const matchFilter = buildTaskMatchConditions(
@@ -74,11 +77,13 @@ export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQu
 	// Step 5: Sort based on sortBy parameter
 	aggregationPipeline.push(buildSortStage(params.sortBy));
 
-	// Step 6: Paginate days (not tasks)
-	aggregationPipeline.push(
-		{ $skip: params.page * params.maxDaysPerPage },
-		{ $limit: params.maxDaysPerPage }
-	);
+	// Step 6: Paginate days if pagination parameter is provided
+	if (pagination) {
+		aggregationPipeline.push(
+			{ $skip: pagination.page * pagination.maxDaysPerPage },
+			{ $limit: pagination.maxDaysPerPage }
+		);
+	}
 
 	// Step 7: Format output
 	aggregationPipeline.push({
@@ -91,14 +96,28 @@ export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQu
 
 	const result = await Task.aggregate(aggregationPipeline);
 
-	// Extract all tasks from the paginated days
-	const allTasksInPage: any[] = [];
+	// Extract all tasks from all days
+	const allTasks: any[] = [];
 	result.forEach(day => {
-		allTasksInPage.push(...day.completedTasksForDay);
+		allTasks.push(...day.completedTasksForDay);
+	});
+
+	return { result, allTasks, searchFilter, matchFilter };
+}
+
+// ============================================================================
+// Main Service Method
+// ============================================================================
+
+export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQueryParams) {
+	// Execute aggregation with pagination
+	const { result, allTasks, searchFilter, matchFilter } = await executeCompletedTasksAggregation(params, {
+		page: params.page,
+		maxDaysPerPage: params.maxDaysPerPage
 	});
 
 	// Build ancestor data for all tasks
-	const { ancestorTasksById } = await buildAncestorData(allTasksInPage);
+	const { ancestorTasksById } = await buildAncestorData(allTasks);
 
 	// Build count pipelines
 	const countDaysPipeline: any[] = [];
@@ -167,69 +186,8 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 		projectsById[project.id] = project;
 	});
 
-	// Build filters using shared builder
-	const searchFilter = buildTaskSearchFilter(params.searchQuery);
-	const matchFilter = buildTaskMatchConditions(
-		params.taskId,
-		params.projectIds,
-		params.startDate,
-		params.endDate,
-		params.taskIdIncludeSubtasks,
-		params.toDoListAppSources,
-		'completedTime',
-		params.intervalStartDate,
-		params.intervalEndDate
-	);
-
-	// Build aggregation pipeline
-	const aggregationPipeline: any[] = [];
-
-	// Step 1: Apply search filter if it exists
-	if (searchFilter) {
-		aggregationPipeline.push({ $match: searchFilter });
-	}
-
-	// Step 2: Filter completed tasks and apply other filters
-	aggregationPipeline.push({ $match: matchFilter });
-
-	// Step 3: Sort by completedTime ascending (oldest first within each day)
-	aggregationPipeline.push({ $sort: { completedTime: 1 } });
-
-	// Step 4: Group tasks by formatted date string (in user's timezone)
-	aggregationPipeline.push({
-		$group: {
-			_id: {
-				$dateToString: {
-					format: "%B %d, %Y",
-					date: "$completedTime",
-					timezone: params.timezone
-				}
-			},
-			completedTasksForDay: { $push: "$$ROOT" },
-			firstCompletedTime: { $first: "$completedTime" },
-			taskCount: { $sum: 1 }
-		}
-	});
-
-	// Step 5: Sort based on sortBy parameter
-	aggregationPipeline.push(buildSortStage(params.sortBy));
-
-	// Step 6: Format output
-	aggregationPipeline.push({
-		$project: {
-			dateStr: "$_id",
-			completedTasksForDay: 1,
-			_id: 0
-		}
-	});
-
-	const result = await Task.aggregate(aggregationPipeline);
-
-	// Extract all tasks from all days
-	const allTasks: any[] = [];
-	result.forEach(day => {
-		allTasks.push(...day.completedTasksForDay);
-	});
+	// Execute aggregation without pagination
+	const { result, allTasks } = await executeCompletedTasksAggregation(params);
 
 	// Build ancestor data for all tasks
 	const { ancestorTasksById } = await buildAncestorData(allTasks);
