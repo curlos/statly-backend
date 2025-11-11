@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 // src/index.ts
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import connectDB from './db/database'; // Import the connectDB function
 
 // Routes
@@ -48,6 +49,9 @@ connectDB()
     return
   })
   .catch((err) => console.error('❌ Failed to connect to DB:', err));
+
+// Enable GZIP compression for all responses
+app.use(compression());
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
