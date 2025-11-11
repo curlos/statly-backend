@@ -106,6 +106,281 @@ async function executeCompletedTasksAggregation(
 }
 
 // ============================================================================
+// Nested Export Helper Functions
+// ============================================================================
+
+/**
+ * Build complete nested structure for one day's completed tasks
+ * This builds the FULL tree from root ancestors down to completed tasks
+ */
+function buildNestedStructureForDay(
+	completedTasksForDay: any[],
+	ancestorTasksById: Record<string, any>
+): Record<string, any> {
+	// Find the TRUE root tasks (tasks with no parent at all)
+	// We need to trace back through ALL ancestors, not just completed ones
+	const trueRootTaskIds = new Set<string>();
+
+	completedTasksForDay.forEach(task => {
+		// Get the full ancestor chain for this task
+		const taskInfo = ancestorTasksById[task.id];
+		if (taskInfo && taskInfo.ancestorIds && taskInfo.ancestorIds.length > 0) {
+			// The last ancestor in the chain is the root
+			const rootId = taskInfo.ancestorIds[taskInfo.ancestorIds.length - 1];
+			trueRootTaskIds.add(rootId);
+		} else if (!task.parentId) {
+			// Task has no parent, so it IS the root
+			trueRootTaskIds.add(task.id);
+		}
+	});
+
+	// Build nested structure for each true root task
+	// This will recursively build the tree, including non-completed ancestor nodes
+	const nestedStructure: Record<string, any> = {};
+	trueRootTaskIds.forEach(rootTaskId => {
+		nestedStructure[rootTaskId] = buildNestedTaskNodeWithAncestors(
+			rootTaskId,
+			completedTasksForDay,
+			ancestorTasksById
+		);
+	});
+
+	return nestedStructure;
+}
+
+/**
+ * Build nested node including non-completed ancestors
+ * This version traverses the full tree structure, not just completed tasks
+ */
+function buildNestedTaskNodeWithAncestors(
+	taskId: string,
+	completedTasksForDay: any[],
+	ancestorTasksById: Record<string, any>
+): any {
+	// For tasks with no parent that were completed, they should appear as their own child
+	const taskInfo = ancestorTasksById[taskId];
+	const hasNoParent = !taskInfo?.parentId;
+	const completedTask = completedTasksForDay.find(t => t.id === taskId);
+
+	// Find tasks that are DIRECT children of this task (parentId matches)
+	const directChildTasks = completedTasksForDay.filter(task => task.parentId === taskId);
+
+	// Find ALL child task IDs that should appear as nodes below this task
+	// This includes:
+	// 1. Non-completed intermediate nodes (tasks in ancestor chain but not completed)
+	// 2. Completed tasks that have their own children (need to be parent containers)
+	const childTaskIdsToRecurse = new Set<string>();
+
+	// Build a map of which tasks have children (are parents)
+	const taskIdsWithChildren = new Set<string>();
+	completedTasksForDay.forEach(task => {
+		if (task.parentId) {
+			taskIdsWithChildren.add(task.parentId);
+		}
+	});
+
+	// Find intermediate parent nodes (not completed themselves, but have completed descendants)
+	// Example: Statly > Oct/Nov Update > Break up JSON > Rework exporters > useExportCompletedTasks > Prompt Claude ✅
+	// When building "Statly" node and looping through "Prompt Claude" (completed), add "Oct/Nov Update" as intermediate node
+	completedTasksForDay.forEach(task => {
+		const childInfo = ancestorTasksById[task.id];
+		if (childInfo && childInfo.ancestorIds) {
+			// ancestorIds = [task, parent, grandparent, ..., root]
+			const currentIndex = childInfo.ancestorIds.indexOf(taskId);
+
+			// If currentIndex > 0, there are tasks between taskId and this completed task
+			if (currentIndex !== -1 && currentIndex > 0) {
+				// Get the direct child of taskId (the intermediate node)
+				const directChildId = childInfo.ancestorIds[currentIndex - 1];
+
+				// Only add if it's NOT the completed task itself (that's handled separately below)
+				if (directChildId !== task.id) {
+					childTaskIdsToRecurse.add(directChildId);
+				}
+			}
+		}
+	});
+
+	// Add direct children that are ALSO parents (completed tasks with their own completed children)
+	// Example: If "useExportCompletedTasks" was completed AND has completed children, make it an accordion
+	directChildTasks.forEach(task => {
+		if (taskIdsWithChildren.has(task.id)) {
+			childTaskIdsToRecurse.add(task.id);
+		}
+	});
+
+	// Special case: If this task has no parent and was completed, add itself as a child to recurse
+	// BUT only if it has NO other children (otherwise it would create a redundant nested accordion)
+	if (hasNoParent && completedTask && childTaskIdsToRecurse.size === 0) {
+		childTaskIdsToRecurse.add(taskId);
+	}
+
+	// Build nested structure for non-completed children (intermediate nodes)
+	let parentDirectChildrenCompletedTasks: Record<string, any> | undefined = undefined;
+
+	if (childTaskIdsToRecurse.size > 0) {
+		parentDirectChildrenCompletedTasks = {};
+		childTaskIdsToRecurse.forEach(childId => {
+			// Avoid infinite recursion: if we're adding the task as its own child, just add the completed task
+			if (childId === taskId) {
+				parentDirectChildrenCompletedTasks![childId] = {
+					directCompletedSubtasks: completedTask ? [completedTask] : undefined,
+					parentDirectChildrenCompletedTasks: undefined
+				};
+			} else {
+				parentDirectChildrenCompletedTasks![childId] = buildNestedTaskNodeWithAncestors(
+					childId,
+					completedTasksForDay,
+					ancestorTasksById
+				);
+			}
+		});
+	}
+
+	// Build directCompletedSubtasksArray:
+	// 1. Include all directChildTasks (tasks whose parentId matches this taskId)
+	// 2. Also include the task itself if:
+	//    - It was completed
+	//    - AND it has no parent (is a root task)
+	//    - AND it's not going to nest under itself (i.e., not in childTaskIdsToRecurse)
+	//    - This handles the case where a root task was completed along with its children
+	const directCompletedSubtasksArray = [...directChildTasks];
+	if (completedTask && hasNoParent && !childTaskIdsToRecurse.has(taskId)) {
+		directCompletedSubtasksArray.push(completedTask);
+	}
+
+	// Return undefined for both if this node has no completed tasks and no children
+	if (directCompletedSubtasksArray.length === 0 && !parentDirectChildrenCompletedTasks) {
+		return {
+			directCompletedSubtasks: undefined,
+			parentDirectChildrenCompletedTasks: undefined
+		};
+	}
+
+	return {
+		directCompletedSubtasks: directCompletedSubtasksArray.length > 0 ? directCompletedSubtasksArray : undefined,
+		parentDirectChildrenCompletedTasks
+	};
+}
+
+/**
+ * Export days with nested structure (for exportMode='nested')
+ * Handles all three groupBy modes: 'none', 'project', 'task'
+ */
+function exportDaysWithNestedStructure(
+	result: any[],
+	ancestorTasksById: Record<string, any>,
+	params: ExportDaysWithCompletedTasksQueryParams
+) {
+	// If no grouping, return nested structure for each day
+	if (params.groupBy === 'none') {
+		const nestedDays: Record<string, any> = {};
+
+		for (const day of result) {
+			const { dateStr, completedTasksForDay } = day;
+			const nestedStructure = buildNestedStructureForDay(completedTasksForDay, ancestorTasksById);
+			nestedDays[dateStr] = {
+				numOfCompletedTasksForDay: completedTasksForDay.length, // Include task count at day level
+				...nestedStructure // Spread root tasks
+			};
+		}
+
+		return nestedDays;
+	}
+
+	// For project or task grouping
+	const grouped: Record<string, Record<string, Record<string, any>>> = {};
+
+	for (const day of result) {
+		const { dateStr, completedTasksForDay } = day;
+
+		if (params.groupBy === 'project') {
+			// Group by project
+			const tasksByProject: Record<string, any[]> = {};
+
+			completedTasksForDay.forEach((task: any) => {
+				const projectId = task.projectId || 'no-project-id';
+				if (!tasksByProject[projectId]) {
+					tasksByProject[projectId] = [];
+				}
+				tasksByProject[projectId].push(task);
+			});
+
+			// Build nested structure for each project
+			Object.entries(tasksByProject).forEach(([projectId, tasks]) => {
+				if (!grouped[projectId]) {
+					grouped[projectId] = {};
+				}
+				grouped[projectId][dateStr] = {
+					...buildNestedStructureForDay(tasks, ancestorTasksById),
+					numOfCompletedTasksForDay: tasks.length // Task count for this project on this day
+				};
+			});
+		} else {
+			// Group by task (including ancestors if taskIdIncludeSubtasks is true)
+			const tasksByGroupId: Record<string, any[]> = {};
+
+			completedTasksForDay.forEach((task: any) => {
+				const groupIds = new Set<string>();
+
+				// Add the task itself
+				groupIds.add(task.id);
+
+				// If task has a parent, include it
+				if (task.parentId) {
+					groupIds.add(task.parentId);
+				}
+
+				// Include ancestors if setting enabled
+				if (params.taskIdIncludeSubtasks) {
+					const taskInfo = ancestorTasksById[task.id];
+					if (taskInfo?.ancestorIds && taskInfo.ancestorIds.length > 1) {
+						// Skip first element (task itself) and add all ancestors
+						taskInfo.ancestorIds.slice(1).forEach((ancestorId: string) => {
+							groupIds.add(ancestorId);
+						});
+					}
+				}
+
+				// Add this task to all relevant group IDs
+				groupIds.forEach(groupId => {
+					if (!tasksByGroupId[groupId]) {
+						tasksByGroupId[groupId] = [];
+					}
+					tasksByGroupId[groupId].push(task);
+				});
+			});
+
+			// Filter out tasks with parents BEFORE building nested structures
+			// This avoids unnecessary computation for tasks that will be excluded
+			const taskIdsToProcess = Object.keys(tasksByGroupId);
+			const filteredTaskIds = params.onlyExportTasksWithNoParent
+				? taskIdsToProcess.filter(taskId => {
+					const taskInfo = ancestorTasksById[taskId];
+					return !taskInfo?.parentId;
+				})
+				: taskIdsToProcess;
+
+			// Build nested structure only for filtered task groups
+			filteredTaskIds.forEach(taskId => {
+				const tasks = tasksByGroupId[taskId];
+				if (!grouped[taskId]) {
+					grouped[taskId] = {};
+				}
+				if (!grouped[taskId][dateStr]) {
+					grouped[taskId][dateStr] = {
+						...buildNestedStructureForDay(tasks, ancestorTasksById),
+						numOfCompletedTasksForDay: tasks.length // Task count for this task group on this day
+					};
+				}
+			});
+		}
+	}
+
+	return grouped;
+}
+
+// ============================================================================
 // Main Service Method
 // ============================================================================
 
@@ -192,6 +467,19 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 	// Build ancestor data for all tasks
 	const { ancestorTasksById } = await buildAncestorData(allTasks);
 
+	// If nested export mode, use nested structure
+	if (params.exportMode === 'nested') {
+		const nestedStructure = exportDaysWithNestedStructure(result, ancestorTasksById, params);
+		// Include ancestorTasksById for frontend to use when serializing
+		// Also include totalTasks count
+		return {
+			...nestedStructure,
+			ancestorTasksById,
+			totalTasks: allTasks.length
+		};
+	}
+
+	// Otherwise, continue with flat export logic
 	// Group tasks by parent/child relationship for each day
 	const daysWithGroupedTasks: any[] = [];
 
@@ -404,7 +692,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 				// Find or create day within this group
 				let groupDay = grouped[groupId].days.find((d: any) => d.dateStr === dateStr);
 				if (!groupDay) {
-					groupDay = { dateStr, parentTasks: [], taskCount: 0 };
+					groupDay = { dateStr, parentTasks: [], numOfCompletedTasksForDay: 0 };
 					grouped[groupId].days.push(groupDay);
 				}
 

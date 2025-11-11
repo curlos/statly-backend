@@ -42,6 +42,7 @@ export interface ExportDaysWithCompletedTasksQueryParams extends BaseQueryParams
 	groupBy: 'none' | 'project' | 'task';
 	taskIdIncludeSubtasks: boolean;
 	onlyExportTasksWithNoParent: boolean;
+	exportMode?: 'flat' | 'nested';
 }
 
 // ============================================================================
@@ -185,5 +186,6 @@ export function parseExportDaysWithCompletedTasksQueryParams(req: Request): Expo
 		groupBy: (req.query['group-by'] as 'none' | 'project' | 'task') || 'none',
 		taskIdIncludeSubtasks: req.query['task-id-include-completed-tasks-from-subtasks'] === 'true',
 		onlyExportTasksWithNoParent: req.query['only-export-tasks-with-no-parent'] === 'true',
+		exportMode: (req.query['export-mode'] as 'flat' | 'nested') || 'flat',
 	};
 }
