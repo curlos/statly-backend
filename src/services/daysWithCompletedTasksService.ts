@@ -280,7 +280,7 @@ function exportDaysWithNestedStructure(
 			const { dateStr, completedTasksForDay } = day;
 			const nestedStructure = buildNestedStructureForDay(completedTasksForDay, ancestorTasksById);
 			nestedDays[dateStr] = {
-				numOfCompletedTasksForDay: completedTasksForDay.length, // Include task count at day level
+				taskCount: completedTasksForDay.length, // Include task count at day level
 				...nestedStructure // Spread root tasks
 			};
 		}
@@ -313,7 +313,7 @@ function exportDaysWithNestedStructure(
 				}
 				grouped[projectId][dateStr] = {
 					...buildNestedStructureForDay(tasks, ancestorTasksById),
-					numOfCompletedTasksForDay: tasks.length // Task count for this project on this day
+					taskCount: tasks.length // Task count for this project on this day
 				};
 			});
 		} else {
@@ -370,9 +370,124 @@ function exportDaysWithNestedStructure(
 				if (!grouped[taskId][dateStr]) {
 					grouped[taskId][dateStr] = {
 						...buildNestedStructureForDay(tasks, ancestorTasksById),
-						numOfCompletedTasksForDay: tasks.length // Task count for this task group on this day
+						taskCount: tasks.length // Task count for this task group on this day
 					};
 				}
+			});
+		}
+	}
+
+	// ============================================================================
+	// Group Standalone Daily Habit Tasks (for groupBy='task' only)
+	// ============================================================================
+	// For nested exports, identify standalone tasks that appear multiple times across days
+	// with the same name and create grouped task IDs like "grouped-Check Streaks"
+	if (params.groupBy === 'task') {
+		// Collect all root task IDs across all days in all groups
+		const allRootTasksByGroup: Record<string, { taskId: string, dateStr: string, dayData: any }[]> = {};
+
+		Object.entries(grouped).forEach(([groupId, daysData]) => {
+			if (!allRootTasksByGroup[groupId]) {
+				allRootTasksByGroup[groupId] = [];
+			}
+
+			Object.entries(daysData).forEach(([dateStr, dayData]) => {
+				const { taskCount, ...rootTasks } = dayData;
+				Object.keys(rootTasks).forEach(taskId => {
+					allRootTasksByGroup[groupId].push({ taskId, dateStr, dayData });
+				});
+			});
+		});
+
+		// For each group, identify standalone tasks that should be grouped
+		const groupedTaskMapping: Record<string, string> = {}; // Maps original taskId to grouped ID
+
+		Object.entries(allRootTasksByGroup).forEach(([groupId, rootTasks]) => {
+			// Group tasks by name
+			const tasksByName: Record<string, { taskId: string, dateStr: string }[]> = {};
+
+			rootTasks.forEach(({ taskId, dateStr }) => {
+				const taskInfo = ancestorTasksById[taskId];
+				const taskName = taskInfo?.title;
+
+				if (taskName) {
+					if (!tasksByName[taskName]) {
+						tasksByName[taskName] = [];
+					}
+					tasksByName[taskName].push({ taskId, dateStr });
+				}
+			});
+
+			// Identify standalone tasks that appear multiple times
+			Object.entries(tasksByName).forEach(([taskName, instances]) => {
+				// Only group if there are multiple instances with the same name
+				if (instances.length > 1) {
+					// Check if these are all standalone tasks (only nest under themselves)
+					const allStandalone = instances.every(({ taskId, dateStr }) => {
+						const dayData = grouped[groupId][dateStr];
+						const taskNode = dayData[taskId];
+
+						// A standalone task nests under itself: has one child which is itself
+						const childIds = taskNode.parentDirectChildrenCompletedTasks
+							? Object.keys(taskNode.parentDirectChildrenCompletedTasks)
+							: [];
+						return childIds.length === 1 && childIds[0] === taskId;
+					});
+
+					if (allStandalone) {
+						const groupedId = `grouped-${taskName}`;
+						instances.forEach(({ taskId }) => {
+							groupedTaskMapping[taskId] = groupedId;
+						});
+					}
+				}
+			});
+		});
+
+		// Apply grouping by merging standalone tasks across days
+		if (Object.keys(groupedTaskMapping).length > 0) {
+			Object.entries(grouped).forEach(([groupId, daysData]) => {
+				const newDaysData: Record<string, any> = {};
+
+				// For each day, merge tasks that should be grouped
+				Object.entries(daysData).forEach(([dateStr, dayData]) => {
+					const { taskCount, ...rootTasks } = dayData;
+					const newRootTasks: Record<string, any> = {};
+
+					Object.entries(rootTasks).forEach(([taskId, taskNode]) => {
+						const mappedId = groupedTaskMapping[taskId];
+
+						if (mappedId) {
+							// This task should be grouped - add to grouped ID
+							if (!newRootTasks[mappedId]) {
+								// First instance - create the grouped node
+								newRootTasks[mappedId] = taskNode;
+							} else {
+								// Merge with existing grouped node
+								const existingNode = newRootTasks[mappedId];
+								const existingSubtasks = existingNode.parentDirectChildrenCompletedTasks?.[taskId]?.directCompletedSubtasks || [];
+								const newSubtasks = taskNode.parentDirectChildrenCompletedTasks?.[taskId]?.directCompletedSubtasks || [];
+
+								if (existingNode.parentDirectChildrenCompletedTasks && taskNode.parentDirectChildrenCompletedTasks) {
+									// Merge subtasks
+									existingNode.parentDirectChildrenCompletedTasks[taskId] = {
+										directCompletedSubtasks: [...existingSubtasks, ...newSubtasks]
+									};
+								}
+							}
+						} else {
+							// Not grouped - keep as is
+							newRootTasks[taskId] = taskNode;
+						}
+					});
+
+					newDaysData[dateStr] = {
+						taskCount,
+						...newRootTasks
+					};
+				});
+
+				grouped[groupId] = newDaysData;
 			});
 		}
 	}
@@ -692,7 +807,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 				// Find or create day within this group
 				let groupDay = grouped[groupId].days.find((d: any) => d.dateStr === dateStr);
 				if (!groupDay) {
-					groupDay = { dateStr, parentTasks: [], numOfCompletedTasksForDay: 0 };
+					groupDay = { dateStr, parentTasks: [], taskCount: 0 };
 					grouped[groupId].days.push(groupDay);
 				}
 
