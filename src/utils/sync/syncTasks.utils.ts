@@ -17,9 +17,9 @@ export async function syncTickTickTasks(userId: string, options?: {
 		getTasksFromNonArchivedProjects: options?.getTasksFromNonArchivedProjects
 	});
 
-	// Calculate threshold for recently completed tasks (3 days ago)
-	const threeDaysAgo = new Date();
-	threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+	// Calculate threshold for recently completed tasks (1 week ago)
+	const oneWeekAgo = new Date();
+	oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
 	// Step 1: Build tasksById map for quick parent lookups
 	const tasksById: Record<string, any> = {};
@@ -67,11 +67,11 @@ export async function syncTickTickTasks(userId: string, options?: {
 		// Update task if:
 		// 1. No modifiedTime exists, OR
 		// 2. Task was modified after last sync, OR
-		// 3. Task was modified within the last 3 days
+		// 3. Task was modified within the last week
 		const shouldUpdateTask =
 			!taskModifiedTime ||
 			taskModifiedTime >= lastSyncTime ||
-			taskModifiedTime >= threeDaysAgo;
+			taskModifiedTime >= oneWeekAgo;
 
 		if (shouldUpdateTask) {
 			// Build ancestor data for full task
