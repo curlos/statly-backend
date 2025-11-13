@@ -1,3 +1,5 @@
+import SyncMetadata from "../models/SyncMetadataModel";
+
 export const sortArrayByProperty = (array: any[], property: string, type = 'descending') => {
 	// Create a deep copy of the array to avoid modifying the original
 	const arrayCopy = array.map((item: any) => ({ ...item }));
@@ -118,3 +120,20 @@ export const getBeFocusedFocusRecordsWithValidDate = (array: any) => {
 		return item;
 	});
 };
+
+// Helper function to get or create sync metadata
+export async function getOrCreateSyncMetadata(userId: string, syncType: string) {
+	let syncMetadata = await SyncMetadata.findOne({ syncType });
+
+	if (!syncMetadata) {
+		syncMetadata = new SyncMetadata({
+			userId,
+			syncType,
+			lastSyncTime: new Date(0), // Set to epoch so all data is synced initially
+		});
+		// Save immediately to prevent duplicate metadata creation if sync is interrupted
+		await syncMetadata.save();
+	}
+
+	return syncMetadata;
+}
