@@ -5,11 +5,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import {
-	getDayAfterToday,
-	arrayToObjectByKey,
-} from '../utils/helpers.utils';
-import { getJsonData, updateLocalJsonData } from '../utils/mongoose.utils';
+import { getJsonData } from '../utils/mongoose.utils';
 import { verifyToken } from '../middleware/verifyToken';
 import { fetchAllTickTickTasks, fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from '../utils/ticktick.utils';
 import { fetchTickTickFocusRecords } from '../utils/focus.utils';
@@ -144,88 +140,6 @@ router.get('/json-data/:name', verifyToken, async (req, res) => {
 	} catch (error) {
 		res.status(404).json({
 			success: false,
-			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
-		});
-	}
-});
-
-router.put('/update-active-and-completed-tasks-from-archived-projects', verifyToken, async (req, res) => {
-	try {
-		const { projectIds } = req.body;
-
-		const dayAfterTodayStr = getDayAfterToday();
-
-		const apiNotCompletedTasks = [];
-		const apiCompletedTasks = [];
-
-		// Get all the not completed and completed tasks for each project.
-		for (const id of projectIds) {
-			// Not Completed Tasks
-			const notCompletedTasksForProjectResponse = await axios.get(
-				`https://api.ticktick.com/api/v2/project/${id}/tasks`,
-				{
-					headers: {
-						Cookie: cookie,
-					},
-				}
-			);
-
-			// Completed Tasks
-			const completedTasksForProjectResponse = await axios.get(
-				`https://api.ticktick.com/api/v2/project/${id}/completed/?from=&to=${dayAfterTodayStr}%2016:59:12&limit=9999`,
-				{
-					headers: {
-						Cookie: cookie,
-					},
-				}
-			);
-
-			const notCompletedTasksForProject = notCompletedTasksForProjectResponse.data;
-			const completedTasksForProject = completedTasksForProjectResponse.data;
-
-			apiNotCompletedTasks.push(...notCompletedTasksForProject);
-			apiCompletedTasks.push(...completedTasksForProject);
-		}
-		
-		// Get the existing completed and not completed tasks from archived projects from the database.
-		const completedTasksFromArchivedProjects = await getJsonData('completed-tasks-from-archived-projects');
-		const notCompletedTasksFromArchivedProjects = await getJsonData('not-completed-tasks-from-archived-projects');
-
-		const apiNotCompletedTasksById = arrayToObjectByKey(apiNotCompletedTasks, 'id');
-		const apiCompletedTasksById = arrayToObjectByKey(apiCompletedTasks, 'id');
-
-		// From the DB's version of these tasks, filter out any tasks that also appear in the API response. In theory, the API would have the latest data and thus its version should be prioritized. (Though practically, it probably doesn't matter? These are tasks from archived projects which are impossible to mess with or edit unless I unarchive the project at which point the task will not appear anywhere here. Maybe if I archive, unarchive, and then re-archive the project something would happen. I usually only archive a project when I know I'm done with it for forever.)
-		const dbNotCompletedTasksFromArchivedProjectsNoDupes = notCompletedTasksFromArchivedProjects.filter((task: any) => {
-			const isNotAlreadyInApiResponse = apiNotCompletedTasksById[task.id];
-			return !isNotAlreadyInApiResponse;
-		});
-
-		const dbCompletedTasksFromArchivedProjectsNoDupes = completedTasksFromArchivedProjects.filter((task: any) => {
-			const isNotAlreadyInApiResponse = apiCompletedTasksById[task.id];
-			return !isNotAlreadyInApiResponse;
-		});
-
-		const newNotCompletedTasksFromArchivedProjects = [...dbNotCompletedTasksFromArchivedProjectsNoDupes, ...apiNotCompletedTasks]
-		const newCompletedTasksFromArchivedProjects = [...dbCompletedTasksFromArchivedProjectsNoDupes, ...apiCompletedTasks]
-
-		// Update the DB with the newest not completed and completed tasks from archived projects. This'll very useful whenever I archive a project.
-		// await updateLocalJsonData({
-		// 	name: 'not-completed-tasks-from-archived-projects',
-		// 	data: newNotCompletedTasksFromArchivedProjects,
-		// });
-
-		// await updateLocalJsonData({
-		// 	name: 'completed-tasks-from-archived-projects',
-		// 	data: newCompletedTasksFromArchivedProjects,
-		// });
-
-		res.status(200).json({
-			apiNotCompletedTasks,
-			apiCompletedTasks,
-		});
-		return;
-	} catch (error) {
-		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching the external data.',
 		});
 	}

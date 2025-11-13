@@ -9,7 +9,10 @@ import { getAllTodoistProjects } from './task.utils';
 import { fetchTickTickFocusRecords, fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks } from './focus.utils';
 import { crossesMidnightInTimezone } from './timezone.utils';
 
-export async function syncTickTickTasks(userId: string) {
+export async function syncTickTickTasks(userId: string, options?: {
+	archivedProjectIds?: string[];
+	getTasksFromNonArchivedProjects?: boolean;
+}) {
 	// Get or create sync metadata
 	let syncMetadata = await SyncMetadata.findOne({ syncType: 'tasks' });
 
@@ -22,7 +25,10 @@ export async function syncTickTickTasks(userId: string) {
 	}
 
 	const lastSyncTime = syncMetadata.lastSyncTime;
-	const tickTickTasks = await fetchAllTickTickTasks();
+	const tickTickTasks = await fetchAllTickTickTasks({
+		archivedProjectIds: options?.archivedProjectIds,
+		getTasksFromNonArchivedProjects: options?.getTasksFromNonArchivedProjects
+	});
 
 	// Calculate threshold for recently completed tasks (3 days ago)
 	const threeDaysAgo = new Date();

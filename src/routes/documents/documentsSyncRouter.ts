@@ -6,7 +6,7 @@ import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
 import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../../utils/sync.utils';
 import { fetchSessionFocusRecordsWithNoBreaks } from '../../utils/focus.utils';
-import { ProjectSession } from '../../models/projectModel';
+import { ProjectSession, ProjectTickTick } from '../../models/projectModel';
 
 const router = express.Router();
 
@@ -36,11 +36,61 @@ router.get('/metadata', verifyToken, async (req, res) => {
 
 router.post('/ticktick/tasks', verifyToken, async (req: CustomRequest, res) => {
     try {
-        const result = await syncTickTickTasks(req.user!.userId);
+        const userId = req.user!.userId;
+
+        // Check if first sync
+        const lastSync = await SyncMetadata.findOne({
+            syncType: 'tasks'
+        });
+
+        const isFirstSync = !lastSync;
+        let archivedProjectIds;
+
+        // If first sync, get all archived projects
+        if (isFirstSync) {
+            // Ensure projects are synced first
+            await syncTickTickProjects(userId);
+
+            const archivedProjects = await ProjectTickTick.find({
+                closed: true
+            }).lean();
+            archivedProjectIds = archivedProjects.map((p: any) => p.id);
+        }
+
+        // Sync with archived projects if applicable
+        const result = await syncTickTickTasks(userId, {
+            archivedProjectIds
+        });
+
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred transferring tasks.',
+        });
+    }
+});
+
+router.post('/ticktick/tasks-from-archived-projects', verifyToken, async (req: CustomRequest, res) => {
+    try {
+        const userId = req.user!.userId;
+        const { archivedProjectIds } = req.body; // Required: array of project IDs
+
+        if (!archivedProjectIds || !Array.isArray(archivedProjectIds) || archivedProjectIds.length === 0) {
+            return res.status(400).json({
+                message: 'archivedProjectIds array is required'
+            });
+        }
+
+        // Sync ONLY archived project tasks (skip regular tasks)
+        const result = await syncTickTickTasks(userId, {
+            archivedProjectIds: archivedProjectIds,
+            getTasksFromNonArchivedProjects: false  // Don't fetch regular tasks
+        });
+
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({
+            message: error instanceof Error ? error.message : 'Error syncing archived project tasks'
         });
     }
 });
@@ -259,13 +309,40 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
 
-        // Run all sync operations in parallel
-        const [tasksResult, projectsResult, projectGroupsResult, focusRecordsResult] = await Promise.all([
-            syncTickTickTasks(userId),
-            syncTickTickProjects(userId),
+        // Check if first sync for tasks
+        const lastTasksSync = await SyncMetadata.findOne({
+            syncType: 'tasks'
+        });
+
+        const isFirstTasksSync = !lastTasksSync;
+
+        const syncPromises = [
             syncTickTickProjectGroups(userId),
             syncTickTickFocusRecords(userId, timezone)
-        ]);
+        ];
+
+        let projectsResult;
+        let archivedProjectIds;
+
+        if (isFirstTasksSync) {
+            projectsResult = await syncTickTickProjects(userId);
+
+            const archivedProjects = await ProjectTickTick.find({
+                closed: true
+            }).lean();
+            archivedProjectIds = archivedProjects.map((p: any) => p.id);
+        } else {
+            syncPromises.push(syncTickTickProjects(userId));
+        }
+
+        const tasksResult = await syncTickTickTasks(userId, { archivedProjectIds });
+        const results = await Promise.all(syncPromises);
+
+        // Map results
+        const [projectGroupsResult, focusRecordsResult] = results;
+        if (!isFirstTasksSync) {
+            projectsResult = results[2]; // Projects was 3rd in parallel array
+        }
 
         res.status(200).json({
             message: 'All data synced successfully',
