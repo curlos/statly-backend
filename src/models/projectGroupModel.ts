@@ -63,7 +63,7 @@ const ProjectGroupTickTickSchema = new Schema({
 		}
 	}
 }, {
-	collection: 'project_groups',
+	collection: 'projectGroups',
 	timestamps: false
 });
 

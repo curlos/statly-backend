@@ -24,6 +24,8 @@ const syncMetadataSchema = new Schema<ISyncMetadata>({
 	tasksUpdated: {
 		type: Number,
 	},
+}, {
+	collection: 'syncMetaDatas'
 });
 
 // Compound index for efficient queries

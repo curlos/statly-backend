@@ -2,6 +2,7 @@ import express from 'express';
 import { CustomRequest } from '../../interfaces/CustomRequest';
 import { verifyToken } from '../../middleware/verifyToken';
 import SyncMetadata from '../../models/SyncMetadataModel';
+import ApiCallStatus from '../../models/ApiCallStatusModel';
 import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
 import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../../utils/sync.utils';
@@ -40,7 +41,7 @@ router.post('/ticktick/tasks', verifyToken, async (req: CustomRequest, res) => {
 
         // Check if first sync
         const lastSync = await SyncMetadata.findOne({
-            syncType: 'tasks'
+            syncType: 'tickTickTasks'
         });
 
         const isFirstSync = !lastSync;
@@ -98,14 +99,16 @@ router.post('/ticktick/tasks-from-archived-projects', verifyToken, async (req: C
 router.post('/todoist/tasks', verifyToken, async (req: CustomRequest, res) => {
     try {
         // Get or create sync metadata for todoist tasks
-        let syncMetadata = await SyncMetadata.findOne({ syncType: 'todoist_tasks' });
+        let syncMetadata = await SyncMetadata.findOne({ syncType: 'todoistTasks' });
 
         if (!syncMetadata) {
             syncMetadata = new SyncMetadata({
                 userId: req.user!.userId,
-                syncType: 'todoist_tasks',
+                syncType: 'todoistTasks',
                 lastSyncTime: new Date(0), // Set to epoch so all tasks are synced initially
             });
+            // Save immediately to prevent duplicate metadata creation if sync is interrupted
+            await syncMetadata.save();
         }
 
         const allTasks = await getAllTodoistTasks();
@@ -238,6 +241,21 @@ router.post('/todoist/projects', verifyToken, async (req: CustomRequest, res) =>
 
 router.post('/session/projects', verifyToken, async (req: CustomRequest, res) => {
     try {
+        const userId = req.user!.userId;
+
+        // Get or create sync metadata
+        let syncMetadata = await SyncMetadata.findOne({ syncType: 'sessionProjects' });
+
+        if (!syncMetadata) {
+            syncMetadata = new SyncMetadata({
+                userId,
+                syncType: 'sessionProjects',
+                lastSyncTime: new Date(0),
+            });
+            // Save immediately to prevent duplicate metadata creation if sync is interrupted
+            await syncMetadata.save();
+        }
+
         // Fetch raw Session focus records (includes full category data)
         const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
 
@@ -289,12 +307,17 @@ router.post('/session/projects', verifyToken, async (req: CustomRequest, res) =>
             ? await ProjectSession.bulkWrite(bulkOps)
             : { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
 
+        // Update sync metadata
+        syncMetadata.lastSyncTime = new Date();
+        await syncMetadata.save();
+
         res.status(200).json({
             message: 'Session projects synced successfully',
             recordsProcessed: uniqueCategories.length,
             upsertedCount: result.upsertedCount,
             modifiedCount: result.modifiedCount,
             matchedCount: result.matchedCount,
+            lastSyncTime: syncMetadata.lastSyncTime,
         });
     } catch (error) {
         res.status(500).json({
@@ -304,14 +327,48 @@ router.post('/session/projects', verifyToken, async (req: CustomRequest, res) =>
 });
 
 router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
+    const userId = req.user!.userId;
+    const apiEndpoint = '/documents/sync/ticktick/all';
+
     try {
-        const userId = req.user!.userId;
+        // Check for existing sync in progress
+        let apiCallStatus = await ApiCallStatus.findOne({ userId, apiEndpoint });
+
+        if (!apiCallStatus) {
+            // Create new status document
+            apiCallStatus = new ApiCallStatus({
+                userId,
+                apiEndpoint,
+                isInProgress: false,
+                startedAt: new Date(),
+            });
+        }
+
+        // Check if sync is already in progress
+        if (apiCallStatus.isInProgress) {
+            // Check if lock is stale (older than 10 minutes)
+            const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+            if (apiCallStatus.startedAt > tenMinutesAgo) {
+                // Lock is active and recent, return 409
+                return res.status(409).json({
+                    message: 'Sync already in progress',
+                    startedAt: apiCallStatus.startedAt,
+                });
+            }
+            // Lock is stale (>10 minutes old), proceed with sync
+        }
+
+        // Acquire lock
+        apiCallStatus.isInProgress = true;
+        apiCallStatus.startedAt = new Date();
+        await apiCallStatus.save();
+
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
 
         // Check if first sync for tasks
         const lastTasksSync = await SyncMetadata.findOne({
-            syncType: 'tasks'
+            syncType: 'tickTickTasks'
         });
 
         const isFirstTasksSync = !lastTasksSync;
@@ -344,6 +401,10 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
             projectsResult = results[2]; // Projects was 3rd in parallel array
         }
 
+        // Release lock
+        apiCallStatus.isInProgress = false;
+        await apiCallStatus.save();
+
         res.status(200).json({
             message: 'All data synced successfully',
             tasks: tasksResult,
@@ -352,6 +413,17 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
             focusRecords: focusRecordsResult
         });
     } catch (error) {
+        // Release lock on error
+        try {
+            const apiCallStatus = await ApiCallStatus.findOne({ userId, apiEndpoint });
+            if (apiCallStatus) {
+                apiCallStatus.isInProgress = false;
+                await apiCallStatus.save();
+            }
+        } catch (lockError) {
+            console.error('Failed to release lock:', lockError);
+        }
+
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing all data.',
         });
@@ -373,9 +445,10 @@ router.post('/ticktick/focus-records', verifyToken, async (req: CustomRequest, r
 
 router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
+        const userId = req.user!.userId;
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
-        const result = await syncBeFocusedFocusRecords(timezone);
+        const result = await syncBeFocusedFocusRecords(userId, timezone);
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
@@ -386,9 +459,10 @@ router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest,
 
 router.post('/forest/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
+        const userId = req.user!.userId;
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
-        const result = await syncForestFocusRecords(timezone);
+        const result = await syncForestFocusRecords(userId, timezone);
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
@@ -399,9 +473,10 @@ router.post('/forest/focus-records', verifyToken, async (req: CustomRequest, res
 
 router.post('/tide/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
+        const userId = req.user!.userId;
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
-        const result = await syncTideFocusRecords(timezone);
+        const result = await syncTideFocusRecords(userId, timezone);
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
@@ -412,9 +487,10 @@ router.post('/tide/focus-records', verifyToken, async (req: CustomRequest, res) 
 
 router.post('/session/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
+        const userId = req.user!.userId;
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
-        const result = await syncSessionFocusRecords(timezone);
+        const result = await syncSessionFocusRecords(userId, timezone);
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
@@ -425,15 +501,16 @@ router.post('/session/focus-records', verifyToken, async (req: CustomRequest, re
 
 router.post('/old-focus-apps/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
+        const userId = req.user!.userId;
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
 
         // Run all old focus app sync operations in parallel
         const [beFocusedResult, forestResult, tideResult, sessionResult] = await Promise.all([
-            syncBeFocusedFocusRecords(timezone),
-            syncForestFocusRecords(timezone),
-            syncTideFocusRecords(timezone),
-            syncSessionFocusRecords(timezone)
+            syncBeFocusedFocusRecords(userId, timezone),
+            syncForestFocusRecords(userId, timezone),
+            syncTideFocusRecords(userId, timezone),
+            syncSessionFocusRecords(userId, timezone)
         ]);
 
         res.status(200).json({

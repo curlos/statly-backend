@@ -9,20 +9,29 @@ import { getAllTodoistProjects } from './task.utils';
 import { fetchTickTickFocusRecords, fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks } from './focus.utils';
 import { crossesMidnightInTimezone } from './timezone.utils';
 
+// Helper function to get or create sync metadata
+async function getOrCreateSyncMetadata(userId: string, syncType: string) {
+	let syncMetadata = await SyncMetadata.findOne({ syncType });
+
+	if (!syncMetadata) {
+		syncMetadata = new SyncMetadata({
+			userId,
+			syncType,
+			lastSyncTime: new Date(0), // Set to epoch so all data is synced initially
+		});
+		// Save immediately to prevent duplicate metadata creation if sync is interrupted
+		await syncMetadata.save();
+	}
+
+	return syncMetadata;
+}
+
 export async function syncTickTickTasks(userId: string, options?: {
 	archivedProjectIds?: string[];
 	getTasksFromNonArchivedProjects?: boolean;
 }) {
 	// Get or create sync metadata
-	let syncMetadata = await SyncMetadata.findOne({ syncType: 'tasks' });
-
-	if (!syncMetadata) {
-		syncMetadata = new SyncMetadata({
-			userId,
-			syncType: 'tasks',
-			lastSyncTime: new Date(0), // Set to epoch so all tasks are synced initially
-		});
-	}
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickTasks');
 
 	const lastSyncTime = syncMetadata.lastSyncTime;
 	const tickTickTasks = await fetchAllTickTickTasks({
@@ -245,15 +254,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 
 export async function syncTickTickProjects(userId: string) {
 	// Get or create sync metadata for projects
-	let syncMetadata = await SyncMetadata.findOne({ syncType: 'projects' });
-
-	if (!syncMetadata) {
-		syncMetadata = new SyncMetadata({
-			userId,
-			syncType: 'projects',
-			lastSyncTime: new Date(0), // Set to epoch so all projects are synced initially
-		});
-	}
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickProjects');
 
 	const lastSyncTime = syncMetadata.lastSyncTime;
 	const tickTickProjects = await fetchAllTickTickProjects();
@@ -296,15 +297,7 @@ export async function syncTickTickProjects(userId: string) {
 
 export async function syncTickTickProjectGroups(userId: string) {
 	// Get or create sync metadata for project groups
-	let syncMetadata = await SyncMetadata.findOne({ syncType: 'project_groups' });
-
-	if (!syncMetadata) {
-		syncMetadata = new SyncMetadata({
-			userId,
-			syncType: 'project_groups',
-			lastSyncTime: new Date(0),
-		});
-	}
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickProjectGroups');
 
 	const tickTickProjectGroups = await fetchAllTickTickProjectGroups();
 
@@ -340,15 +333,7 @@ export async function syncTickTickProjectGroups(userId: string) {
 
 export async function syncTodoistProjects(userId: string) {
 	// Get or create sync metadata for todoist projects
-	let syncMetadata = await SyncMetadata.findOne({ syncType: 'todoist_projects' });
-
-	if (!syncMetadata) {
-		syncMetadata = new SyncMetadata({
-			userId,
-			syncType: 'todoist_projects',
-			lastSyncTime: new Date(0), // Set to epoch so all projects are synced initially
-		});
-	}
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'todoistProjects');
 
 	const todoistProjects = await getAllTodoistProjects();
 
@@ -407,15 +392,7 @@ export async function syncTodoistProjects(userId: string) {
 
 export async function syncTickTickFocusRecords(userId: string, timezone: string = 'UTC') {
 	// Get or create sync metadata for focus records
-	let syncMetadata = await SyncMetadata.findOne({ syncType: 'focus-records-ticktick' });
-
-	if (!syncMetadata) {
-		syncMetadata = new SyncMetadata({
-			userId,
-			syncType: 'focus-records-ticktick',
-			lastSyncTime: new Date(0), // Set to epoch so all focus records are synced initially
-		});
-	}
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickFocusRecords');
 
 	const lastSyncTime = syncMetadata.lastSyncTime;
 	const focusRecords = await fetchTickTickFocusRecords();
@@ -525,7 +502,10 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 	};
 }
 
-export async function syncBeFocusedFocusRecords(timezone: string = 'UTC') {
+export async function syncBeFocusedFocusRecords(userId: string, timezone: string = 'UTC') {
+	// Get or create sync metadata
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'beFocusedFocusRecords');
+
 	// Fetch raw BeFocused data
 	const rawBeFocusedRecords = await fetchBeFocusedAppFocusRecords();
 
@@ -576,15 +556,23 @@ export async function syncBeFocusedFocusRecords(timezone: string = 'UTC') {
 
 	const result = await FocusRecordBeFocused.bulkWrite(bulkOps);
 
+	// Update sync metadata
+	syncMetadata.lastSyncTime = new Date();
+	await syncMetadata.save();
+
 	return {
 		message: 'BeFocused focus records synced successfully',
 		recordsProcessed: normalizedRecords.length,
 		upsertedCount: result.upsertedCount,
 		modifiedCount: result.modifiedCount,
+		lastSyncTime: syncMetadata.lastSyncTime,
 	};
 }
 
-export async function syncForestFocusRecords(timezone: string = 'UTC') {
+export async function syncForestFocusRecords(userId: string, timezone: string = 'UTC') {
+	// Get or create sync metadata
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'forestFocusRecords');
+
 	// Fetch raw Forest data
 	const rawForestRecords = await fetchForestAppFocusRecords(true);
 
@@ -641,15 +629,23 @@ export async function syncForestFocusRecords(timezone: string = 'UTC') {
 
 	const result = await FocusRecordForest.bulkWrite(bulkOps);
 
+	// Update sync metadata
+	syncMetadata.lastSyncTime = new Date();
+	await syncMetadata.save();
+
 	return {
 		message: 'Forest focus records synced successfully',
 		recordsProcessed: normalizedRecords.length,
 		upsertedCount: result.upsertedCount,
 		modifiedCount: result.modifiedCount,
+		lastSyncTime: syncMetadata.lastSyncTime,
 	};
 }
 
-export async function syncTideFocusRecords(timezone: string = 'UTC') {
+export async function syncTideFocusRecords(userId: string, timezone: string = 'UTC') {
+	// Get or create sync metadata
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tideFocusRecords');
+
 	// Fetch raw Tide data
 	const rawTideRecords = await fetchTideAppFocusRecords();
 
@@ -716,15 +712,23 @@ export async function syncTideFocusRecords(timezone: string = 'UTC') {
 
 	const result = await FocusRecordTide.bulkWrite(bulkOps);
 
+	// Update sync metadata
+	syncMetadata.lastSyncTime = new Date();
+	await syncMetadata.save();
+
 	return {
 		message: 'Tide focus records synced successfully',
 		recordsProcessed: normalizedRecords.length,
 		upsertedCount: result.upsertedCount,
 		modifiedCount: result.modifiedCount,
+		lastSyncTime: syncMetadata.lastSyncTime,
 	};
 }
 
-export async function syncSessionFocusRecords(timezone: string = 'UTC') {
+export async function syncSessionFocusRecords(userId: string, timezone: string = 'UTC') {
+	// Get or create sync metadata
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'sessionFocusRecords');
+
 	// Fetch raw Session data
 	const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
 
@@ -820,10 +824,15 @@ export async function syncSessionFocusRecords(timezone: string = 'UTC') {
 
 	const result = await FocusRecordSession.bulkWrite(bulkOps);
 
+	// Update sync metadata
+	syncMetadata.lastSyncTime = new Date();
+	await syncMetadata.save();
+
 	return {
 		message: 'Session focus records synced successfully',
 		recordsProcessed: normalizedRecords.length,
 		upsertedCount: result.upsertedCount,
 		modifiedCount: result.modifiedCount,
+		lastSyncTime: syncMetadata.lastSyncTime,
 	};
 }

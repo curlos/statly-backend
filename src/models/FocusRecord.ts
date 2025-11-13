@@ -80,7 +80,7 @@ const BaseFocusRecordSchema = new Schema({
 		index: true, // Index for fast filtering
 	},
 }, {
-	collection: 'focus-records',
+	collection: 'focusRecords',
 	discriminatorKey: 'source',
 	timestamps: false
 });
