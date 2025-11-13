@@ -3,8 +3,6 @@ import { CustomRequest } from '../../interfaces/CustomRequest';
 import { verifyToken } from '../../middleware/verifyToken';
 import SyncMetadata from '../../models/SyncMetadataModel';
 import ApiCallStatus from '../../models/ApiCallStatusModel';
-import { TaskTodoist } from '../../models/TaskModel';
-import { getAllTodoistTasks } from '../../utils/task.utils';
 import { ProjectTickTick } from '../../models/projectModel';
 import { syncTickTickFocusRecords, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../../utils/sync/syncFocusRecords.utils';
 import { syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects, syncSessionProjects } from '../../utils/sync/syncProjects.utils';
@@ -325,18 +323,29 @@ router.post('/session/focus-records', verifyToken, async (req: CustomRequest, re
     }
 });
 
-router.post('/old-focus-apps/focus-records', verifyToken, async (req: CustomRequest, res) => {
+router.post('/old-focus-apps/focus-records-tasks-and-projects', verifyToken, async (req: CustomRequest, res) => {
     try {
         const userId = req.user!.userId;
         // Get timezone from request body (defaults to UTC)
         const timezone = req.body.timezone || 'UTC';
 
-        // Run all old focus app sync operations in parallel
-        const [beFocusedResult, forestResult, tideResult, sessionResult] = await Promise.all([
+        // Run all old focus app sync operations in parallel, including Todoist tasks/projects and Session projects
+        const [
+            beFocusedResult,
+            forestResult,
+            tideResult,
+            sessionResult,
+            todoistTasksResult,
+            todoistProjectsResult,
+            sessionProjectsResult
+        ] = await Promise.all([
             syncBeFocusedFocusRecords(userId, timezone),
             syncForestFocusRecords(userId, timezone),
             syncTideFocusRecords(userId, timezone),
-            syncSessionFocusRecords(userId, timezone)
+            syncSessionFocusRecords(userId, timezone),
+            syncTodoistTasks(userId),
+            syncTodoistProjects(userId),
+            syncSessionProjects(userId)
         ]);
 
         res.status(200).json({
@@ -344,7 +353,10 @@ router.post('/old-focus-apps/focus-records', verifyToken, async (req: CustomRequ
             beFocused: beFocusedResult,
             forest: forestResult,
             tide: tideResult,
-            session: sessionResult
+            session: sessionResult,
+            todoistTasks: todoistTasksResult,
+            todoistProjects: todoistProjectsResult,
+            sessionProjects: sessionProjectsResult
         });
     } catch (error) {
         res.status(500).json({
