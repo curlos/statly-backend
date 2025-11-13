@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import SyncMetadata from '../models/SyncMetadataModel';
 import { TaskTickTick } from '../models/TaskModel';
-import { ProjectTickTick, ProjectTodoist } from '../models/projectModel';
+import { ProjectTickTick, ProjectTodoist, ProjectSession } from '../models/projectModel';
 import { ProjectGroupTickTick } from '../models/projectGroupModel';
 import { FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from '../models/FocusRecord';
 import { fetchAllTickTickTasks, fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from './ticktick.utils';
@@ -386,6 +386,75 @@ export async function syncTodoistProjects(userId: string) {
 		modifiedCount: result.modifiedCount,
 		matchedCount: result.matchedCount,
 		totalOperations: bulkOps.length,
+		lastSyncTime: syncMetadata.lastSyncTime,
+	};
+}
+
+export async function syncSessionProjects(userId: string) {
+	// Get or create sync metadata for session projects
+	const syncMetadata = await getOrCreateSyncMetadata(userId, 'sessionProjects');
+
+	// Fetch raw Session focus records (includes full category data)
+	const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
+
+	// Extract unique categories/projects
+	const categoriesMap = new Map();
+
+	for (const record of rawSessionRecords) {
+		const category = record['category'];
+
+		if (category) {
+			const categoryId = category['id'] || 'general-session';
+			const categoryTitle = category['title'] || 'General';
+			const hexColor = category['hex_color'] || '';
+
+			// Skip if already processed
+			if (!categoriesMap.has(categoryId)) {
+				categoriesMap.set(categoryId, {
+					id: categoryId === '' ? 'general-session' : categoryId,
+					name: categoryTitle,
+					color: hexColor,
+				});
+			}
+		}
+	}
+
+	// Convert map to array and prepare bulk operations
+	const uniqueCategories = Array.from(categoriesMap.values());
+	const bulkOps = [];
+
+	for (const category of uniqueCategories) {
+		const normalizedProject = {
+			id: category.id,
+			source: 'ProjectSession',
+			name: category.name,
+			color: category.color,
+		};
+
+		bulkOps.push({
+			updateOne: {
+				filter: { id: category.id },
+				update: { $set: normalizedProject },
+				upsert: true,
+			},
+		});
+	}
+
+	// Execute all operations in a single bulkWrite
+	const result = bulkOps.length > 0
+		? await ProjectSession.bulkWrite(bulkOps)
+		: { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
+
+	// Update sync metadata with current time
+	syncMetadata.lastSyncTime = new Date();
+	await syncMetadata.save();
+
+	return {
+		message: 'Session projects synced successfully',
+		recordsProcessed: uniqueCategories.length,
+		upsertedCount: result.upsertedCount,
+		modifiedCount: result.modifiedCount,
+		matchedCount: result.matchedCount,
 		lastSyncTime: syncMetadata.lastSyncTime,
 	};
 }

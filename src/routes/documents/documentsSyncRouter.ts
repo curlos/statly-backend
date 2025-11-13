@@ -5,9 +5,8 @@ import SyncMetadata from '../../models/SyncMetadataModel';
 import ApiCallStatus from '../../models/ApiCallStatusModel';
 import { TaskTodoist } from '../../models/TaskModel';
 import { getAllTodoistTasks } from '../../utils/task.utils';
-import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../../utils/sync.utils';
-import { fetchSessionFocusRecordsWithNoBreaks } from '../../utils/focus.utils';
-import { ProjectSession, ProjectTickTick } from '../../models/projectModel';
+import { syncTickTickTasks, syncTickTickProjects, syncTickTickProjectGroups, syncTickTickFocusRecords, syncTodoistProjects, syncSessionProjects, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../../utils/sync.utils';
+import { ProjectTickTick } from '../../models/projectModel';
 
 const router = express.Router();
 
@@ -241,84 +240,8 @@ router.post('/todoist/projects', verifyToken, async (req: CustomRequest, res) =>
 
 router.post('/session/projects', verifyToken, async (req: CustomRequest, res) => {
     try {
-        const userId = req.user!.userId;
-
-        // Get or create sync metadata
-        let syncMetadata = await SyncMetadata.findOne({ syncType: 'sessionProjects' });
-
-        if (!syncMetadata) {
-            syncMetadata = new SyncMetadata({
-                userId,
-                syncType: 'sessionProjects',
-                lastSyncTime: new Date(0),
-            });
-            // Save immediately to prevent duplicate metadata creation if sync is interrupted
-            await syncMetadata.save();
-        }
-
-        // Fetch raw Session focus records (includes full category data)
-        const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
-
-        // Extract unique categories/projects
-        const categoriesMap = new Map();
-
-        for (const record of rawSessionRecords) {
-            const category = record['category'];
-
-            if (category) {
-                const categoryId = category['id'] || 'general-session';
-                const categoryTitle = category['title'] || 'General';
-                const hexColor = category['hex_color'] || '';
-
-                // Skip if already processed
-                if (!categoriesMap.has(categoryId)) {
-                    categoriesMap.set(categoryId, {
-                        id: categoryId === '' ? 'general-session' : categoryId,
-                        name: categoryTitle,
-                        color: hexColor,
-                    });
-                }
-            }
-        }
-
-        // Convert map to array and prepare bulk operations
-        const uniqueCategories = Array.from(categoriesMap.values());
-        const bulkOps = [];
-
-        for (const category of uniqueCategories) {
-            const normalizedProject = {
-                id: category.id,
-                source: 'ProjectSession',
-                name: category.name,
-                color: category.color,
-            };
-
-            bulkOps.push({
-                updateOne: {
-                    filter: { id: category.id },
-                    update: { $set: normalizedProject },
-                    upsert: true,
-                },
-            });
-        }
-
-        // Execute bulk operations if there are any
-        const result = bulkOps.length > 0
-            ? await ProjectSession.bulkWrite(bulkOps)
-            : { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
-
-        // Update sync metadata
-        syncMetadata.lastSyncTime = new Date();
-        await syncMetadata.save();
-
-        res.status(200).json({
-            message: 'Session projects synced successfully',
-            recordsProcessed: uniqueCategories.length,
-            upsertedCount: result.upsertedCount,
-            modifiedCount: result.modifiedCount,
-            matchedCount: result.matchedCount,
-            lastSyncTime: syncMetadata.lastSyncTime,
-        });
+        const result = await syncSessionProjects(req.user!.userId);
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({
             message: error instanceof Error ? error.message : 'An error occurred syncing Session projects.',
