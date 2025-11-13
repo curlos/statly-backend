@@ -1,9 +1,15 @@
-import { randomUUID } from "crypto";
+import { createHash } from "crypto";
 import { FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from "../../models/FocusRecord";
 import { TaskTickTick } from "../../models/TaskModel";
 import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks, fetchTickTickFocusRecords, fetchTideAppFocusRecords } from "../focus.utils";
 import { crossesMidnightInTimezone } from "../timezone.utils";
 import { getOrCreateSyncMetadata } from "../helpers.utils";
+
+function createDeterministicId(source: string, ...fields: any[]): string {
+	const data = fields.join('|');
+	const hash = createHash('sha256').update(data).digest('hex').substring(0, 12);
+	return `${source}-${hash}`;
+}
 
 export async function syncTickTickFocusRecords(userId: string, timezone: string = 'UTC') {
 	// Get or create sync metadata for focus records
@@ -132,6 +138,9 @@ export async function syncBeFocusedFocusRecords(userId: string, timezone: string
 		const endDate = new Date(startDate.getTime() + durationInMinutes * 60 * 1000);
 		const assignedTask = record['Assigned task'] || 'Untitled';
 
+		// Create deterministic ID using the parsed variables
+		const id = createDeterministicId('befocused', startDate.toISOString(), durationInSeconds.toString(), assignedTask);
+
 		// Create custom taskId: "TaskName - BeFocused"
 		const taskId = `${assignedTask} - BeFocused`;
 
@@ -140,7 +149,7 @@ export async function syncBeFocusedFocusRecords(userId: string, timezone: string
 		const focusAppSource = 'FocusRecordBeFocused'
 
 		return {
-			id: randomUUID(),
+			id,
 			source: focusAppSource,
 			startTime: startDate, // Date object for MongoDB
 			endTime: endDate, // Date object for MongoDB
@@ -201,6 +210,9 @@ export async function syncForestFocusRecords(userId: string, timezone: string = 
 		const treeType = record['Tree Type'] || '';
 		const isSuccess = record['Is Success'] === 'True';
 
+		// Create deterministic ID using the parsed variables
+		const id = createDeterministicId('forest', startDate.toISOString(), endDate.toISOString(), tag, isSuccess.toString());
+
 		// Create custom taskId: "Tag - Forest"
 		const taskId = `${tag} - Forest`;
 
@@ -210,7 +222,7 @@ export async function syncForestFocusRecords(userId: string, timezone: string = 
 		const focusAppSource = 'FocusRecordForest'
 
 		return {
-			id: randomUUID(),
+			id,
 			source: focusAppSource,
 			startTime: startDate, // Date object for MongoDB
 			endTime: endDate, // Date object for MongoDB
@@ -287,6 +299,9 @@ export async function syncTideFocusRecords(userId: string, timezone: string = 'U
 		const endDate = new Date(startDate.getTime() + durationInSeconds * 1000);
 		const name = record['name'] || 'Untitled';
 
+		// Create deterministic ID using the parsed variables
+		const id = createDeterministicId('tide', startDate.toISOString(), endDate.toISOString(), durationInSeconds.toString());
+
 		// Create custom taskId: "Name - Tide"
 		const taskId = `${name} - Tide`;
 
@@ -296,7 +311,7 @@ export async function syncTideFocusRecords(userId: string, timezone: string = 'U
 		const focusAppSource = 'FocusRecordTide'
 
 		return {
-			id: `${startDate.getTime()}-tide`, // Custom ID based on start time
+			id,
 			source: focusAppSource,
 			startTime: startDate, // Date object for MongoDB
 			endTime: endDate, // Date object for MongoDB
@@ -415,8 +430,11 @@ export async function syncSessionFocusRecords(userId: string, timezone: string =
 		// Check if record crosses midnight in user's timezone
 		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
 
+		// Create deterministic ID using the parsed variables
+		const id = createDeterministicId('session', startDate.toISOString(), endDate.toISOString(), totalDurationInSeconds.toString(), title);
+
 		return {
-			id: randomUUID(),
+			id,
 			source: 'FocusRecordSession',
 			startTime: startDate,
 			endTime: endDate,
