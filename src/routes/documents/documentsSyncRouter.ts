@@ -7,6 +7,7 @@ import { ProjectTickTick } from '../../models/projectModel';
 import { syncTickTickFocusRecords, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../../utils/sync/syncFocusRecords.utils';
 import { syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects, syncSessionProjects } from '../../utils/sync/syncProjects.utils';
 import { syncTickTickTasks, syncTodoistTasks } from '../../utils/sync/syncTasks.utils';
+import { withSyncLock } from '../../utils/withSyncLock';
 
 const router = express.Router();
 
@@ -34,8 +35,10 @@ router.get('/metadata', verifyToken, async (req, res) => {
     }
 });
 
-router.post('/ticktick/tasks', verifyToken, async (req: CustomRequest, res) => {
-    try {
+router.post('/ticktick/tasks', verifyToken, withSyncLock({
+    endpoint: '/documents/sync/ticktick/tasks',
+    syncFunction: syncTickTickTasks,
+    extractParams: async (req) => {
         const userId = req.user!.userId;
 
         // Check if first sync
@@ -57,18 +60,11 @@ router.post('/ticktick/tasks', verifyToken, async (req: CustomRequest, res) => {
             archivedProjectIds = archivedProjects.map((p: any) => p.id);
         }
 
-        // Sync with archived projects if applicable
-        const result = await syncTickTickTasks(userId, {
-            archivedProjectIds
-        });
-
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(500).json({
-            message: error instanceof Error ? error.message : 'An error occurred transferring tasks.',
-        });
-    }
-});
+        // Return options object for syncTickTickTasks
+        return [{ archivedProjectIds }];
+    },
+    errorMessage: 'An error occurred transferring tasks.'
+}));
 
 router.post('/ticktick/tasks-from-archived-projects', verifyToken, async (req: CustomRequest, res) => {
     try {
@@ -106,27 +102,17 @@ router.post('/todoist/tasks', verifyToken, async (req: CustomRequest, res) => {
     }
 });
 
-router.post('/ticktick/projects', verifyToken, async (req: CustomRequest, res) => {
-    try {
-        const result = await syncTickTickProjects(req.user!.userId);
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(500).json({
-            message: error instanceof Error ? error.message : 'An error occurred syncing TickTick projects.',
-        });
-    }
-});
+router.post('/ticktick/projects', verifyToken, withSyncLock({
+    endpoint: '/documents/sync/ticktick/projects',
+    syncFunction: syncTickTickProjects,
+    errorMessage: 'An error occurred syncing TickTick projects.'
+}));
 
-router.post('/ticktick/project-groups', verifyToken, async (req: CustomRequest, res) => {
-    try {
-        const result = await syncTickTickProjectGroups(req.user!.userId);
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(500).json({
-            message: error instanceof Error ? error.message : 'An error occurred syncing TickTick project groups.',
-        });
-    }
-});
+router.post('/ticktick/project-groups', verifyToken, withSyncLock({
+    endpoint: '/documents/sync/ticktick/project-groups',
+    syncFunction: syncTickTickProjectGroups,
+    errorMessage: 'An error occurred syncing TickTick project groups.'
+}));
 
 router.post('/todoist/projects', verifyToken, async (req: CustomRequest, res) => {
     try {
@@ -254,18 +240,15 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
     }
 });
 
-router.post('/ticktick/focus-records', verifyToken, async (req: CustomRequest, res) => {
-    try {
-        // Get timezone from request body (defaults to UTC)
+router.post('/ticktick/focus-records', verifyToken, withSyncLock({
+    endpoint: '/documents/sync/ticktick/focus-records',
+    syncFunction: syncTickTickFocusRecords,
+    extractParams: (req) => {
         const timezone = req.body.timezone || 'UTC';
-        const result = await syncTickTickFocusRecords(req.user!.userId, timezone);
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(500).json({
-            message: error instanceof Error ? error.message : 'An error occurred syncing TickTick focus records.',
-        });
-    }
-});
+        return [timezone];
+    },
+    errorMessage: 'An error occurred syncing TickTick focus records.'
+}));
 
 router.post('/be-focused/focus-records', verifyToken, async (req: CustomRequest, res) => {
     try {
