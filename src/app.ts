@@ -16,6 +16,7 @@ import documentsTasksRouter from './routes/documents/documentsTasksRouter'
 import documentsSyncRouter from './routes/documents/documentsSyncRouter'
 import documentsProjectsRouter from './routes/documents/documentsProjectsRouter'
 import documentsStatsRouter from './routes/documents/documentsStatsRouter'
+import documentsImportRouter from './routes/documents/documentsImportRouter'
 
 dotenv.config();
 
@@ -60,6 +61,7 @@ app.use('/documents/tasks', documentsTasksRouter);
 app.use('/documents/projects', documentsProjectsRouter);
 app.use('/documents/sync', documentsSyncRouter);
 app.use('/documents/stats', documentsStatsRouter);
+app.use('/documents/import', documentsImportRouter);
 app.use('/users', usersRouter);
 app.use('/user-settings', settingsRouter);
 

@@ -61,7 +61,7 @@ export async function syncTickTickProjectGroups(userId: string) {
 		bulkOps.push({
 			updateOne: {
 				filter: { id: projectGroup.id },
-				update: { $set: projectGroup },
+				update: { $set: { ...projectGroup, source: 'ProjectGroupTickTick' } },
 				upsert: true,
 			},
 		});

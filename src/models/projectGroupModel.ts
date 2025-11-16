@@ -8,6 +8,11 @@ const ProjectGroupTickTickSchema = new Schema({
 		unique: true,
 		index: true
 	},
+	source: {
+		type: String,
+		required: true,
+		default: 'ProjectGroupTickTick'
+	},
 	etag: {
 		type: String
 	},
