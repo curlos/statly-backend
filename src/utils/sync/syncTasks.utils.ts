@@ -21,6 +21,10 @@ export async function syncTickTickTasks(userId: string, options?: {
 	const oneWeekAgo = new Date();
 	oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
+	// Fetch all existing task IDs from DB for efficient lookup
+	const existingTasks = await TaskTickTick.find({}, { id: 1 }).lean();
+	const existingTaskIds = new Set(existingTasks.map((t: any) => t.id));
+
 	// Step 1: Build tasksById map for quick parent lookups
 	const tasksById: Record<string, any> = {};
 	tickTickTasks.forEach((task: any) => {
@@ -65,10 +69,12 @@ export async function syncTickTickTasks(userId: string, options?: {
 		const taskModifiedTime = task.modifiedTime ? new Date(task.modifiedTime) : null;
 
 		// Update task if:
-		// 1. No modifiedTime exists, OR
-		// 2. Task was modified after last sync, OR
-		// 3. Task was modified within the last week
+		// 1. Task doesn't exist in DB yet, OR
+		// 2. No modifiedTime exists, OR
+		// 3. Task was modified after last sync, OR
+		// 4. Task was modified within the last week
 		const shouldUpdateTask =
+			!existingTaskIds.has(task.id) ||
 			!taskModifiedTime ||
 			taskModifiedTime >= lastSyncTime ||
 			taskModifiedTime >= oneWeekAgo;
