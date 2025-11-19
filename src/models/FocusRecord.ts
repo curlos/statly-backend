@@ -79,6 +79,13 @@ const BaseFocusRecordSchema = new Schema({
 		default: false,
 		index: true, // Index for fast filtering
 	},
+	emotions: {
+		type: [{
+			emotion: String,  // 'joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust', 'neutral'
+			score: Number     // confidence 0-1
+		}],
+		_id: false  // Disable _id for emotion array items
+	},
 }, {
 	collection: 'focusRecords',
 	discriminatorKey: 'source',

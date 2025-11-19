@@ -22,6 +22,10 @@ function buildSortCriteria(sortBy: string): { [key: string]: 1 | -1 } {
 			return { duration: -1 };
 		case 'Focus Hours: Least-Most':
 			return { duration: 1 };
+		case 'Emotional Intensity: High-Low':
+			return { firstEmotionScore: -1 };
+		case 'Emotional Intensity: Low-High':
+			return { firstEmotionScore: 1 };
 		case 'Newest':
 		default:
 			return { startTime: -1 };
@@ -55,6 +59,19 @@ async function executeQuery(
 	// Add task filtering and duration recalculation (preserves original duration)
 	addTaskFilteringAndDurationRecalculation(queryPipeline, taskFilterConditions, true);
 
+	// Add first emotion score field for emotion-based sorting
+	// emotions[0].score represents the highest scoring emotion
+	queryPipeline.push({
+		$addFields: {
+			firstEmotionScore: {
+				$ifNull: [
+					{ $arrayElemAt: ["$emotions.score", 0] },
+					0
+				]
+			}
+		}
+	});
+
 	queryPipeline.push({ $sort: sortCriteria });
 	queryPipeline.push({ $skip: skip });
 	queryPipeline.push({ $limit: limit });
@@ -79,11 +96,38 @@ async function executeQuery(
 		hasTaskOrProjectFilters
 	);
 
+	// Calculate emotion counts
+	const emotionCountPipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
+
+	emotionCountPipeline.push(
+		{ $unwind: { path: '$emotions', preserveNullAndEmptyArrays: false } },
+		{
+			$group: {
+				_id: '$emotions.emotion',
+				count: { $sum: 1 }
+			}
+		},
+		{
+			$project: {
+				_id: 0,
+				emotion: '$_id',
+				count: 1
+			}
+		}
+	);
+
+	const emotionCountResult = await FocusRecordTickTick.aggregate(emotionCountPipeline);
+	const emotionCounts = emotionCountResult.reduce((acc, item) => {
+		acc[item.emotion] = item.count;
+		return acc;
+	}, {} as Record<string, number>);
+
 	return {
 		focusRecords,
 		total,
 		totalDuration,
-		onlyTasksTotalDuration
+		onlyTasksTotalDuration,
+		emotionCounts
 	};
 }
 
@@ -104,6 +148,7 @@ export interface FocusRecordsQueryParams {
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
 	searchQuery?: string;
 	focusAppSources: string[]; // Mapped focus app sources
+	emotions: string[]; // Emotions filter
 	crossesMidnight?: boolean;
 }
 
@@ -122,7 +167,8 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 		params.focusAppSources,
 		params.crossesMidnight,
 		params.intervalStartDate,
-		params.intervalEndDate
+		params.intervalEndDate,
+		params.emotions
 	);
 
 	// Calculate the date boundaries for duration adjustment
@@ -138,7 +184,7 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 	}
 
 	// Execute unified query (conditionally adds stages based on filters)
-	const { focusRecords, total, totalDuration, onlyTasksTotalDuration } = await executeQuery(
+	const { focusRecords, total, totalDuration, onlyTasksTotalDuration, emotionCounts } = await executeQuery(
 		searchFilter,
 		focusRecordMatchConditions,
 		taskFilterConditions,
@@ -166,6 +212,7 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 		hasMore,
 		totalDuration,
 		onlyTasksTotalDuration,
+		emotionCounts,
 	};
 }
 

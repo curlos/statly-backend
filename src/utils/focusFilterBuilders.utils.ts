@@ -42,7 +42,8 @@ export function buildFocusMatchAndFilterConditions(
 	appSources: string[],
 	crossesMidnight?: boolean,
 	intervalStartDate?: string,
-	intervalEndDate?: string
+	intervalEndDate?: string,
+	emotions?: string[]
 ) {
 	const focusRecordMatchConditions: any = {};
 	const taskFilterConditions: any[] = [];
@@ -137,6 +138,11 @@ export function buildFocusMatchAndFilterConditions(
 	// Add app source filter
 	if (appSources.length > 0) {
 		focusRecordMatchConditions.source = { $in: appSources };
+	}
+
+	// Add emotions filter
+	if (emotions && emotions.length > 0) {
+		focusRecordMatchConditions["emotions.emotion"] = { $in: emotions };
 	}
 
 	// Add crossesMidnight filter (only when explicitly true)

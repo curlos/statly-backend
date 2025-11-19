@@ -17,6 +17,7 @@ export interface BaseQueryParams {
 	searchQuery?: string;
 	focusAppSources: string[]; // Mapped focus app sources
 	toDoListAppSources: string[]; // Mapped to-do list app sources
+	emotions: string[]; // Emotions filter (anger, joy, sadness, etc.)
 	timezone: string;
 	crossesMidnight?: boolean; // Filter for focus records that cross midnight
 }
@@ -72,6 +73,9 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 	const toDoListAppNames: string[] = req.query['to-do-list-apps'] ? (req.query['to-do-list-apps'] as string).split(',') : [];
 	const toDoListAppSources: string[] = toDoListAppNames.map(appName => TASK_APP_SOURCE_MAPPING[appName]).filter(Boolean);
 
+	// Parse emotions query param
+	const emotions: string[] = req.query['emotions'] ? (req.query['emotions'] as string).split(',') : [];
+
 	// Parse crossesMidnight query param
 	const crossesMidnightParam = req.query['crosses-midnight'] as string;
 	const crossesMidnight = crossesMidnightParam === 'true' ? true : crossesMidnightParam === 'false' ? false : undefined;
@@ -87,6 +91,7 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 		searchQuery: req.query['search'] as string,
 		focusAppSources,
 		toDoListAppSources,
+		emotions,
 		timezone: (req.query.timezone as string) || 'UTC',
 		crossesMidnight,
 	};

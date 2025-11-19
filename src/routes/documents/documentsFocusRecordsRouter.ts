@@ -4,6 +4,7 @@ import { fetchSessionFocusRecordsWithNoBreaks, fetchBeFocusedAppFocusRecords, fe
 import { getFocusRecordsHandler, exportFocusRecordsHandler } from '../../controllers/focusRecordsController';
 import { getFocusMedalsHandler } from '../../controllers/medalsController';
 import { getFocusChallengesHandler } from '../../controllers/challengesController';
+import { getFocusRecordsNeedingSentiment, analyzeNoteEmotionsHandler } from '../../controllers/sentimentBatchController';
 import FocusRecord from '../../models/FocusRecord';
 
 const router = express.Router();
@@ -12,6 +13,8 @@ router.get('/', verifyToken, getFocusRecordsHandler);
 router.get('/export', verifyToken, exportFocusRecordsHandler);
 router.get('/medals', verifyToken, getFocusMedalsHandler);
 router.get('/challenges', verifyToken, getFocusChallengesHandler);
+router.get('/analyze-sentiment/ids', verifyToken, getFocusRecordsNeedingSentiment);
+router.post('/analyze-note-emotions', verifyToken, analyzeNoteEmotionsHandler);
 
 // GET /all - Returns all focus records with pagination support
 router.get('/all', verifyToken, async (req, res) => {

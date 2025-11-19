@@ -35,6 +35,8 @@ interface IUserSettings extends Document {
 				selectedMedalImage?: string;
 				medalImageSizePx?: number;
 				showMedalGlow?: boolean;
+				showFocusRecordEmotions?: boolean;
+				showEmotionCount?: boolean;
 			};
 			completedTasks?: {
 				taskIdIncludeCompletedTasksFromSubtasks?: boolean;
@@ -101,7 +103,9 @@ const UserSettingsSchema = new Schema(
 					showMedals: { type: Boolean, default: true },
 					selectedMedalImage: { type: String, default: "https://i.imgur.com/6xLKg5k.jpeg" },
 					medalImageSizePx: { type: Number, default: 100 },
-					showMedalGlow: { type: Boolean, default: false }
+					showMedalGlow: { type: Boolean, default: false },
+					showFocusRecordEmotions: { type: Boolean, default: false },
+					showEmotionCount: { type: Boolean, default: false }
 				},
 				completedTasks: {
 					taskIdIncludeCompletedTasksFromSubtasks: { type: Boolean, default: true },
