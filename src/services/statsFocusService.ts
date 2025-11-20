@@ -31,6 +31,8 @@ export interface FocusRecordsStatsQueryParams {
 	crossesMidnight?: boolean;
 	groupBy: string; // 'day' | 'project' | 'task' | 'hour' | 'timeline'
 	nested?: boolean; // If true, include ancestorTasksById for nested display
+	emotions?: string[]; // Emotions filter (anger, joy, sadness, etc.)
+
 }
 
 export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams) {
@@ -45,7 +47,8 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 		params.focusAppSources,
 		params.crossesMidnight,
 		params.intervalStartDate,
-		params.intervalEndDate
+		params.intervalEndDate,
+		params.emotions
 	);
 
 	// Calculate the date boundaries for duration adjustment

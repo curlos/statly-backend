@@ -41,8 +41,8 @@ export function buildFocusMatchAndFilterConditions(
 	taskIdIncludeFocusRecordsFromSubtasks: boolean,
 	appSources: string[],
 	crossesMidnight?: boolean,
-	intervalStartDate?: string,
-	intervalEndDate?: string,
+	intervalStartDate?: string | null,
+	intervalEndDate?: string | null,
 	emotions?: string[]
 ) {
 	const focusRecordMatchConditions: any = {};

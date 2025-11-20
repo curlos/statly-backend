@@ -335,7 +335,10 @@ export async function getFocusHoursMedals(params: MedalsQueryParams) {
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.focusAppSources,
-		params.crossesMidnight
+		params.crossesMidnight,
+		null,
+		null,
+		params.emotions
 	);
 
 	// Build aggregation pipeline

@@ -107,7 +107,10 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.focusAppSources,
-		params.crossesMidnight
+		params.crossesMidnight,
+		null,
+		null,
+		params.emotions
 	);
 
 	// Calculate date boundaries for duration adjustment
