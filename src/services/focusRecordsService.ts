@@ -122,6 +122,24 @@ async function executeQuery(
 		return acc;
 	}, {} as Record<string, number>);
 
+	// Count records with no emotions
+	const noEmotionCountPipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
+	noEmotionCountPipeline.push({
+		$match: {
+			$or: [
+				{ emotions: [] },
+				{ emotions: null },
+				{ emotions: { $exists: false } }
+			]
+		}
+	});
+	noEmotionCountPipeline.push({ $count: 'count' });
+
+	const noEmotionCountResult = await FocusRecordTickTick.aggregate(noEmotionCountPipeline);
+	if (noEmotionCountResult.length > 0 && noEmotionCountResult[0].count > 0) {
+		emotionCounts['none'] = noEmotionCountResult[0].count;
+	}
+
 	return {
 		focusRecords,
 		total,

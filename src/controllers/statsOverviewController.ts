@@ -39,7 +39,7 @@ export async function getStatsFocusHandler(req: Request, res: Response) {
 		}
 
 		// Validate group-by parameter
-		const validGroupByValues = ['day', 'week', 'month', 'project', 'task', 'hour', 'timeline', 'year', 'record'];
+		const validGroupByValues = ['day', 'week', 'month', 'project', 'task', 'emotion', 'hour', 'timeline', 'year', 'record'];
 		if (!validGroupByValues.includes(groupBy)) {
 			return res.status(400).json({
 				message: `Invalid group-by parameter. Must be one of: ${validGroupByValues.join(', ')}`

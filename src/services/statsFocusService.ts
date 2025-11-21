@@ -90,6 +90,8 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 			return await groupByProject(basePipeline, taskFilterConditions, nested);
 		case 'task':
 			return await groupByTask(basePipeline, taskFilterConditions, nested);
+		case 'emotion':
+			return await groupByEmotion(basePipeline, taskFilterConditions, nested);
 		case 'hour':
 			return await groupByHour(basePipeline, taskFilterConditions, params.timezone);
 		case 'timeline':
@@ -454,6 +456,143 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 	const { byTask, ancestorTasksById } = await aggregateTaskData(pipeline, totalDuration);
 	response.byTask = byTask;
 	response.ancestorTasksById = ancestorTasksById;
+
+	return response;
+}
+
+async function aggregateProjectAndTaskDataByEmotion(basePipeline: any[], emotions: string[], totalDuration: number) {
+	const byEmotionWithTasks: any = {};
+
+	for (const emotion of emotions) {
+		// Create emotion-filtered pipeline
+		const emotionPipeline = [...basePipeline];
+
+		// Filter focus records that contain this emotion
+		if (emotion === 'none') {
+			// Match records with empty or null emotions array
+			emotionPipeline.push({
+				$match: {
+					$or: [
+						{ emotions: [] },
+						{ emotions: null },
+						{ emotions: { $exists: false } }
+					]
+				}
+			});
+		} else {
+			// Match records containing this specific emotion
+			emotionPipeline.push({
+				$match: {
+					"emotions.emotion": emotion
+				}
+			});
+		}
+
+		// Aggregate projects for this emotion
+		const projectPipeline = [...emotionPipeline];
+		projectPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
+		projectPipeline.push({
+			$group: {
+				_id: {
+					projectId: "$tasks.projectId",
+					source: "$source"
+				},
+				duration: { $sum: "$tasks.duration" },
+			}
+		});
+		projectPipeline.push({ $sort: { duration: -1 } });
+
+		const projectResults = await FocusRecordTickTick.aggregate(projectPipeline);
+
+		const byProject = projectResults.map(r => {
+			const percentage = totalDuration > 0 ? (r.duration / totalDuration) * 100 : 0;
+			const projectId = r._id.projectId || r._id.source;
+
+			return {
+				id: projectId,
+				duration: r.duration,
+				percentage: Number(percentage.toFixed(2)),
+				type: 'project'
+			};
+		});
+
+		// Aggregate tasks for this emotion
+		const { byTask, ancestorTasksById } = await aggregateTaskData(emotionPipeline, totalDuration);
+
+		byEmotionWithTasks[emotion] = {
+			byProject,
+			byTask,
+			ancestorTasksById
+		};
+	}
+
+	return byEmotionWithTasks;
+}
+
+async function groupByEmotion(pipeline: any[], taskFilterConditions: any[] = [], nested: boolean = false) {
+	// Calculate totals using task-level durations
+	const { totalRecords, totalDuration } = await calculateTotals(pipeline, taskFilterConditions);
+
+	const aggPipeline = [...pipeline];
+
+	// Unwind tasks array first to use task-level durations
+	aggPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
+
+	// Add a field to handle empty emotions array
+	aggPipeline.push({
+		$addFields: {
+			emotionToGroup: {
+				$cond: {
+					if: { $or: [{ $eq: ["$emotions", []] }, { $eq: ["$emotions", null] }] },
+					then: [{ emotion: "none" }],
+					else: "$emotions"
+				}
+			}
+		}
+	});
+
+	// Then unwind emotions array to access individual emotion objects
+	aggPipeline.push({ $unwind: { path: "$emotionToGroup", preserveNullAndEmptyArrays: false } });
+
+	// Group by emotion name - sum task-level durations (not record-level)
+	aggPipeline.push({
+		$group: {
+			_id: "$emotionToGroup.emotion",
+			duration: { $sum: "$tasks.duration" },
+			count: { $sum: 1 }
+		}
+	});
+
+	aggPipeline.push({ $sort: { duration: -1 } });
+
+	const results = await FocusRecordTickTick.aggregate(aggPipeline);
+
+	const response: any = {
+		summary: {
+			totalDuration,
+			totalRecords,
+			dateRange: { start: null, end: null }
+		},
+		byEmotion: results.map(r => {
+			const percentage = totalDuration > 0 ? (r.duration / totalDuration) * 100 : 0;
+
+			return {
+				id: r._id,
+				name: r._id,
+				duration: r.duration,
+				percentage: Number(percentage.toFixed(2)),
+				count: r.count,
+				type: 'emotion'
+			};
+		})
+	};
+
+	// If nested, fetch emotion-specific project and task data
+	if (nested) {
+		const emotions = results.map(r => r._id); // Get list of emotion names
+		const byEmotionWithTasks = await aggregateProjectAndTaskDataByEmotion(pipeline, emotions, totalDuration);
+		response.byEmotionWithTasks = byEmotionWithTasks;
+	}
 
 	return response;
 }

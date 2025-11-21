@@ -142,7 +142,27 @@ export function buildFocusMatchAndFilterConditions(
 
 	// Add emotions filter
 	if (emotions && emotions.length > 0) {
-		focusRecordMatchConditions["emotions.emotion"] = { $in: emotions };
+		// Check if "none" is included
+		const hasNoEmotions = emotions.includes('none');
+		const regularEmotions = emotions.filter(e => e !== 'none');
+
+		if (hasNoEmotions && regularEmotions.length > 0) {
+			// Include both records with no emotions AND records with the specified emotions
+			focusRecordMatchConditions.$or = [
+				{ $or: [{ emotions: [] }, { emotions: null }, { emotions: { $exists: false } }] },
+				{ "emotions.emotion": { $in: regularEmotions } }
+			];
+		} else if (hasNoEmotions) {
+			// Only filter for records with no emotions
+			focusRecordMatchConditions.$or = [
+				{ emotions: [] },
+				{ emotions: null },
+				{ emotions: { $exists: false } }
+			];
+		} else {
+			// Only filter for regular emotions
+			focusRecordMatchConditions["emotions.emotion"] = { $in: emotions };
+		}
 	}
 
 	// Add crossesMidnight filter (only when explicitly true)
