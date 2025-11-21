@@ -249,8 +249,9 @@ export interface ExportFocusRecordsQueryParams {
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
 	searchQuery?: string;
 	focusAppSources: string[];
+	emotions: string[];
 	crossesMidnight?: boolean;
-	groupBy: 'none' | 'project' | 'task';
+	groupBy: 'none' | 'project' | 'task' | 'emotion';
 	onlyExportTasksWithNoParent: boolean;
 }
 
@@ -282,7 +283,8 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 		params.focusAppSources,
 		params.crossesMidnight,
 		params.intervalStartDate,
-		params.intervalEndDate
+		params.intervalEndDate,
+		params.emotions
 	);
 
 	// Calculate date boundaries for duration adjustment
@@ -297,7 +299,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 	}
 
 	// Execute query without pagination (get all records)
-	const { focusRecords, total, totalDuration, onlyTasksTotalDuration } = await executeQuery(
+	const { focusRecords, total, totalDuration, onlyTasksTotalDuration, emotionCounts } = await executeQuery(
 		searchFilter,
 		focusRecordMatchConditions,
 		taskFilterConditions,
@@ -382,16 +384,17 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 			records: focusRecordsWithCompletedTasks,
 			totalRecords: total,
 			totalDuration: onlyTasksTotalDuration,
+			emotionCounts,
 		};
 	}
 
-	// Group records by project or task
-	const grouped: { [key: string]: { records: any[], totalDuration: number, groupName: string } } = {};
+	// Group records by project, task, or emotion
+	const grouped: { [key: string]: { records: any[], totalDuration: number, groupName: string, emotionCounts: Record<string, number> } } = {};
 
 	for (const focusRecord of focusRecordsWithCompletedTasks) {
 		const uniqueIds = new Set<string>();
 
-		// Collect unique project or task IDs
+		// Collect unique project, task, or emotion IDs
 		if (params.groupBy === 'project') {
 			// Group by project
 			if (focusRecord.tasks && focusRecord.tasks.length > 0) {
@@ -402,6 +405,15 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 						uniqueIds.add('no-project-id');
 					}
 				});
+			}
+		} else if (params.groupBy === 'emotion') {
+			// Group by emotion - add all emotions this record has
+			if (focusRecord.emotions && focusRecord.emotions.length > 0) {
+				focusRecord.emotions.forEach((emotionObj: any) => {
+					uniqueIds.add(emotionObj.emotion);
+				});
+			} else {
+				uniqueIds.add('none');
 			}
 		} else {
 			// Group by task
@@ -432,6 +444,9 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 						const project = projectsById[id];
 						groupName = sourceToAppName[id] || project?.name || id;
 					}
+				} else if (params.groupBy === 'emotion') {
+					// For emotions, use uppercase emotion name
+					groupName = id.toUpperCase();
 				} else {
 					// For tasks, use the task name from ancestorTasksById
 					const taskInfo = ancestorTasksById[id];
@@ -448,14 +463,24 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 					records: [],
 					totalDuration: 0,
 					groupName,
+					emotionCounts: {},
 				};
 			}
 
-			// Filter tasks that belong to this group
+			// Filter tasks that belong to this group, or use full record for emotions
 			let filteredTasks = [];
-			if (params.groupBy === 'project') {
+			let duration = 0;
+
+			if (params.groupBy === 'emotion') {
+				// For emotion grouping, include the entire focus record (no task filtering)
+				// Use task-level duration sum to match stats page behavior
+				filteredTasks = focusRecord.tasks || [];
+				duration = filteredTasks.reduce((sum: number, task: any) => sum + (task.duration || 0), 0);
+			} else if (params.groupBy === 'project') {
 				// For project grouping, only include tasks in this project
 				filteredTasks = focusRecord.tasks?.filter((task: any) => (task.projectId || 'no-project-id') === id) || [];
+				// Calculate duration for this specific group
+				duration = filteredTasks.reduce((sum: number, task: any) => sum + task.duration, 0);
 			} else {
 				// For task grouping, only include tasks matching this task ID
 				filteredTasks = focusRecord.tasks?.filter((task: any) => {
@@ -465,15 +490,14 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 					}
 					return false;
 				}) || [];
+				// Calculate duration for this specific group
+				duration = filteredTasks.reduce((sum: number, task: any) => sum + task.duration, 0);
 			}
 
-			// Skip this focus record if no tasks match after filtering
-			if (filteredTasks.length === 0) {
+			// Skip this focus record if no tasks match after filtering (not applicable for emotion grouping)
+			if (params.groupBy !== 'emotion' && filteredTasks.length === 0) {
 				continue;
 			}
-
-			// Calculate duration for this specific group
-			const duration = filteredTasks.reduce((sum: number, task: any) => sum + task.duration, 0);
 
 			// Create a filtered copy of the focus record with only matching tasks
 			const filteredFocusRecord = {
@@ -483,6 +507,17 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 
 			grouped[id].records.push(filteredFocusRecord);
 			grouped[id].totalDuration += duration;
+
+			// Update emotion counts for this group
+			if (focusRecord.emotions && focusRecord.emotions.length > 0) {
+				focusRecord.emotions.forEach((emotionObj: any) => {
+					const emotion = emotionObj.emotion;
+					grouped[id].emotionCounts[emotion] = (grouped[id].emotionCounts[emotion] || 0) + 1;
+				});
+			} else {
+				// No emotions - count as 'none'
+				grouped[id].emotionCounts['none'] = (grouped[id].emotionCounts['none'] || 0) + 1;
+			}
 		}
 	}
 
@@ -501,5 +536,6 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 		grouped,
 		totalRecords: total,
 		totalDuration: onlyTasksTotalDuration,
+		emotionCounts,
 	};
 }

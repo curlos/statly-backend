@@ -47,6 +47,7 @@ export function buildFocusMatchAndFilterConditions(
 ) {
 	const focusRecordMatchConditions: any = {};
 	const taskFilterConditions: any[] = [];
+	const andedOrConditions: any[] = []; // Collect all $or conditions here to be AND-ed together
 
 	// Two-tier date filtering:
 	// 1. First tier: Filter Sidebar dates (startDate, endDate) - broad filter at MongoDB level
@@ -85,7 +86,7 @@ export function buildFocusMatchAndFilterConditions(
 		}
 
 		if (dateConditions.length > 0) {
-			focusRecordMatchConditions.$or = dateConditions;
+			andedOrConditions.push({ $or: dateConditions });
 		}
 	}
 
@@ -121,17 +122,7 @@ export function buildFocusMatchAndFilterConditions(
 		}
 
 		if (intervalDateConditions.length > 0) {
-			// Combine with existing $or conditions if they exist
-			if (focusRecordMatchConditions.$or) {
-				// If we already have $or conditions (from first tier), we need to AND them together
-				focusRecordMatchConditions.$and = [
-					{ $or: focusRecordMatchConditions.$or },
-					{ $or: intervalDateConditions }
-				];
-				delete focusRecordMatchConditions.$or;
-			} else {
-				focusRecordMatchConditions.$or = intervalDateConditions;
-			}
+			andedOrConditions.push({ $or: intervalDateConditions });
 		}
 	}
 
@@ -148,19 +139,23 @@ export function buildFocusMatchAndFilterConditions(
 
 		if (hasNoEmotions && regularEmotions.length > 0) {
 			// Include both records with no emotions AND records with the specified emotions
-			focusRecordMatchConditions.$or = [
-				{ $or: [{ emotions: [] }, { emotions: null }, { emotions: { $exists: false } }] },
-				{ "emotions.emotion": { $in: regularEmotions } }
-			];
+			andedOrConditions.push({
+				$or: [
+					{ $or: [{ emotions: [] }, { emotions: null }, { emotions: { $exists: false } }] },
+					{ "emotions.emotion": { $in: regularEmotions } }
+				]
+			});
 		} else if (hasNoEmotions) {
 			// Only filter for records with no emotions
-			focusRecordMatchConditions.$or = [
-				{ emotions: [] },
-				{ emotions: null },
-				{ emotions: { $exists: false } }
-			];
+			andedOrConditions.push({
+				$or: [
+					{ emotions: [] },
+					{ emotions: null },
+					{ emotions: { $exists: false } }
+				]
+			});
 		} else {
-			// Only filter for regular emotions
+			// Only filter for regular emotions - no $or needed
 			focusRecordMatchConditions["emotions.emotion"] = { $in: emotions };
 		}
 	}
@@ -179,10 +174,13 @@ export function buildFocusMatchAndFilterConditions(
 	// Add task filter
 	if (taskId) {
 		if (taskIdIncludeFocusRecordsFromSubtasks) {
-			focusRecordMatchConditions.$or = [
-				{ "tasks.taskId": taskId },
-				{ "tasks.ancestorIds": taskId }
-			];
+			andedOrConditions.push({
+				$or: [
+					{ "tasks.taskId": taskId },
+					{ "tasks.ancestorIds": taskId }
+				]
+			});
+
 			taskFilterConditions.push({
 				$or: [
 					{ $eq: ["$$task.taskId", taskId] },
@@ -193,6 +191,11 @@ export function buildFocusMatchAndFilterConditions(
 			focusRecordMatchConditions["tasks.taskId"] = taskId;
 			taskFilterConditions.push({ $eq: ["$$task.taskId", taskId] });
 		}
+	}
+
+	// Combine all $or conditions with $and at the end
+	if (andedOrConditions.length > 0) {
+		focusRecordMatchConditions.$and = andedOrConditions;
 	}
 
 	return { focusRecordMatchConditions, taskFilterConditions };
