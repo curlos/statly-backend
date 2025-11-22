@@ -4,6 +4,8 @@ import { TaskTickTick } from "../../models/TaskModel";
 import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks, fetchTickTickFocusRecords, fetchTideAppFocusRecords } from "../focus.utils";
 import { crossesMidnightInTimezone } from "../timezone.utils";
 import { getOrCreateSyncMetadata } from "../helpers.utils";
+import { analyzeNoteEmotionsCore } from "../../controllers/sentimentBatchController";
+import UserSettings from "../../models/UserSettingsModel";
 
 function createDeterministicId(source: string, ...fields: any[]): string {
 	const data = fields.join('|');
@@ -21,6 +23,26 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 	// Calculate the cutoff date (30 days before last sync)
 	const thirtyDaysBeforeLastSync = new Date(lastSyncTime);
 	thirtyDaysBeforeLastSync.setDate(thirtyDaysBeforeLastSync.getDate() - 30);
+
+	// Check if we should analyze emotions (do this early to avoid unnecessary work)
+	const userSettings = await UserSettings.findOne({ userId });
+	const shouldAnalyzeEmotions = userSettings?.tickTickOne?.pages?.focusRecords?.analyzeNoteEmotionsWhileSyncingFocusRecords || false;
+
+	// Only fetch existing records if we need to analyze emotions
+	let existingRecordsMap = new Map<string, { note: string; emotions: any }>();
+	if (shouldAnalyzeEmotions) {
+		const recordIds = focusRecords
+			.filter(r => new Date(r.endTime) >= thirtyDaysBeforeLastSync)
+			.map(r => r.id);
+
+		const existingRecords = await FocusRecordTickTick.find({
+			id: { $in: recordIds }
+		}).select('id note emotions').lean();
+
+		existingRecordsMap = new Map(
+			existingRecords.map((r: any) => [r.id, { note: r.note || '', emotions: r.emotions }])
+		);
+	}
 
 	// Collect all unique task IDs from focus records
 	const allTaskIds = new Set<string>();
@@ -51,6 +73,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 	}
 
 	const bulkOps = [];
+	const recordsNeedingEmotionAnalysis: string[] = [];
 
 	for (const record of focusRecords) {
 		const recordEndTime = new Date(record.endTime);
@@ -91,6 +114,25 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 				crossesMidnight,
 			};
 
+			// Determine if this record needs emotion analysis (only if setting is enabled)
+			if (shouldAnalyzeEmotions && normalizedRecord.note && normalizedRecord.note.trim() !== '') {
+				const existingRecord = existingRecordsMap.get(record.id);
+
+				if (!existingRecord) {
+					// New record with a note - needs analysis
+					recordsNeedingEmotionAnalysis.push(record.id);
+				} else {
+					// Existing record - check if note changed or if it has no emotions
+					const hasEmotions = existingRecord.emotions && existingRecord.emotions.length > 0;
+					const noteChanged = existingRecord.note !== normalizedRecord.note;
+
+					if (!hasEmotions || noteChanged) {
+						// Either no emotions OR note changed - needs (re)analysis
+						recordsNeedingEmotionAnalysis.push(record.id);
+					}
+				}
+			}
+
 			// Add upsert operation to bulk array
 			bulkOps.push({
 				updateOne: {
@@ -113,6 +155,33 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 	syncMetadata.lastSyncTime = new Date();
 	await syncMetadata.save();
 
+	// Analyze emotions for records that need it
+	let emotionAnalysisResult = null;
+	if (shouldAnalyzeEmotions && recordsNeedingEmotionAnalysis.length > 0) {
+		try {
+			console.log(`🧠 Analyzing emotions for ${recordsNeedingEmotionAnalysis.length} records...`);
+
+			// Fetch the MongoDB _id values for these records (using their TickTick IDs)
+			const recordsToAnalyze = await FocusRecordTickTick.find({
+				id: { $in: recordsNeedingEmotionAnalysis }
+			}).select('_id').lean();
+
+			const mongoIds = recordsToAnalyze.map((r: any) => r._id.toString());
+
+			if (mongoIds.length > 0) {
+				emotionAnalysisResult = await analyzeNoteEmotionsCore(mongoIds);
+				console.log(`✅ Emotion analysis complete: ${emotionAnalysisResult.analyzed} analyzed, ${emotionAnalysisResult.failed} failed`);
+			} else {
+				console.log('⚠️ No records found to analyze');
+				emotionAnalysisResult = { analyzed: 0, failed: 0 };
+			}
+		} catch (error) {
+			console.error('Error analyzing emotions during sync:', error);
+			// Don't fail the sync if emotion analysis fails
+			emotionAnalysisResult = { error: 'Failed to analyze emotions', analyzed: 0, failed: recordsNeedingEmotionAnalysis.length };
+		}
+	}
+
 	return {
 		message: 'TickTick focus records synced successfully',
 		upsertedCount: result.upsertedCount,
@@ -120,6 +189,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 		matchedCount: result.matchedCount,
 		totalOperations: bulkOps.length,
 		lastSyncTime: syncMetadata.lastSyncTime,
+		emotionAnalysis: emotionAnalysisResult,
 	};
 }
 
