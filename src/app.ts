@@ -23,8 +23,8 @@ dotenv.config();
 const app = express();
 
 const allowedOrigins = [
-  'http://localhost:5173', // local frontend
-  'https://ticktick-2-0-web.vercel.app' // deployed frontend
+  'http://localhost:5173', // local frontend site
+  'https://statly-pi.vercel.app' // deployed frontend site
 ];
 
 // ✅ Dynamically allow based on origin
