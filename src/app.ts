@@ -44,12 +44,14 @@ app.use(
 // ✅ Handle preflight
 app.options('*', cors());
 
-// ✅ Connect to database once on startup
-connectDB()
-  .then(() => {
-    return
-  })
-  .catch((err) => console.error('❌ Failed to connect to DB:', err));
+// ✅ Connect to database once on startup (only for local development)
+if (!process.env.VERCEL) {
+	connectDB()
+		.then(() => {
+			console.log('✅ Database connected for local development');
+		})
+		.catch((err) => console.error('❌ Failed to connect to DB:', err));
+}
 
 // Enable GZIP compression for all responses
 app.use(compression());
