@@ -168,6 +168,7 @@ export interface FocusRecordsQueryParams {
 	focusAppSources: string[]; // Mapped focus app sources
 	emotions: string[]; // Emotions filter
 	crossesMidnight?: boolean;
+	timezone?: string;
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams) {
@@ -186,7 +187,8 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 		params.crossesMidnight,
 		params.intervalStartDate,
 		params.intervalEndDate,
-		params.emotions
+		params.emotions,
+		params.timezone
 	);
 
 	// Calculate the date boundaries for duration adjustment
@@ -253,6 +255,7 @@ export interface ExportFocusRecordsQueryParams {
 	crossesMidnight?: boolean;
 	groupBy: 'none' | 'project' | 'task' | 'emotion';
 	onlyExportTasksWithNoParent: boolean;
+	timezone?: string;
 }
 
 export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) {
@@ -284,7 +287,8 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 		params.crossesMidnight,
 		params.intervalStartDate,
 		params.intervalEndDate,
-		params.emotions
+		params.emotions,
+		params.timezone
 	);
 
 	// Calculate date boundaries for duration adjustment

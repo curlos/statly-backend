@@ -1,3 +1,24 @@
+import { fromZonedTime } from 'date-fns-tz';
+
+/**
+ * Converts a date string to a Date object representing midnight in the specified timezone.
+ * This ensures date boundaries are created in the user's timezone, not the server's timezone.
+ *
+ * @param dateString - Date string like "October 10, 2025" or "Nov 24, 2025"
+ * @param timezone - IANA timezone string like "America/New_York"
+ * @returns Date object in UTC that represents midnight in the user's timezone
+ *
+ * @example
+ * // User in EST selects Oct 10, 2025
+ * parseDateInTimezone("October 10, 2025", "America/New_York")
+ * // Returns: Date object for Oct 10, 2025 00:00:00 EST = Oct 10, 2025 05:00:00 UTC
+ */
+export function parseDateInTimezone(dateString: string, timezone: string = 'UTC'): Date {
+	const date = new Date(dateString);
+	const dateString24h = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} 00:00:00`;
+	return fromZonedTime(dateString24h, timezone);
+}
+
 /**
  * Check if a focus record crosses midnight in the user's timezone
  * @param startDate - Start date (UTC)

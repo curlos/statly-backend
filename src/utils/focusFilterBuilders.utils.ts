@@ -1,3 +1,5 @@
+import { parseDateInTimezone } from './timezone.utils';
+
 // ============================================================================
 // Focus Records - App Source Mapping
 // ============================================================================
@@ -43,7 +45,8 @@ export function buildFocusMatchAndFilterConditions(
 	crossesMidnight?: boolean,
 	intervalStartDate?: string | null,
 	intervalEndDate?: string | null,
-	emotions?: string[]
+	emotions?: string[],
+	timezone?: string
 ) {
 	const focusRecordMatchConditions: any = {};
 	const taskFilterConditions: any[] = [];
@@ -57,11 +60,12 @@ export function buildFocusMatchAndFilterConditions(
 	// Include records where EITHER startTime OR endTime falls within the date range
 	// This ensures records that cross midnight are included on both days
 	if (startDate || endDate) {
-		const startBoundary = startDate ? new Date(startDate) : null;
+		const tz = timezone || 'UTC';
+		const startBoundary = startDate ? parseDateInTimezone(startDate, tz) : null;
 		let endBoundary = null;
 		if (endDate) {
-			endBoundary = new Date(endDate);
-			endBoundary.setDate(endBoundary.getDate() + 1);
+			endBoundary = parseDateInTimezone(endDate, tz);
+			endBoundary.setUTCDate(endBoundary.getUTCDate() + 1);
 		}
 
 		// Build $or condition: record is included if it starts OR ends within the range
@@ -93,11 +97,12 @@ export function buildFocusMatchAndFilterConditions(
 	// Add second tier date range filter (Interval Dropdown)
 	// This will be applied after the first tier filter
 	if (intervalStartDate || intervalEndDate) {
-		const intervalStartBoundary = intervalStartDate ? new Date(intervalStartDate) : null;
+		const tz = timezone || 'UTC';
+		const intervalStartBoundary = intervalStartDate ? parseDateInTimezone(intervalStartDate, tz) : null;
 		let intervalEndBoundary = null;
 		if (intervalEndDate) {
-			intervalEndBoundary = new Date(intervalEndDate);
-			intervalEndBoundary.setDate(intervalEndBoundary.getDate() + 1);
+			intervalEndBoundary = parseDateInTimezone(intervalEndDate, tz);
+			intervalEndBoundary.setUTCDate(intervalEndBoundary.getUTCDate() + 1);
 		}
 
 		// Build interval date conditions
