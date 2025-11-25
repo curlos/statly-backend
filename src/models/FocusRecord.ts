@@ -5,6 +5,7 @@ const BaseFocusRecordTaskSchema = new Schema({
 	taskId: {
 		type: String,
 		required: true,
+		index: true, // Index for fast lookup when updating focus records during task sync
 	},
 	title: {
 		type: String,

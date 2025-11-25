@@ -21,9 +21,12 @@ export async function syncTickTickTasks(userId: string, options?: {
 	const oneWeekAgo = new Date();
 	oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-	// Fetch all existing task IDs from DB for efficient lookup
-	const existingTasks = await TaskTickTick.find({}, { id: 1 }).lean();
-	const existingTaskIds = new Set(existingTasks.map((t: any) => t.id));
+	// Fetch only the task IDs that are being synced (much faster than fetching all tasks)
+	const taskIdsToCheck = tickTickTasks.map((t: any) => t.id);
+	const existingTaskIds = await TaskTickTick.distinct('id', {
+		id: { $in: taskIdsToCheck }
+	});
+	const existingTaskIdsSet = new Set(existingTaskIds);
 
 	// Step 1: Build tasksById map for quick parent lookups
 	const tasksById: Record<string, any> = {};
@@ -62,7 +65,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 
 	const bulkOps = [];
 	// Track modified tasks for focus record updates
-	const modifiedTasksMap: Record<string, { projectId: string, ancestorIds: string[] }> = {};
+	const modifiedTasksMap: Record<string, { projectId: string, ancestorIds: string[], title: string }> = {};
 
 	for (const task of tickTickTasks) {
 		// Check if task needs updating based on modifiedTime
@@ -74,7 +77,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 		// 3. Task was modified after last sync, OR
 		// 4. Task was modified within the last week
 		const shouldUpdateTask =
-			!existingTaskIds.has(task.id) ||
+			!existingTaskIdsSet.has(task.id) ||
 			!taskModifiedTime ||
 			taskModifiedTime >= lastSyncTime ||
 			taskModifiedTime >= oneWeekAgo;
@@ -90,7 +93,8 @@ export async function syncTickTickTasks(userId: string, options?: {
 			// Track this task for focus record updates
 			modifiedTasksMap[task.id] = {
 				projectId: task.projectId,
-				ancestorIds: ancestorIds
+				ancestorIds: ancestorIds,
+				title: task.title
 			};
 
 			// Normalize the FULL task
@@ -166,48 +170,45 @@ export async function syncTickTickTasks(userId: string, options?: {
 		const modifiedTaskIds = Object.keys(modifiedTasksMap);
 
 		// Find all focus records that contain any of the modified tasks
+		// Only fetch fields we need (id and tasks) for better performance
 		const focusRecordsToUpdate = await FocusRecordTickTick.find({
 			'tasks.taskId': { $in: modifiedTaskIds }
-		}).lean() as any[];
+		})
+		.select('id tasks')
+		.lean() as any[];
 
 		const focusRecordBulkOps = [];
 
 		for (const focusRecord of focusRecordsToUpdate) {
-			// Check which tasks in this focus record need updating
-			const tasksNeedingUpdate = focusRecord.tasks?.filter((task: any) => {
-				if (!modifiedTasksMap[task.taskId]) return false;
+			const updateFields: Record<string, any> = {};
+
+			// Check each task in the focus record and batch updates
+			focusRecord.tasks?.forEach((task: any, index: number) => {
+				if (!modifiedTasksMap[task.taskId]) return;
 
 				const modifiedTask = modifiedTasksMap[task.taskId];
 
-				// Compare projectId and ancestorIds
+				// Compare projectId, ancestorIds, and title
 				const projectIdChanged = task.projectId !== modifiedTask.projectId;
 				const ancestorIdsChanged = JSON.stringify(task.ancestorIds || []) !== JSON.stringify(modifiedTask.ancestorIds);
+				const titleChanged = task.title !== modifiedTask.title;
 
-				return projectIdChanged || ancestorIdsChanged;
-			}) || [];
-
-			// If any tasks need updating, create a bulk operation
-			if (tasksNeedingUpdate.length > 0) {
-				for (const taskToUpdate of tasksNeedingUpdate) {
-					const modifiedTask = modifiedTasksMap[taskToUpdate.taskId];
-
-					// Use arrayFilters to update specific task in the array
-					focusRecordBulkOps.push({
-						updateOne: {
-							filter: {
-								id: focusRecord.id,
-								'tasks.taskId': taskToUpdate.taskId
-							},
-							update: {
-								$set: {
-									'tasks.$[elem].projectId': modifiedTask.projectId,
-									'tasks.$[elem].ancestorIds': modifiedTask.ancestorIds
-								}
-							},
-							arrayFilters: [{ 'elem.taskId': taskToUpdate.taskId }]
-						}
-					});
+				if (projectIdChanged || ancestorIdsChanged || titleChanged) {
+					// Update by array index (faster than arrayFilters)
+					updateFields[`tasks.${index}.projectId`] = modifiedTask.projectId;
+					updateFields[`tasks.${index}.ancestorIds`] = modifiedTask.ancestorIds;
+					updateFields[`tasks.${index}.title`] = modifiedTask.title;
 				}
+			});
+
+			// Create ONE bulk operation per focus record (not per task!)
+			if (Object.keys(updateFields).length > 0) {
+				focusRecordBulkOps.push({
+					updateOne: {
+						filter: { id: focusRecord.id },
+						update: { $set: updateFields }
+					}
+				});
 			}
 		}
 
