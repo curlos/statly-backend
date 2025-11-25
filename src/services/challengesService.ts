@@ -14,6 +14,7 @@ import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { ChallengesQueryParams } from '../utils/queryParams.utils';
 import { addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
+import { parseDateInTimezone } from '../utils/timezone.utils';
 
 // ============================================================================
 // Helper Functions
@@ -110,15 +111,17 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 		params.crossesMidnight,
 		null,
 		null,
-		params.emotions
+		params.emotions,
+		params.timezone
 	);
 
 	// Calculate date boundaries for duration adjustment
-	const startDateBoundary = params.startDate ? new Date(params.startDate) : null;
+	const tz = params.timezone || 'UTC';
+	const startDateBoundary = params.startDate ? parseDateInTimezone(params.startDate, tz) : null;
 	let endDateBoundary: Date | null = null;
 	if (params.endDate) {
-		endDateBoundary = new Date(params.endDate);
-		endDateBoundary.setDate(endDateBoundary.getDate() + 1);
+		endDateBoundary = parseDateInTimezone(params.endDate, tz);
+		endDateBoundary.setUTCDate(endDateBoundary.getUTCDate() + 1);
 	}
 
 	// Build aggregation pipeline
@@ -166,7 +169,11 @@ export async function getCompletedTasksChallenges(params: ChallengesQueryParams)
 		params.startDate,
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
-		params.toDoListAppSources
+		params.toDoListAppSources,
+		'completedTime',
+		undefined,
+		undefined,
+		params.timezone
 	);
 
 	// Build aggregation pipeline

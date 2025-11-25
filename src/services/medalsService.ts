@@ -338,7 +338,8 @@ export async function getFocusHoursMedals(params: MedalsQueryParams) {
 		params.crossesMidnight,
 		null,
 		null,
-		params.emotions
+		params.emotions,
+		params.timezone
 	);
 
 	// Build aggregation pipeline
@@ -385,7 +386,11 @@ export async function getCompletedTasksMedals(params: MedalsQueryParams) {
 		params.startDate,
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
-		params.toDoListAppSources
+		params.toDoListAppSources,
+		'completedTime',
+		undefined,
+		undefined,
+		params.timezone
 	);
 
 	// Build aggregation pipeline

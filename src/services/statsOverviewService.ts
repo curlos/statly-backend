@@ -40,7 +40,10 @@ export async function getOverviewStats(params: OverviewStatsQueryParams): Promis
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.toDoListAppSources,
-		'createdTime' // Skip date filtering for all tasks
+		'createdTime', // Skip date filtering for all tasks
+		undefined,
+		undefined,
+		params.timezone
 	);
 
 	// Apply search filter to all tasks
@@ -58,7 +61,11 @@ export async function getOverviewStats(params: OverviewStatsQueryParams): Promis
 		params.startDate,
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
-		params.toDoListAppSources
+		params.toDoListAppSources,
+		'completedTime',
+		undefined,
+		undefined,
+		params.timezone
 	);
 
 	// Apply search filter to completed tasks

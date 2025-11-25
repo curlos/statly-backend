@@ -34,7 +34,8 @@ export async function getCompletedTasksStats(params: CompletedTasksStatsQueryPar
 		params.toDoListAppSources,
 		'completedTime',
 		params.intervalStartDate,
-		params.intervalEndDate
+		params.intervalEndDate,
+		params.timezone
 	);
 
 	// Build base pipeline with filters

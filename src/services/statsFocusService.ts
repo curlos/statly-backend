@@ -11,6 +11,7 @@ import {
 } from '../utils/focusFilterBuilders.utils';
 import { buildAncestorData } from '../utils/task.utils';
 import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
+import { parseDateInTimezone } from '../utils/timezone.utils';
 
 // ============================================================================
 // Stats Aggregation Service
@@ -48,7 +49,8 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 		params.crossesMidnight,
 		params.intervalStartDate,
 		params.intervalEndDate,
-		params.emotions
+		params.emotions,
+		params.timezone
 	);
 
 	// Calculate the date boundaries for duration adjustment
@@ -56,11 +58,12 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 	const effectiveStartDate = params.intervalStartDate || params.startDate;
 	const effectiveEndDate = params.intervalEndDate || params.endDate;
 
-	const startDateBoundary = effectiveStartDate ? new Date(effectiveStartDate) : null;
+	const tz = params.timezone || 'UTC';
+	const startDateBoundary = effectiveStartDate ? parseDateInTimezone(effectiveStartDate, tz) : null;
 	let endDateBoundary: Date | null = null;
 	if (effectiveEndDate) {
-		endDateBoundary = new Date(effectiveEndDate);
-		endDateBoundary.setDate(endDateBoundary.getDate() + 1);
+		endDateBoundary = parseDateInTimezone(effectiveEndDate, tz);
+		endDateBoundary.setUTCDate(endDateBoundary.getUTCDate() + 1);
 	}
 
 	// Build base pipeline with shared filters

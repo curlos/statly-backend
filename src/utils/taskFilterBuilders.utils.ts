@@ -1,3 +1,5 @@
+import { parseDateInTimezone } from './timezone.utils';
+
 // ============================================================================
 // Tasks - App Source Mapping
 // ============================================================================
@@ -33,25 +35,26 @@ export function buildTaskSearchFilter(searchQuery?: string) {
  * Helper function to build date range filter conditions
  * @param startDate - Start date string (optional)
  * @param endDate - End date string (optional)
+ * @param timezone - IANA timezone string (optional)
  * @returns Date filter object or null if no dates provided
  */
-function buildDateRangeFilter(startDate?: string, endDate?: string) {
+function buildDateRangeFilter(startDate?: string, endDate?: string, timezone?: string) {
 	if (!startDate && !endDate) {
 		return null;
 	}
 
+	const tz = timezone || 'UTC';
 	const dateFilter: any = {};
 
 	if (startDate) {
-		const startBoundary = new Date(startDate);
-		startBoundary.setHours(0, 0, 0, 0); // Beginning of day
+		const startBoundary = parseDateInTimezone(startDate, tz);
 		dateFilter.$gte = startBoundary;
 	}
 
 	if (endDate) {
-		const endBoundary = new Date(endDate);
-		endBoundary.setHours(23, 59, 59, 999); // End of day
-		dateFilter.$lte = endBoundary;
+		const endBoundary = parseDateInTimezone(endDate, tz);
+		endBoundary.setUTCDate(endBoundary.getUTCDate() + 1);
+		dateFilter.$lt = endBoundary;
 	}
 
 	return dateFilter;
@@ -70,7 +73,8 @@ export function buildTaskMatchConditions(
 	appSources: string[],
 	timeField: 'completedTime' | 'createdTime' = 'completedTime',
 	intervalStartDate?: string,
-	intervalEndDate?: string
+	intervalEndDate?: string,
+	timezone?: string
 ) {
 	const matchFilter: any = {};
 
@@ -86,13 +90,13 @@ export function buildTaskMatchConditions(
 		const dateConditions: any[] = [];
 
 		// Add first tier date range filter (Filter Sidebar)
-		const firstTierFilter = buildDateRangeFilter(startDate, endDate);
+		const firstTierFilter = buildDateRangeFilter(startDate, endDate, timezone);
 		if (firstTierFilter) {
 			dateConditions.push({ completedTime: firstTierFilter });
 		}
 
 		// Add second tier date range filter (Interval Dropdown)
-		const secondTierFilter = buildDateRangeFilter(intervalStartDate, intervalEndDate);
+		const secondTierFilter = buildDateRangeFilter(intervalStartDate, intervalEndDate, timezone);
 		if (secondTierFilter) {
 			dateConditions.push({ completedTime: secondTierFilter });
 		}

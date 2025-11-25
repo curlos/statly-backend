@@ -41,7 +41,8 @@ async function executeCompletedTasksAggregation(
 		params.toDoListAppSources,
 		'completedTime',
 		params.intervalStartDate,
-		params.intervalEndDate
+		params.intervalEndDate,
+		params.timezone
 	);
 
 	// Build aggregation pipeline
