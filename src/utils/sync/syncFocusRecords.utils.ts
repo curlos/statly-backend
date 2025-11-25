@@ -20,9 +20,9 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 	const lastSyncTime = syncMetadata.lastSyncTime;
 	const focusRecords = await fetchTickTickFocusRecords();
 
-	// Calculate the cutoff date (30 days before last sync)
-	const thirtyDaysBeforeLastSync = new Date(lastSyncTime);
-	thirtyDaysBeforeLastSync.setDate(thirtyDaysBeforeLastSync.getDate() - 30);
+	// Calculate the cutoff date (3 days before last sync)
+	const threeDaysBeforeLastSync = new Date(lastSyncTime);
+	threeDaysBeforeLastSync.setDate(threeDaysBeforeLastSync.getDate() - 3);
 
 	// Check if we should analyze emotions (do this early to avoid unnecessary work)
 	const userSettings = await UserSettings.findOne({ userId });
@@ -32,7 +32,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 	let existingRecordsMap = new Map<string, { note: string; emotions: any }>();
 	if (shouldAnalyzeEmotions) {
 		const recordIds = focusRecords
-			.filter(r => new Date(r.endTime) >= thirtyDaysBeforeLastSync)
+			.filter(r => new Date(r.endTime) >= threeDaysBeforeLastSync)
 			.map(r => r.id);
 
 		const existingRecords = await FocusRecordTickTick.find({
@@ -48,7 +48,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 	const allTaskIds = new Set<string>();
 	for (const record of focusRecords) {
 		const recordEndTime = new Date(record.endTime);
-		if (recordEndTime >= thirtyDaysBeforeLastSync && record.tasks) {
+		if (recordEndTime >= threeDaysBeforeLastSync && record.tasks) {
 			record.tasks.forEach((task: any) => {
 				if (task.taskId) {
 					allTaskIds.add(task.taskId);
@@ -74,12 +74,14 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 
 	const bulkOps = [];
 	const recordsNeedingEmotionAnalysis: string[] = [];
+	// Cache for crossesMidnight calculations (keyed by start/end day pair)
+	const midnightCache = new Map<string, boolean>();
 
 	for (const record of focusRecords) {
 		const recordEndTime = new Date(record.endTime);
 
-		// Only sync if endTime is within 30 days of last sync
-		if (recordEndTime >= thirtyDaysBeforeLastSync) {
+		// Only sync if endTime is within 3 days of last sync or after.
+		if (recordEndTime >= threeDaysBeforeLastSync) {
 			// Calculate duration and denormalize projectId/ancestorIds for each task
 			const tasksWithDuration = (record.tasks || []).map((task: any) => {
 				const startTime = new Date(task.startTime);
@@ -103,8 +105,16 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 			const pauseDuration = record.pauseDuration || 0; // pauseDuration is already in seconds
 			const realFocusDuration = totalDurationSeconds - pauseDuration; // Subtract pause duration
 
-			// Check if record crosses midnight in user's timezone
-			const crossesMidnight = crossesMidnightInTimezone(startTime, endTime, timezone);
+			// Check if record crosses midnight in user's timezone (with caching)
+			const startDay = Math.floor(startTime.getTime() / 86400000);
+			const endDay = Math.floor(endTime.getTime() / 86400000);
+			const dateKey = `${startDay}_${endDay}`;
+
+			let crossesMidnight = midnightCache.get(dateKey);
+			if (crossesMidnight === undefined) {
+				crossesMidnight = crossesMidnightInTimezone(startTime, endTime, timezone);
+				midnightCache.set(dateKey, crossesMidnight);
+			}
 
 			// Normalize the focus record to match our schema
 			const normalizedRecord = {

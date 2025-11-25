@@ -21,7 +21,7 @@ export const fetchTickTickFocusRecords = async (options: FetchFocusRecordsOption
 
 	const localFocusData = doNotUseMongoDB
 		? localSortedAllFocusData
-		: await FocusRecordTickTick.find().sort({ startTime: -1 }).lean();
+		: await FocusRecordTickTick.find().sort({ startTime: -1 }).limit(21).lean();
 
 	let fromMs = 0;
 	let toMs = farAwayDateInMs;
@@ -50,20 +50,18 @@ export const fetchTickTickFocusRecords = async (options: FetchFocusRecordsOption
 		}
 	}
 
-	const focusDataPomos = await axios.get(`https://api.ticktick.com/api/v2/pomodoros?from=${fromMs}&to=${toMs}`, {
-		headers: {
-			Cookie: cookie,
-		},
-	});
-
-	const focusDataStopwatch = await axios.get(
-		`https://api.ticktick.com/api/v2/pomodoros/timing?from=${fromMs}&to=${toMs}`,
-		{
+	const [focusDataPomos, focusDataStopwatch] = await Promise.all([
+		axios.get(`https://api.ticktick.com/api/v2/pomodoros?from=${fromMs}&to=${toMs}`, {
 			headers: {
 				Cookie: cookie,
 			},
-		}
-	);
+		}),
+		axios.get(`https://api.ticktick.com/api/v2/pomodoros/timing?from=${fromMs}&to=${toMs}`, {
+			headers: {
+				Cookie: cookie,
+			},
+		})
+	]);
 
 	const tickTickOneApiFocusData = [...focusDataPomos.data, ...focusDataStopwatch.data];
 	const tickTickOneApiFocusDataById = arrayToObjectByKey(tickTickOneApiFocusData, 'id');
