@@ -18,10 +18,12 @@ export async function buildAncestorData(tasks: any[]) {
 		}
 	});
 
-	// Step 2: Fetch ALL ancestor tasks in ONE batch query
+	// Step 2: Fetch ALL ancestor tasks in ONE batch query (only needed fields)
 	const ancestorTasks = await Task.find({
 		id: { $in: Array.from(allAncestorIds) }
-	}).lean();
+	})
+		.select('id title parentId ancestorIds projectId')
+		.lean();
 
 	// Step 3: Build ancestorTasksById map
 	const ancestorTasksById: Record<string, { id: string; title: string; parentId: string | null; ancestorIds: Array<string>; projectId: string | null; }> = {};
