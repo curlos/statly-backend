@@ -150,6 +150,7 @@ export function parseFocusRecordsQueryParams(req: Request) {
 		page: parseInt(req.query.page as string) || 0,
 		limit: parseInt(req.query.limit as string) || 25,
 		sortBy: (req.query['sort-by'] as string) || 'Newest',
+		showEmotionCount: req.query['show-emotion-count'] === 'true',
 	};
 }
 

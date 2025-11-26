@@ -42,7 +42,8 @@ async function executeQuery(
 	skip: number,
 	limit: number,
 	startDateBoundary: Date | null = null,
-	endDateBoundary: Date | null = null
+	endDateBoundary: Date | null = null,
+	needEmotionCalculations: boolean = true
 ) {
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
 
@@ -97,62 +98,75 @@ async function executeQuery(
 		];
 	}
 
+	// Build paginated records pipeline
+	const paginatedRecordsPipeline: any[] = [];
+
+	// Only add firstEmotionScore field if sorting by emotional intensity
+	const isSortingByEmotions = sortCriteria.firstEmotionScore !== undefined;
+	if (isSortingByEmotions) {
+		paginatedRecordsPipeline.push({
+			$addFields: {
+				firstEmotionScore: {
+					$ifNull: [
+						{ $arrayElemAt: ["$emotions.score", 0] },
+						0
+					]
+				}
+			}
+		});
+	}
+
+	paginatedRecordsPipeline.push(
+		{ $sort: sortCriteria },
+		{ $skip: skip },
+		{ $limit: limit }
+	);
+
+	// Build $facet stages object conditionally
+	const facetStages: any = {
+		// Get paginated focus records
+		paginatedFocusRecords: paginatedRecordsPipeline,
+
+		// Calculate totals (count and durations)
+		totals: totalsPipeline,
+	};
+
+	// Only add emotion calculations if needed
+	if (needEmotionCalculations) {
+		facetStages.emotionCounts = [
+			{ $unwind: { path: '$emotions', preserveNullAndEmptyArrays: false } },
+			{
+				$group: {
+					_id: '$emotions.emotion',
+					count: { $sum: 1 }
+				}
+			},
+			{
+				$project: {
+					_id: 0,
+					emotion: '$_id',
+					count: 1
+				}
+			}
+		];
+
+		facetStages.noEmotionCount = [
+			{
+				$match: {
+					$or: [
+						{ emotions: [] },
+						{ emotions: null },
+						{ emotions: { $exists: false } }
+					]
+				}
+			},
+			{ $count: 'count' }
+		];
+	}
+
 	// Use $facet to run all aggregations in parallel within a single query
 	basePipeline.push({
-		$facet: {
-			// Get paginated focus records
-			paginatedFocusRecords: [
-				// Add first emotion score field for emotion-based sorting
-				{
-					$addFields: {
-						firstEmotionScore: {
-							$ifNull: [
-								{ $arrayElemAt: ["$emotions.score", 0] },
-								0
-							]
-						}
-					}
-				},
-				{ $sort: sortCriteria },
-				{ $skip: skip },
-				{ $limit: limit }
-			],
-
-			// Calculate totals (count and durations)
-			totals: totalsPipeline,
-
-			// Calculate emotion counts
-			emotionCounts: [
-				{ $unwind: { path: '$emotions', preserveNullAndEmptyArrays: false } },
-				{
-					$group: {
-						_id: '$emotions.emotion',
-						count: { $sum: 1 }
-					}
-				},
-				{
-					$project: {
-						_id: 0,
-						emotion: '$_id',
-						count: 1
-					}
-				}
-			],
-
-			// Count records with no emotions
-			noEmotionCount: [
-				{
-					$match: {
-						$or: [
-							{ emotions: [] },
-							{ emotions: null },
-							{ emotions: { $exists: false } }
-						]
-					}
-				},
-				{ $count: 'count' }
-			]
-		}
+		$facet: facetStages
 	});
 
 	// Execute the combined query (1 database call instead of 4)
@@ -168,17 +182,20 @@ async function executeQuery(
 	const totalDuration = totalsResult[0]?.totalDuration || 0;
 	const onlyTasksTotalDuration = totalsResult[0]?.onlyTasksTotalDuration || 0;
 
-	// Extract emotion counts
-	const emotionCountResult = facetResult.emotionCounts || [];
-	const emotionCounts = emotionCountResult.reduce((acc: Record<string, number>, item: any) => {
-		acc[item.emotion] = item.count;
-		return acc;
-	}, {} as Record<string, number>);
+	// Extract emotion counts (only if they were calculated)
+	let emotionCounts: Record<string, number> = {};
+	if (needEmotionCalculations) {
+		const emotionCountResult = facetResult.emotionCounts || [];
+		emotionCounts = emotionCountResult.reduce((acc: Record<string, number>, item: any) => {
+			acc[item.emotion] = item.count;
+			return acc;
+		}, {} as Record<string, number>);
 
-	// Add no emotion count if exists
-	const noEmotionCountResult = facetResult.noEmotionCount || [];
-	if (noEmotionCountResult.length > 0 && noEmotionCountResult[0].count > 0) {
-		emotionCounts['none'] = noEmotionCountResult[0].count;
+		// Add no emotion count if exists
+		const noEmotionCountResult = facetResult.noEmotionCount || [];
+		if (noEmotionCountResult.length > 0 && noEmotionCountResult[0].count > 0) {
+			emotionCounts['none'] = noEmotionCountResult[0].count;
+		}
 	}
 
 	return {
@@ -210,6 +227,7 @@ export interface FocusRecordsQueryParams {
 	emotions: string[]; // Emotions filter
 	crossesMidnight?: boolean;
 	timezone?: string;
+	showEmotionCount?: boolean; // User setting to show emotion counts
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams) {
@@ -244,6 +262,9 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 		endDateBoundary.setDate(endDateBoundary.getDate() + 1);
 	}
 
+	// Determine if we need emotion calculations based on user settings
+	const needEmotionCalculations = params.showEmotionCount === true;
+
 	// Execute unified query (conditionally adds stages based on filters)
 	const { focusRecords, total, totalDuration, onlyTasksTotalDuration, emotionCounts } = await executeQuery(
 		searchFilter,
@@ -253,7 +274,8 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 		skip,
 		params.limit,
 		startDateBoundary,
-		endDateBoundary
+		endDateBoundary,
+		needEmotionCalculations
 	);
 
 	// Add ancestor tasks and completed tasks
