@@ -180,7 +180,8 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
 				$lte: new Date(mergedRanges[0].end)
 			}
 		})
-		.select('title completedTime')
+		.sort({ completedTime: 1 })
+		.select('title completedTime -_id')
 		.lean();
 		allCompletedTasks = tasks;
 	} else {
@@ -195,7 +196,8 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
 		}));
 
 		const tasks = await Task.find({ $or: orConditions })
-			.select('title completedTime')
+			.sort({ completedTime: 1 })
+			.select('title completedTime -_id')
 			.lean();
 		allCompletedTasks = tasks;
 	}
@@ -231,6 +233,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
 		}
 
 		// Collect tasks only from relevant dates and filter by time
+		// Note: Tasks are already sorted by completedTime from the DB query
 		const completedTasks: any[] = [];
 		relevantDates.forEach(dateKey => {
 			const tasksForDate = tasksByDate.get(dateKey) || [];
@@ -242,12 +245,14 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
 			});
 		});
 
-		// Sort by completedTime ascending
-		completedTasks.sort((a, b) => new Date(a.completedTime).getTime() - new Date(b.completedTime).getTime());
+		// Remove completedTime from tasks before adding to focus record (frontend only needs title)
+		const completedTasksForResponse = completedTasks.map(task => ({
+			title: task.title
+		}));
 
 		return {
 			...record,
-			completedTasks
+			completedTasks: completedTasksForResponse
 		};
 	});
 

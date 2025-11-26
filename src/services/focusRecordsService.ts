@@ -119,7 +119,22 @@ async function executeQuery(
 	paginatedRecordsPipeline.push(
 		{ $sort: sortCriteria },
 		{ $skip: skip },
-		{ $limit: limit }
+		{ $limit: limit },
+		// Only select fields that are used by the frontend
+		{
+			$project: {
+				id: 1,
+				startTime: 1,
+				endTime: 1,
+				duration: 1,
+				note: 1,
+				crossesMidnight: 1,
+				completedTasks: 1,
+				emotions: 1,
+				tasks: 1,
+				pauseDuration: 1
+			}
+		}
 	);
 
 	// Build $facet stages object conditionally
