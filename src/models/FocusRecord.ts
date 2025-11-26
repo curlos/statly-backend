@@ -93,6 +93,12 @@ const BaseFocusRecordSchema = new Schema({
 	timestamps: false
 });
 
+// Add compound indexes for common query patterns
+BaseFocusRecordSchema.index({ startTime: -1, source: 1 });
+BaseFocusRecordSchema.index({ startTime: -1, 'tasks.projectId': 1 });
+BaseFocusRecordSchema.index({ startTime: -1, 'tasks.taskId': 1 });
+BaseFocusRecordSchema.index({ startTime: -1, crossesMidnight: 1 });
+
 // Create base model
 const FocusRecord = mongoose.model('FocusRecord', BaseFocusRecordSchema);
 
