@@ -5,8 +5,6 @@ import {
 	buildFocusSearchFilter,
 	buildFocusMatchAndFilterConditions,
 	buildFocusBasePipeline,
-	buildFocusTotalsCalculationPipeline,
-	extractFocusTotalsFromResult,
 	addTaskFilteringAndDurationRecalculation,
 } from '../utils/focusFilterBuilders.utils';
 
@@ -48,94 +46,137 @@ async function executeQuery(
 ) {
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
 
-	// Build main query pipeline
-	const queryPipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
+	// Build base pipeline with filters and adjustments
+	const basePipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
 
 	// Add stage to adjust durations for records that cross midnight beyond date boundaries
 	if (startDateBoundary || endDateBoundary) {
-		addMidnightRecordDurationAdjustment(queryPipeline, startDateBoundary, endDateBoundary);
+		addMidnightRecordDurationAdjustment(basePipeline, startDateBoundary, endDateBoundary);
 	}
 
 	// Add task filtering and duration recalculation (preserves original duration)
-	addTaskFilteringAndDurationRecalculation(queryPipeline, taskFilterConditions, true);
+	addTaskFilteringAndDurationRecalculation(basePipeline, taskFilterConditions, true);
 
-	// Add first emotion score field for emotion-based sorting
-	// emotions[0].score represents the highest scoring emotion
-	queryPipeline.push({
-		$addFields: {
-			firstEmotionScore: {
-				$ifNull: [
-					{ $arrayElemAt: ["$emotions.score", 0] },
-					0
-				]
+	// Build the totals pipeline based on whether we have task/project filters
+	let totalsPipeline: any[];
+	if (hasTaskOrProjectFilters) {
+		// Filtered case: use originalDuration and recalculated duration
+		totalsPipeline = [
+			{
+				$group: {
+					_id: null,
+					total: { $sum: 1 },
+					totalDuration: { $sum: "$originalDuration" },
+					onlyTasksTotalDuration: { $sum: "$duration" }
+				}
 			}
+		];
+	} else {
+		// No filters: need to calculate base duration AND tasks duration
+		// Add a field to store the sum of all task durations
+		totalsPipeline = [
+			{
+				$addFields: {
+					tasksDurationSum: {
+						$reduce: {
+							input: "$tasks",
+							initialValue: 0,
+							in: { $add: ["$$value", "$$this.duration"] }
+						}
+					}
+				}
+			},
+			{
+				$group: {
+					_id: null,
+					total: { $sum: 1 },
+					totalDuration: { $sum: "$duration" },
+					onlyTasksTotalDuration: { $sum: "$tasksDurationSum" }
+				}
+			}
+		];
+	}
+
+	// Use $facet to run all aggregations in parallel within a single query
+	basePipeline.push({
+		$facet: {
+			// Get paginated focus records
+			paginatedFocusRecords: [
+				// Add first emotion score field for emotion-based sorting
+				{
+					$addFields: {
+						firstEmotionScore: {
+							$ifNull: [
+								{ $arrayElemAt: ["$emotions.score", 0] },
+								0
+							]
+						}
+					}
+				},
+				{ $sort: sortCriteria },
+				{ $skip: skip },
+				{ $limit: limit }
+			],
+
+			// Calculate totals (count and durations)
+			totals: totalsPipeline,
+
+			// Calculate emotion counts
+			emotionCounts: [
+				{ $unwind: { path: '$emotions', preserveNullAndEmptyArrays: false } },
+				{
+					$group: {
+						_id: '$emotions.emotion',
+						count: { $sum: 1 }
+					}
+				},
+				{
+					$project: {
+						_id: 0,
+						emotion: '$_id',
+						count: 1
+					}
+				}
+			],
+
+			// Count records with no emotions
+			noEmotionCount: [
+				{
+					$match: {
+						$or: [
+							{ emotions: [] },
+							{ emotions: null },
+							{ emotions: { $exists: false } }
+						]
+					}
+				},
+				{ $count: 'count' }
+			]
 		}
 	});
 
-	queryPipeline.push({ $sort: sortCriteria });
-	queryPipeline.push({ $skip: skip });
-	queryPipeline.push({ $limit: limit });
+	// Execute the combined query (1 database call instead of 4)
+	const result = await FocusRecordTickTick.aggregate(basePipeline);
 
-	const focusRecords = await FocusRecordTickTick.aggregate(queryPipeline);
+	// Extract results from facet
+	const facetResult = result[0];
+	const focusRecords = facetResult.paginatedFocusRecords || [];
 
-	// Build count and duration pipeline (using extracted function)
-	const basePipelineForTotals = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
+	// Extract totals (same structure for both filtered and non-filtered cases now)
+	const totalsResult = facetResult.totals || [];
+	const total = totalsResult[0]?.total || 0;
+	const totalDuration = totalsResult[0]?.totalDuration || 0;
+	const onlyTasksTotalDuration = totalsResult[0]?.onlyTasksTotalDuration || 0;
 
-	// Add the same duration adjustment logic for the count/duration pipeline
-	if (startDateBoundary || endDateBoundary) {
-		addMidnightRecordDurationAdjustment(basePipelineForTotals, startDateBoundary, endDateBoundary);
-	}
-
-	// Use extracted function to build totals calculation pipeline
-	const countAndDurationPipeline = buildFocusTotalsCalculationPipeline(basePipelineForTotals, taskFilterConditions);
-	const countAndDurationResult = await FocusRecordTickTick.aggregate(countAndDurationPipeline);
-
-	// Use extracted function to parse the result
-	const { total, totalDuration, onlyTasksTotalDuration } = extractFocusTotalsFromResult(
-		countAndDurationResult,
-		hasTaskOrProjectFilters
-	);
-
-	// Calculate emotion counts
-	const emotionCountPipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
-
-	emotionCountPipeline.push(
-		{ $unwind: { path: '$emotions', preserveNullAndEmptyArrays: false } },
-		{
-			$group: {
-				_id: '$emotions.emotion',
-				count: { $sum: 1 }
-			}
-		},
-		{
-			$project: {
-				_id: 0,
-				emotion: '$_id',
-				count: 1
-			}
-		}
-	);
-
-	const emotionCountResult = await FocusRecordTickTick.aggregate(emotionCountPipeline);
-	const emotionCounts = emotionCountResult.reduce((acc, item) => {
+	// Extract emotion counts
+	const emotionCountResult = facetResult.emotionCounts || [];
+	const emotionCounts = emotionCountResult.reduce((acc: Record<string, number>, item: any) => {
 		acc[item.emotion] = item.count;
 		return acc;
 	}, {} as Record<string, number>);
 
-	// Count records with no emotions
-	const noEmotionCountPipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
-	noEmotionCountPipeline.push({
-		$match: {
-			$or: [
-				{ emotions: [] },
-				{ emotions: null },
-				{ emotions: { $exists: false } }
-			]
-		}
-	});
-	noEmotionCountPipeline.push({ $count: 'count' });
-
-	const noEmotionCountResult = await FocusRecordTickTick.aggregate(noEmotionCountPipeline);
+	// Add no emotion count if exists
+	const noEmotionCountResult = facetResult.noEmotionCount || [];
 	if (noEmotionCountResult.length > 0 && noEmotionCountResult[0].count > 0) {
 		emotionCounts['none'] = noEmotionCountResult[0].count;
 	}
