@@ -51,9 +51,6 @@ export async function getOverviewStats(params: OverviewStatsQueryParams): Promis
 		? { $and: [searchFilter, allTasksFilter] }
 		: allTasksFilter;
 
-	// Count all tasks with filters
-	const numOfAllTasks = await Task.countDocuments(allTasksQuery);
-
 	// Build filter for completed tasks (defaults to completedTime with date filtering)
 	const completedTasksFilter = buildTaskMatchConditions(
 		params.taskId,
@@ -73,9 +70,6 @@ export async function getOverviewStats(params: OverviewStatsQueryParams): Promis
 		? { $and: [searchFilter, completedTasksFilter] }
 		: completedTasksFilter;
 
-	// Count completed tasks with filters
-	const numOfCompletedTasks = await Task.countDocuments(completedTasksQuery);
-
 	// Build filter for projects
 	const projectFilter: any = {};
 
@@ -84,8 +78,29 @@ export async function getOverviewStats(params: OverviewStatsQueryParams): Promis
 		projectFilter.id = { $in: params.projectIds };
 	}
 
-	// Count projects with filters
-	const numOfProjects = await Project.countDocuments(projectFilter);
+	// Optimization: Run task counts and project count in parallel
+	// Use $facet to combine both task count queries into one aggregation
+	const [taskCountsResult, numOfProjects] = await Promise.all([
+		Task.aggregate([
+			{
+				$facet: {
+					allTasks: [
+						{ $match: allTasksQuery },
+						{ $count: 'count' }
+					],
+					completedTasks: [
+						{ $match: completedTasksQuery },
+						{ $count: 'count' }
+					]
+				}
+			}
+		]),
+		Project.countDocuments(projectFilter)
+	]);
+
+	// Extract counts from aggregation results
+	const numOfAllTasks = taskCountsResult[0]?.allTasks[0]?.count || 0;
+	const numOfCompletedTasks = taskCountsResult[0]?.completedTasks[0]?.count || 0;
 
 	return {
 		numOfAllTasks,
