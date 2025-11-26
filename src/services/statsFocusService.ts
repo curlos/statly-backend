@@ -152,37 +152,43 @@ function buildTotalsPipelineStages(taskFilterConditions: any[] = []): any[] {
 }
 
 /**
- * Shared helper to aggregate task-level data and fetch ancestor information.
- * Used by both groupByTask and groupByProject (when nested=true).
+ * Returns the aggregation stages needed to group tasks by taskId.
+ * Use this in a $facet to fetch task data in parallel with other aggregations.
  */
-async function aggregateTaskData(pipeline: any[], totalDuration: number) {
-	// Build task-level aggregation
-	const taskPipeline = [...pipeline];
-	taskPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
-	taskPipeline.push({
-		$group: {
-			_id: "$tasks.taskId",
-			taskName: { $first: "$tasks.title" },
-			projectId: { $first: "$tasks.projectId" },
-			source: { $first: "$source" },
-			duration: { $sum: "$tasks.duration" },
-			count: { $sum: 1 }
-		}
-	});
-	taskPipeline.push({ $sort: { duration: -1 } });
+function getTaskAggregationStages() {
+	return [
+		{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+		{
+			$group: {
+				_id: "$tasks.taskId",
+				taskName: { $first: "$tasks.title" },
+				projectId: { $first: "$tasks.projectId" },
+				source: { $first: "$source" },
+				duration: { $sum: "$tasks.duration" },
+				count: { $sum: 1 }
+			}
+		},
+		{ $sort: { duration: -1 } }
+	];
+}
 
-	const taskResults = await FocusRecordTickTick.aggregate(taskPipeline);
-
+/**
+ * Processes task aggregation results that were already fetched (e.g., from a $facet).
+ * Fetches actual task names and ancestor data for TickTick tasks.
+ */
+async function processTaskData(taskResults: any[], totalDuration: number) {
 	// Fetch actual task data from MongoDB for TickTick tasks
 	const tickTickTaskIds = taskResults
-		.filter(r => r.source === 'FocusRecordTickTick')
-		.map(r => r._id);
+		.filter((r: any) => r.source === 'FocusRecordTickTick')
+		.map((r: any) => r._id);
 
 	let actualTaskNames: Record<string, string> = {};
 	let ancestorTasksById: Record<string, any> = {};
 
 	if (tickTickTaskIds.length > 0) {
-		const tasks = await Task.find({ id: { $in: tickTickTaskIds } }).lean();
+		const tasks = await Task.find({ id: { $in: tickTickTaskIds } })
+			.select('id title parentId ancestorIds projectId')
+			.lean();
 
 		actualTaskNames = tasks.reduce((acc, task) => {
 			acc[task.id] = task.title;
@@ -204,7 +210,7 @@ async function aggregateTaskData(pipeline: any[], totalDuration: number) {
 	}
 
 	// Map results to formatted task data
-	const byTask = taskResults.map(r => {
+	const byTask = taskResults.map((r: any) => {
 		const taskName = (r.source === 'FocusRecordTickTick' && actualTaskNames[r._id])
 			? actualTaskNames[r._id]
 			: r.taskName || 'Unknown Task';
@@ -448,29 +454,34 @@ async function groupByYear(pipeline: any[], startDate?: string, endDate?: string
 
 async function groupByProject(pipeline: any[], taskFilterConditions: any[] = [], nested: boolean = false) {
 	// Use $facet to calculate totals and group by project in a single query
-	pipeline.push({
-		$facet: {
-			// Calculate totals using task-level durations
-			totals: buildTotalsPipelineStages(taskFilterConditions),
+	const facetStages: any = {
+		// Calculate totals using task-level durations
+		totals: buildTotalsPipelineStages(taskFilterConditions),
 
-			// Unwind tasks array to access project information
-			byProject: [
-				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
-				// Group by project for TickTick/Session, or by source for other apps
-				// Use a composite key: if projectId exists, use it; otherwise use source
-				{
-					$group: {
-						_id: {
-							projectId: "$tasks.projectId",
-							source: "$source"
-						},
-						duration: { $sum: "$tasks.duration" },
-					}
-				},
-				{ $sort: { duration: -1 } }
-			]
-		}
-	});
+		// Unwind tasks array to access project information
+		byProject: [
+			{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+			// Group by project for TickTick/Session, or by source for other apps
+			// Use a composite key: if projectId exists, use it; otherwise use source
+			{
+				$group: {
+					_id: {
+						projectId: "$tasks.projectId",
+						source: "$source"
+					},
+					duration: { $sum: "$tasks.duration" },
+				}
+			},
+			{ $sort: { duration: -1 } }
+		]
+	};
+
+	// If nested, also fetch task-level data in the same query
+	if (nested) {
+		facetStages.byTask = getTaskAggregationStages();
+	}
+
+	pipeline.push({ $facet: facetStages });
 
 	const result = await FocusRecordTickTick.aggregate(pipeline);
 	const facetResult = result[0];
@@ -498,11 +509,9 @@ async function groupByProject(pipeline: any[], taskFilterConditions: any[] = [],
 		})
 	};
 
-	// If nested, also fetch task-level data and ancestorTasksById
+	// If nested, process the task results that were fetched in the same query
 	if (nested) {
-		// Need to rebuild base pipeline without $facet for nested aggregation
-		const basePipeline = pipeline.slice(0, -1); // Remove the $facet stage
-		const { byTask, ancestorTasksById } = await aggregateTaskData(basePipeline, totalDuration);
+		const { byTask, ancestorTasksById } = await processTaskData(facetResult.byTask, totalDuration);
 		response.byTask = byTask;
 		response.ancestorTasksById = ancestorTasksById;
 	}
@@ -511,11 +520,13 @@ async function groupByProject(pipeline: any[], taskFilterConditions: any[] = [],
 }
 
 async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], nested: boolean = false) {
-	// Use $facet to calculate totals (task data requires separate aggregation)
+	// Use $facet to calculate totals and fetch task data in a single query
 	pipeline.push({
 		$facet: {
 			// Calculate totals using task-level durations
-			totals: buildTotalsPipelineStages(taskFilterConditions)
+			totals: buildTotalsPipelineStages(taskFilterConditions),
+			// Fetch task-level aggregation data
+			byTask: getTaskAggregationStages()
 		}
 	});
 
@@ -525,27 +536,25 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 	const totalRecords = facetResult.totals[0]?.total || 0;
 	const totalDuration = facetResult.totals[0]?.totalDuration || 0;
 
+	// Process the task results that were fetched in the same query
+	const { byTask, ancestorTasksById } = await processTaskData(facetResult.byTask, totalDuration);
+
 	const response: any = {
 		summary: {
 			totalDuration,
 			totalRecords,
 			dateRange: { start: null, end: null }
-		}
+		},
+		byTask,
+		ancestorTasksById
 	};
-
-	// Use shared helper to aggregate task data (requires separate query)
-	const basePipeline = pipeline.slice(0, -1); // Remove the $facet stage
-	const { byTask, ancestorTasksById } = await aggregateTaskData(basePipeline, totalDuration);
-	response.byTask = byTask;
-	response.ancestorTasksById = ancestorTasksById;
 
 	return response;
 }
 
 async function aggregateProjectAndTaskDataByEmotion(basePipeline: any[], emotions: string[], totalDuration: number) {
-	const byEmotionWithTasks: any = {};
-
-	for (const emotion of emotions) {
+	// Run all emotion queries in parallel for better performance
+	const emotionPromises = emotions.map(async (emotion) => {
 		// Create emotion-filtered pipeline
 		const emotionPipeline = [...basePipeline];
 
@@ -570,23 +579,30 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: any[], emotion
 			});
 		}
 
-		// Aggregate projects for this emotion
-		const projectPipeline = [...emotionPipeline];
-		projectPipeline.push({ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } });
-		projectPipeline.push({
-			$group: {
-				_id: {
-					projectId: "$tasks.projectId",
-					source: "$source"
-				},
-				duration: { $sum: "$tasks.duration" },
+		// Use $facet to aggregate both projects and tasks in a single query
+		emotionPipeline.push({
+			$facet: {
+				byProject: [
+					{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+					{
+						$group: {
+							_id: {
+								projectId: "$tasks.projectId",
+								source: "$source"
+							},
+							duration: { $sum: "$tasks.duration" },
+						}
+					},
+					{ $sort: { duration: -1 } }
+				],
+				byTask: getTaskAggregationStages()
 			}
 		});
-		projectPipeline.push({ $sort: { duration: -1 } });
 
-		const projectResults = await FocusRecordTickTick.aggregate(projectPipeline);
+		const result = await FocusRecordTickTick.aggregate(emotionPipeline);
+		const facetResult = result[0];
 
-		const byProject = projectResults.map(r => {
+		const byProject = facetResult.byProject.map((r: any) => {
 			const percentage = totalDuration > 0 ? (r.duration / totalDuration) * 100 : 0;
 			const projectId = r._id.projectId || r._id.source;
 
@@ -598,15 +614,27 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: any[], emotion
 			};
 		});
 
-		// Aggregate tasks for this emotion
-		const { byTask, ancestorTasksById } = await aggregateTaskData(emotionPipeline, totalDuration);
+		// Process the task results that were fetched in the same query
+		const { byTask, ancestorTasksById } = await processTaskData(facetResult.byTask, totalDuration);
 
-		byEmotionWithTasks[emotion] = {
-			byProject,
-			byTask,
-			ancestorTasksById
+		return {
+			emotion,
+			data: {
+				byProject,
+				byTask,
+				ancestorTasksById
+			}
 		};
-	}
+	});
+
+	// Wait for all emotion queries to complete in parallel
+	const emotionResults = await Promise.all(emotionPromises);
+
+	// Convert array of results back to object keyed by emotion
+	const byEmotionWithTasks: any = {};
+	emotionResults.forEach(({ emotion, data }) => {
+		byEmotionWithTasks[emotion] = data;
+	});
 
 	return byEmotionWithTasks;
 }
@@ -686,7 +714,7 @@ async function groupByEmotion(pipeline: any[], taskFilterConditions: any[] = [],
 	// If nested, fetch emotion-specific project and task data
 	if (nested) {
 		const emotions = results.map((r: any) => r._id); // Get list of emotion names
-		// Note: This still uses a separate query per emotion - could be optimized further in the future
+		// Note: Runs 1 query per emotion in parallel (projects + tasks via $facet, all emotions simultaneously)
 		// Pass the clean pipeline (without $facet) to allow further aggregation
 		const byEmotionWithTasks = await aggregateProjectAndTaskDataByEmotion(cleanPipeline, emotions, totalDuration);
 		response.byEmotionWithTasks = byEmotionWithTasks;
