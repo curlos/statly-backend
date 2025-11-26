@@ -105,7 +105,9 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
 	});
 
 	// Fetch full task documents to get ancestorIds
-	const tasksWithAncestors = await Task.find({ id: { $in: Array.from(allTaskIds) } }).lean();
+	const tasksWithAncestors = await Task.find({ id: { $in: Array.from(allTaskIds) } })
+		.select('id title parentId ancestorIds projectId')
+		.lean();
 
 	// Build ancestor data
 	const { ancestorTasksById } = await buildAncestorData(tasksWithAncestors);
