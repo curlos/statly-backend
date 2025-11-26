@@ -5,10 +5,13 @@ import { verifyToken } from '../../middleware/verifyToken';
 
 const router = express.Router();
 
-// GET /projects - Returns all projects
+// GET /projects - Returns all projects with only necessary fields
 router.get('/', verifyToken, async (_req, res) => {
 	try {
-		const projects = await Project.find({});
+		// Only select fields actually used by frontend (reduces payload by ~90%)
+		const projects = await Project.find({})
+			.select('id name color closed groupId source')
+			.lean();
 		res.status(200).json(projects);
 	} catch (error) {
 		res.status(500).json({
@@ -17,10 +20,13 @@ router.get('/', verifyToken, async (_req, res) => {
 	}
 });
 
-// GET /project-groups - Returns all project groups
+// GET /project-groups - Returns all project groups with only necessary fields
 router.get('/project-groups', verifyToken, async (_req, res) => {
 	try {
-		const projectGroups = await ProjectGroupTickTick.find({});
+		// Only select fields actually used by frontend (id and name)
+		const projectGroups = await ProjectGroupTickTick.find({})
+			.select('id name')
+			.lean();
 		res.status(200).json(projectGroups);
 	} catch (error) {
 		res.status(500).json({
