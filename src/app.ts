@@ -58,6 +58,14 @@ app.use(compression());
 
 app.use(express.json()); // Middleware to parse JSON bodies
 
+// Health check endpoint for warmup (no auth required)
+app.get('/health', (req, res) => {
+	res.status(200).json({
+		status: 'ok',
+		timestamp: new Date().toISOString()
+	});
+});
+
 app.use('/documents/focus-records', documentsFocusRecordsRouter);
 app.use('/documents/tasks', documentsTasksRouter);
 app.use('/documents/projects', documentsProjectsRouter);
