@@ -309,8 +309,14 @@ router.post('/session/focus-records', verifyToken, async (req: CustomRequest, re
 router.post('/old-focus-apps/focus-records-tasks-and-projects', verifyToken, async (req: CustomRequest, res) => {
     try {
         const userId = req.user!.userId;
-        // Get timezone from request body (defaults to UTC)
-        const timezone = req.body.timezone || 'UTC';
+        // Get timezone from request body (required)
+        const timezone = req.body.timezone;
+
+        if (!timezone) {
+            return res.status(400).json({
+                message: 'timezone is required'
+            });
+        }
 
         // Run all old focus app sync operations in parallel, including Todoist tasks/projects and Session projects
         const [

@@ -1,4 +1,5 @@
 import SyncMetadata from "../models/SyncMetadataModel";
+import { crossesMidnightInTimezone } from "./timezone.utils";
 
 export const sortArrayByProperty = (array: any[], property: string, type = 'descending') => {
 	// Create a deep copy of the array to avoid modifying the original
@@ -136,4 +137,31 @@ export async function getOrCreateSyncMetadata(userId: string, syncType: string) 
 	}
 
 	return syncMetadata;
+}
+
+/**
+ * Helper function to check if a record crosses midnight with caching
+ * @param startTime - Start time of the record
+ * @param endTime - End time of the record
+ * @param timezone - User's timezone
+ * @param cache - Map to cache results
+ * @returns boolean indicating if record crosses midnight
+ */
+export function getCachedCrossesMidnight(
+	startTime: Date,
+	endTime: Date,
+	timezone: string,
+	cache: Map<string, boolean>
+): boolean {
+	const startDay = Math.floor(startTime.getTime() / 86400000);
+	const endDay = Math.floor(endTime.getTime() / 86400000);
+	const dateKey = `${timezone}_${startDay}_${endDay}`;
+
+	let crossesMidnight = cache.get(dateKey);
+	if (crossesMidnight === undefined) {
+		crossesMidnight = crossesMidnightInTimezone(startTime, endTime, timezone);
+		cache.set(dateKey, crossesMidnight);
+	}
+
+	return crossesMidnight;
 }

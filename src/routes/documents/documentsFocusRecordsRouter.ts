@@ -5,6 +5,7 @@ import { getFocusRecordsHandler, exportFocusRecordsHandler } from '../../control
 import { getFocusMedalsHandler } from '../../controllers/medalsController';
 import { getFocusChallengesHandler } from '../../controllers/challengesController';
 import { getFocusRecordsNeedingSentiment, analyzeNoteEmotionsHandler } from '../../controllers/sentimentBatchController';
+import { revalidateCrossesMidnightHandler } from '../../controllers/crossesMidnightBatchController';
 import FocusRecord from '../../models/FocusRecord';
 
 const router = express.Router();
@@ -15,6 +16,7 @@ router.get('/medals', verifyToken, getFocusMedalsHandler);
 router.get('/challenges', verifyToken, getFocusChallengesHandler);
 router.get('/analyze-sentiment/ids', verifyToken, getFocusRecordsNeedingSentiment);
 router.post('/analyze-note-emotions', verifyToken, analyzeNoteEmotionsHandler);
+router.post('/revalidate-crosses-midnight', verifyToken, revalidateCrossesMidnightHandler);
 
 // GET /all - Returns all focus records with pagination support
 router.get('/all', verifyToken, async (req, res) => {

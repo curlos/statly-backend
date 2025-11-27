@@ -13,6 +13,33 @@ function createDeterministicId(source: string, ...fields: any[]): string {
 	return `${source}-${hash}`;
 }
 
+/**
+ * Helper function to check if a record crosses midnight with caching
+ * @param startTime - Start time of the record
+ * @param endTime - End time of the record
+ * @param timezone - User's timezone
+ * @param cache - Map to cache results
+ * @returns boolean indicating if record crosses midnight
+ */
+function getCachedCrossesMidnight(
+	startTime: Date,
+	endTime: Date,
+	timezone: string,
+	cache: Map<string, boolean>
+): boolean {
+	const startDay = Math.floor(startTime.getTime() / 86400000);
+	const endDay = Math.floor(endTime.getTime() / 86400000);
+	const dateKey = `${timezone}_${startDay}_${endDay}`;
+
+	let crossesMidnight = cache.get(dateKey);
+	if (crossesMidnight === undefined) {
+		crossesMidnight = crossesMidnightInTimezone(startTime, endTime, timezone);
+		cache.set(dateKey, crossesMidnight);
+	}
+
+	return crossesMidnight;
+}
+
 export async function syncTickTickFocusRecords(userId: string, timezone: string = 'UTC') {
 	// Get or create sync metadata for focus records
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickFocusRecords');
@@ -106,15 +133,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 			const realFocusDuration = totalDurationSeconds - pauseDuration; // Subtract pause duration
 
 			// Check if record crosses midnight in user's timezone (with caching)
-			const startDay = Math.floor(startTime.getTime() / 86400000);
-			const endDay = Math.floor(endTime.getTime() / 86400000);
-			const dateKey = `${startDay}_${endDay}`;
-
-			let crossesMidnight = midnightCache.get(dateKey);
-			if (crossesMidnight === undefined) {
-				crossesMidnight = crossesMidnightInTimezone(startTime, endTime, timezone);
-				midnightCache.set(dateKey, crossesMidnight);
-			}
+			const crossesMidnight = getCachedCrossesMidnight(startTime, endTime, timezone, midnightCache);
 
 			// Normalize the focus record to match our schema
 			const normalizedRecord = {
@@ -210,6 +229,9 @@ export async function syncBeFocusedFocusRecords(userId: string, timezone: string
 	// Fetch raw BeFocused data
 	const rawBeFocusedRecords = await fetchBeFocusedAppFocusRecords();
 
+	// Initialize cache for crossesMidnight calculations
+	const midnightCache = new Map<string, boolean>();
+
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawBeFocusedRecords.map((record: any) => {
 		const startDate = new Date(record['Start date']);
@@ -224,8 +246,8 @@ export async function syncBeFocusedFocusRecords(userId: string, timezone: string
 		// Create custom taskId: "TaskName - BeFocused"
 		const taskId = `${assignedTask} - BeFocused`;
 
-		// Check if record crosses midnight in user's timezone
-		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
+		// Check if record crosses midnight in user's timezone (with caching)
+		const crossesMidnight = getCachedCrossesMidnight(startDate, endDate, timezone, midnightCache);
 		const focusAppSource = 'FocusRecordBeFocused'
 
 		return {
@@ -280,6 +302,9 @@ export async function syncForestFocusRecords(userId: string, timezone: string = 
 	// Fetch raw Forest data
 	const rawForestRecords = await fetchForestAppFocusRecords(true);
 
+	// Initialize cache for crossesMidnight calculations
+	const midnightCache = new Map<string, boolean>();
+
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawForestRecords.map((record: any) => {
 		const startDate = new Date(record['Start Time']);
@@ -296,8 +321,8 @@ export async function syncForestFocusRecords(userId: string, timezone: string = 
 		// Create custom taskId: "Tag - Forest"
 		const taskId = `${tag} - Forest`;
 
-		// Check if record crosses midnight in user's timezone
-		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
+		// Check if record crosses midnight in user's timezone (with caching)
+		const crossesMidnight = getCachedCrossesMidnight(startDate, endDate, timezone, midnightCache);
 
 		const focusAppSource = 'FocusRecordForest'
 
@@ -356,6 +381,9 @@ export async function syncTideFocusRecords(userId: string, timezone: string = 'U
 	// Fetch raw Tide data
 	const rawTideRecords = await fetchTideAppFocusRecords();
 
+	// Initialize cache for crossesMidnight calculations
+	const midnightCache = new Map<string, boolean>();
+
 	// Helper function to parse duration string (e.g., "1h50m", "35m", "3m")
 	const parseDuration = (durationStr: string): number => {
 		let totalSeconds = 0;
@@ -385,8 +413,8 @@ export async function syncTideFocusRecords(userId: string, timezone: string = 'U
 		// Create custom taskId: "Name - Tide"
 		const taskId = `${name} - Tide`;
 
-		// Check if record crosses midnight in user's timezone
-		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
+		// Check if record crosses midnight in user's timezone (with caching)
+		const crossesMidnight = getCachedCrossesMidnight(startDate, endDate, timezone, midnightCache);
 
 		const focusAppSource = 'FocusRecordTide'
 
@@ -441,6 +469,9 @@ export async function syncSessionFocusRecords(userId: string, timezone: string =
 
 	// Fetch raw Session data
 	const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
+
+	// Initialize cache for crossesMidnight calculations
+	const midnightCache = new Map<string, boolean>();
 
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawSessionRecords.map((record: any) => {
@@ -507,8 +538,8 @@ export async function syncSessionFocusRecords(userId: string, timezone: string =
 			});
 		}
 
-		// Check if record crosses midnight in user's timezone
-		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
+		// Check if record crosses midnight in user's timezone (with caching)
+		const crossesMidnight = getCachedCrossesMidnight(startDate, endDate, timezone, midnightCache);
 
 		// Create deterministic ID using the parsed variables
 		const id = createDeterministicId('session', startDate.toISOString(), endDate.toISOString(), totalDurationInSeconds.toString(), title);
