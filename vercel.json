@@ -1,9 +1,11 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/index.ts", "use": "@vercel/node" }
+    { "src": "api/index.ts", "use": "@vercel/node" },
+    { "src": "api/warmup.ts", "use": "@vercel/node" }
   ],
   "routes": [
+    { "src": "/api/warmup", "dest": "api/warmup.ts" },
     { "src": "/(.*)", "dest": "api/index.ts" }
   ]
 }
