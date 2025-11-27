@@ -54,6 +54,10 @@ const BaseTaskSchema = new Schema({
 	timestamps: false
 });
 
+// Add compound index for optimal query performance
+// Query pattern: completedTime (range) + source (equality) + projectId (equality)
+BaseTaskSchema.index({ completedTime: 1, source: 1, projectId: 1 });
+
 // Create base model
 const Task = mongoose.model('Task', BaseTaskSchema);
 
