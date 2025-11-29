@@ -10,7 +10,8 @@ import { BaseQueryParams } from '../utils/queryParams.utils';
 // ============================================================================
 
 export interface OverviewStatsQueryParams extends BaseQueryParams {
-	// No additional fields needed - using base query params
+	skipTodayStats?: boolean;
+	includeFirstData?: boolean;
 }
 
 export interface OverviewStats {
@@ -18,11 +19,13 @@ export interface OverviewStats {
 	totalCompletedTasksCount: number;
 	totalProjectsCount: number;
 	numOfDaysSinceAccountCreated: number;
-	todayCompletedTasksCount: number;
-	todayFocusRecordCount: number;
-	todayFocusDuration: number;
+	todayCompletedTasksCount?: number;
+	todayFocusRecordCount?: number;
+	todayFocusDuration?: number;
 	totalFocusRecordCount: number;
 	totalFocusDuration: number;
+	firstCompletedTaskDate?: string | null;
+	firstFocusRecordDate?: string | null;
 }
 
 // ============================================================================
@@ -32,7 +35,7 @@ export interface OverviewStats {
 /**
  * Get task statistics using $facet to run all counts in parallel
  */
-async function getTaskStats(params: OverviewStatsQueryParams, todayDateString: string) {
+async function getTaskStats(params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean) {
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
 
 	// Build filter for all tasks
@@ -82,37 +85,48 @@ async function getTaskStats(params: OverviewStatsQueryParams, todayDateString: s
 	const completedTasksQuery = searchFilter ? { $and: [searchFilter, completedTasksFilter] } : completedTasksFilter;
 	const todayCompletedTasksQuery = searchFilter ? { $and: [searchFilter, todayCompletedTasksFilter] } : todayCompletedTasksFilter;
 
+	// Build facet stages based on skipTodayStats
+	const facetStages: any = {
+		allTasks: [
+			{ $match: allTasksQuery },
+			{ $count: 'count' }
+		],
+		completedTasks: [
+			{ $match: completedTasksQuery },
+			{ $count: 'count' }
+		]
+	};
+
+	if (!skipTodayStats) {
+		facetStages.todayCompletedTasks = [
+			{ $match: todayCompletedTasksQuery },
+			{ $count: 'count' }
+		];
+	}
+
 	// Run all task counts in parallel using $facet
 	const [result] = await Task.aggregate([
 		{
-			$facet: {
-				allTasks: [
-					{ $match: allTasksQuery },
-					{ $count: 'count' }
-				],
-				completedTasks: [
-					{ $match: completedTasksQuery },
-					{ $count: 'count' }
-				],
-				todayCompletedTasks: [
-					{ $match: todayCompletedTasksQuery },
-					{ $count: 'count' }
-				]
-			}
+			$facet: facetStages
 		}
 	]);
 
-	return {
+	const stats: any = {
 		totalTasksCount: result?.allTasks[0]?.count || 0,
-		totalCompletedTasksCount: result?.completedTasks[0]?.count || 0,
-		todayCompletedTasksCount: result?.todayCompletedTasks[0]?.count || 0
+		totalCompletedTasksCount: result?.completedTasks[0]?.count || 0
 	};
+
+	if (!skipTodayStats) {
+		stats.todayCompletedTasksCount = result?.todayCompletedTasks[0]?.count || 0;
+	}
+
+	return stats;
 }
 
 /**
  * Get focus record statistics using $facet to run today & all-time stats in parallel
  */
-async function getFocusStats(params: OverviewStatsQueryParams, todayDateString: string) {
+async function getFocusStats(params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean) {
 	// Build search filter
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 
@@ -150,56 +164,67 @@ async function getFocusStats(params: OverviewStatsQueryParams, todayDateString: 
 	const todayFocusQuery = searchFilter ? { $and: [searchFilter, todayFocusMatch] } : todayFocusMatch;
 	const totalFocusQuery = searchFilter ? { $and: [searchFilter, totalFocusMatch] } : totalFocusMatch;
 
-	// Run both focus queries in parallel using $facet
+	// Build facet stages based on skipTodayStats
+	const facetStages: any = {
+		totalStats: [
+			{ $match: totalFocusQuery },
+			{
+				$group: {
+					_id: null,
+					count: { $sum: 1 },
+					duration: {
+						$sum: {
+							$reduce: {
+								input: "$tasks",
+								initialValue: 0,
+								in: { $add: ["$$value", "$$this.duration"] }
+							}
+						}
+					}
+				}
+			}
+		]
+	};
+
+	if (!skipTodayStats) {
+		facetStages.todayStats = [
+			{ $match: todayFocusQuery },
+			{
+				$group: {
+					_id: null,
+					count: { $sum: 1 },
+					duration: {
+						$sum: {
+							$reduce: {
+								input: "$tasks",
+								initialValue: 0,
+								in: { $add: ["$$value", "$$this.duration"] }
+							}
+						}
+					}
+				}
+			}
+		];
+	}
+
+	// Run focus queries in parallel using $facet
 	const [result] = await FocusRecordTickTick.aggregate([
 		{
-			$facet: {
-				todayStats: [
-					{ $match: todayFocusQuery },
-					{
-						$group: {
-							_id: null,
-							count: { $sum: 1 },
-							duration: {
-								$sum: {
-									$reduce: {
-										input: "$tasks",
-										initialValue: 0,
-										in: { $add: ["$$value", "$$this.duration"] }
-									}
-								}
-							}
-						}
-					}
-				],
-				totalStats: [
-					{ $match: totalFocusQuery },
-					{
-						$group: {
-							_id: null,
-							count: { $sum: 1 },
-							duration: {
-								$sum: {
-									$reduce: {
-										input: "$tasks",
-										initialValue: 0,
-										in: { $add: ["$$value", "$$this.duration"] }
-									}
-								}
-							}
-						}
-					}
-				]
-			}
+			$facet: facetStages
 		}
 	]);
 
-	return {
-		todayFocusRecordCount: result?.todayStats[0]?.count || 0,
-		todayFocusDuration: result?.todayStats[0]?.duration || 0,
+	const stats: any = {
 		totalFocusRecordCount: result?.totalStats[0]?.count || 0,
 		totalFocusDuration: result?.totalStats[0]?.duration || 0
 	};
+
+	if (!skipTodayStats) {
+		stats.todayFocusRecordCount = result?.todayStats[0]?.count || 0;
+		stats.todayFocusDuration = result?.todayStats[0]?.duration || 0;
+	}
+
+	return stats;
 }
 
 /**
@@ -214,6 +239,28 @@ async function getProjectStats(params: OverviewStatsQueryParams) {
 
 	const totalProjectsCount = await Project.countDocuments(projectFilter);
 	return { totalProjectsCount };
+}
+
+/**
+ * Get first task completion date and first focus record date
+ */
+async function getFirstData() {
+	// Get first completed task (find tasks with non-null completedTime)
+	const firstCompletedTask = await Task.findOne({ completedTime: { $ne: null } })
+		.sort({ completedTime: 1 })
+		.select('completedTime')
+		.lean();
+
+	// Get first focus record
+	const firstFocusRecord = await FocusRecordTickTick.findOne()
+		.sort({ startTime: 1 })
+		.select('startTime')
+		.lean();
+
+	return {
+		firstCompletedTaskDate: firstCompletedTask?.completedTime || null,
+		firstFocusRecordDate: firstFocusRecord?.startTime || null
+	};
 }
 
 /**
@@ -237,17 +284,36 @@ export async function getOverviewStats(params: OverviewStatsQueryParams): Promis
 		day: 'numeric'
 	});
 
-	// Run all stats queries in parallel
-	const [taskStats, focusStats, projectStats] = await Promise.all([
-		getTaskStats(params, todayDateString),
-		getFocusStats(params, todayDateString),
-		getProjectStats(params)
-	]);
+	const skipTodayStats = params.skipTodayStats || false;
+	const includeFirstData = params.includeFirstData || false;
 
-	return {
+	// Build promises array for parallel execution
+	const promises: Promise<any>[] = [
+		getTaskStats(params, todayDateString, skipTodayStats),
+		getFocusStats(params, todayDateString, skipTodayStats),
+		getProjectStats(params)
+	];
+
+	if (includeFirstData) {
+		promises.push(getFirstData());
+	}
+
+	// Run all stats queries in parallel
+	const results = await Promise.all(promises);
+
+	const [taskStats, focusStats, projectStats, firstData] = results;
+
+	const overviewStats: OverviewStats = {
 		...taskStats,
 		...focusStats,
 		...projectStats,
 		numOfDaysSinceAccountCreated
 	};
+
+	if (includeFirstData && firstData) {
+		overviewStats.firstCompletedTaskDate = firstData.firstCompletedTaskDate;
+		overviewStats.firstFocusRecordDate = firstData.firstFocusRecordDate;
+	}
+
+	return overviewStats;
 }

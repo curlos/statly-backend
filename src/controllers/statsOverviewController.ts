@@ -10,10 +10,18 @@ import { parseBaseQueryParams } from '../utils/queryParams.utils';
 export async function getOverviewStatsHandler(req: Request, res: Response) {
 	try {
 		// Parse base query parameters (filters)
-		const params = parseBaseQueryParams(req);
+		const baseParams = parseBaseQueryParams(req);
+
+		// Parse additional overview-specific params
+		const skipTodayStats = req.query.skipTodayStats === 'true';
+		const includeFirstData = req.query.includeFirstData === 'true';
 
 		// Call service to get overview stats with filters
-		const result = await getOverviewStats(params);
+		const result = await getOverviewStats({
+			...baseParams,
+			skipTodayStats,
+			includeFirstData
+		});
 
 		// Return success response
 		res.status(200).json(result);

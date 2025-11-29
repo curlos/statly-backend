@@ -60,6 +60,7 @@ router.get('/logged-in', async (req, res) => {
 			_id: user._id,
 			email: user.email,
 			name: user.name,
+			createdAt: user.createdAt,
 		});
 	} catch (error) {
 		if (typeof error === 'string') {
