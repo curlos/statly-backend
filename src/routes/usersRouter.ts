@@ -4,6 +4,32 @@ import jwt, { Secret } from 'jsonwebtoken';
 import User from '../models/UserModel';
 import UserSettings from '../models/UserSettingsModel';
 
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const validateEmail = (email: string): boolean => {
+	return EMAIL_REGEX.test(email);
+};
+
+const validatePassword = (password: string): { valid: boolean; message?: string } => {
+	if (password.length < 8) {
+		return { valid: false, message: 'Password must be at least 8 characters long' };
+	}
+	if (!/[a-z]/.test(password)) {
+		return { valid: false, message: 'Password must contain at least one lowercase letter' };
+	}
+	if (!/[A-Z]/.test(password)) {
+		return { valid: false, message: 'Password must contain at least one uppercase letter' };
+	}
+	if (!/\d/.test(password)) {
+		return { valid: false, message: 'Password must contain at least one number' };
+	}
+	if (!/[@$!%*?&]/.test(password)) {
+		return { valid: false, message: 'Password must contain at least one special character (@$!%*?&)' };
+	}
+	return { valid: true };
+};
+
 const router = express.Router();
 
 router.get('/logged-in', async (req, res) => {
@@ -33,7 +59,7 @@ router.get('/logged-in', async (req, res) => {
 		res.json({
 			_id: user._id,
 			email: user.email,
-			nickname: user.nickname,
+			name: user.name,
 		});
 	} catch (error) {
 		if (typeof error === 'string') {
@@ -47,28 +73,52 @@ router.get('/logged-in', async (req, res) => {
 
 router.post('/register', async (req, res) => {
 	try {
-		const { nickname, email, password } = req.body;
+		const { name, email, password } = req.body;
 
-		// Validate input: email and password are required, nickname is optional
-		if (!email || !password) {
-			return res.status(400).json({ message: 'Email and password are required' });
+		// Validate all fields are present
+		if (!name || !email || !password) {
+			return res.status(400).json({ message: 'Name, email, and password are required.' });
 		}
 
-		// Check for existing user by email only (since email needs to be unique)
-		const existingUser = await User.findOne({ email });
+		// Trim and validate name
+		const trimmedName = name.trim();
+		if (trimmedName.length === 0) {
+			return res.status(400).json({ message: 'Name cannot be empty or only whitespace.' });
+		}
+
+		// Trim and validate email format
+		const trimmedEmail = email.trim().toLowerCase();
+		const displayEmail = email.trim(); // Preserve original casing
+		if (!validateEmail(trimmedEmail)) {
+			return res.status(400).json({ message: 'Please provide a valid email address.' });
+		}
+
+		// Validate password strength
+		const passwordValidation = validatePassword(password);
+		if (!passwordValidation.valid) {
+			return res.status(400).json({ message: passwordValidation.message });
+		}
+
+		// Check for existing user by email (using lowercase for comparison)
+		const existingUser = await User.findOne({ email: trimmedEmail });
 		if (existingUser) {
 			return res.status(400).json({ message: 'User with this email already exists' });
 		}
 
-		// Create a new user with the provided email, optional nickname, and password
-		const user = new User({ nickname, email, password });
+		// Create a new user with trimmed/sanitized values
+		const user = new User({
+			name: trimmedName,
+			email: trimmedEmail,
+			displayEmail: displayEmail,
+			password // Will be hashed by pre-save hook
+		});
 		await user.save();
 
 		// Create default settings for the new user
 		const userSettings = new UserSettings({
-			userId: user._id, // Link to the newly created user
+			userId: user._id,
 			habit: {
-				showInTimedSmartLists: true, // Default value, can add more fields as necessary
+				showInTimedSmartLists: true,
 			},
 		});
 		await userSettings.save();
@@ -92,13 +142,19 @@ router.post('/login', async (req, res) => {
 	try {
 		const { email, password } = req.body;
 
-		// Validate input
+		// Validate input presence
 		if (!email || !password) {
 			return res.status(400).json({ message: 'Email and password are required' });
 		}
 
-		// Check if the user exists
-		const user = await User.findOne({ email });
+		// Trim and validate email format
+		const trimmedEmail = email.trim().toLowerCase();
+		if (!validateEmail(trimmedEmail)) {
+			return res.status(400).json({ message: 'Please provide a valid email address.' });
+		}
+
+		// Check if the user exists (using lowercase for comparison)
+		const user = await User.findOne({ email: trimmedEmail });
 		if (!user) {
 			return res.status(401).json({ message: 'Invalid email or password' });
 		}

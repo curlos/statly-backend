@@ -14,11 +14,6 @@ export const verifyToken = (req: CustomRequest, res: Response, next: NextFunctio
 
 	try {
 		const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-
-		if (decoded.userId !== process.env.MONGODB_PERSONAL_TEST_USER_ID) {
-			res.status(401).json({ message: 'Must login with personal test account.' });
-			return
-		}
 		
 		req.user = decoded; // Attach the user payload from the token to the request object
 		next();
