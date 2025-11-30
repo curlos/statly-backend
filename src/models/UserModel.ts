@@ -6,6 +6,7 @@ interface IUser extends Document {
 	displayEmail: string;
 	password: string;
 	name?: string;
+	profilePic?: string;
 	createdAt: Date;
 	updatedAt: Date;
 	isModified(path: string): boolean;
@@ -37,6 +38,10 @@ const userSchema = new Schema<IUser>({
 	password: {
 		type: String,
 		required: true,
+	},
+	profilePic: {
+		type: String,
+		trim: true,
 	},
 }, {
 	timestamps: true
