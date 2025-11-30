@@ -1,20 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 interface IUserSettings extends Document {
-	habit?: {
-		showInTimedSmartLists?: boolean;
-	};
-	calendarViewOptions?: {
-		colorsType?: string;
-		shownTasksFilters?: {
-			showCompleted?: boolean;
-			showCheckItem?: boolean;
-			showAllRepeatCycle?: boolean;
-			showHabit?: boolean;
-			showFocusRecords?: boolean;
-			showWeekends?: boolean;
-		};
-	};
 	theme?: {
 		color?: string;
 		fontFamily?: string;
@@ -71,22 +57,8 @@ interface IUserSettings extends Document {
 const UserSettingsSchema = new Schema(
 	{
 		userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-		habit: {
-			showInTimedSmartLists: { type: Boolean, default: true },
-		},
-		calendarViewOptions: {
-			colorsType: { type: String, default: 'Projects' },
-			shownTasksFilters: {
-				showCompleted: { type: Boolean, default: true },
-				showCheckItem: { type: Boolean, default: true },
-				showAllRepeatCycle: { type: Boolean, default: true },
-				showHabit: { type: Boolean, default: true },
-				showFocusRecords: { type: Boolean, default: true },
-				showWeekends: { type: Boolean, default: true },
-			},
-		},
 		theme: {
-			color: { type: String },
+			color: { type: String, default: 'blue-500' },
 			fontFamily: { type: String, default: 'Default' }
 		},
 		tickTickOne: {
@@ -101,8 +73,8 @@ const UserSettingsSchema = new Schema(
 					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
 					maxFocusRecordsPerPage: { type: Number, default: 50 },
 					onlyExportTasksWithNoParent: { type: Boolean, default: true },
-					showMedals: { type: Boolean, default: true },
-					selectedMedalImage: { type: String, default: "https://i.imgur.com/6xLKg5k.jpeg" },
+					showMedals: { type: Boolean, default: false },
+					selectedMedalImage: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007663/Statly/battlefield-1-medals/weapons/28_5HFD732.webp" },
 					medalImageSizePx: { type: Number, default: 100 },
 					showMedalGlow: { type: Boolean, default: false },
 					showFocusRecordEmotions: { type: Boolean, default: false },
@@ -122,14 +94,14 @@ const UserSettingsSchema = new Schema(
 				},
 				challenges: {
 					selectedChallengeCardImage: {
-						focus: { type: String, default: "https://i.imgur.com/6xLKg5k.jpeg" },
-						tasks: { type: String, default: "https://i.imgur.com/x084PtQ.png" },
+						focus: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007839/Statly/black-ops-2-calling-cards/general/432_6xLKg5k.webp" },
+						tasks: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007840/Statly/black-ops-2-calling-cards/general/436_x084PtQ.webp" },
 					}
 				},
 				medals: {
 					selectedMedalCardImage: {
-						focus: { type: String, default: "https://i.imgur.com/dIvJYlX.png" },
-						tasks: { type: String, default: "https://i.imgur.com/91AMzBS.png" },
+						focus: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007663/Statly/battlefield-1-medals/weapons/28_5HFD732.webp" },
+						tasks: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007766/Statly/battlefield-1-medals/combat/56_91AMzBS.webp" },
 					},
 					defaultMedalInterval: { type: String, default: "All" },
 					customMedalStartDate: { type: String, default: "" }
