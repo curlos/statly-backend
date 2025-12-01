@@ -188,7 +188,7 @@ async function processTaskData(taskResults: any[], totalDuration: number, userId
 	let ancestorTasksById: Record<string, any> = {};
 
 	if (tickTickTaskIds.length > 0) {
-		const tasks = await Task.find({ id: { $in: tickTickTaskIds } })
+		const tasks = await Task.find({ userId, id: { $in: tickTickTaskIds } })
 			.select('id title parentId ancestorIds projectId')
 			.lean();
 

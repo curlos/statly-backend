@@ -10,6 +10,7 @@ import ticktickRouter from './routes/ticktickRouter';
 import tempRouter from './routes/tempRouter';
 import usersRouter from './routes/usersRouter';
 import settingsRouter from './routes/userSettingsRouter';
+import deleteRouter from './routes/deleteRouter';
 import oldFocusAppsRouter from './routes/oldFocusAppsRouter';
 import documentsFocusRecordsRouter from './routes/documents/documentsFocusRecordsRouter';
 import documentsTasksRouter from './routes/documents/documentsTasksRouter'
@@ -74,6 +75,7 @@ app.use('/documents/stats', documentsStatsRouter);
 app.use('/documents/import', documentsImportRouter);
 app.use('/users', usersRouter);
 app.use('/user-settings', settingsRouter);
+app.use('/delete', deleteRouter);
 
 // Old routes
 app.use('/ticktick', ticktickRouter);

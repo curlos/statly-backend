@@ -26,9 +26,9 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 router.get('/project-groups', verifyToken, async (req: CustomRequest, res) => {
 	try {
 		const userId = req.user!.userId;
-		// Only select fields actually used by frontend (id and name)
+		// Only select fields actually used by frontend (id, name, and source for backup/import)
 		const projectGroups = await ProjectGroupTickTick.find({ userId })
-			.select('id name')
+			.select('id name source')
 			.lean();
 		res.status(200).json(projectGroups);
 	} catch (error) {
