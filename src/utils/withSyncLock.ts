@@ -1,10 +1,11 @@
 import { Response } from 'express';
 import { CustomRequest } from '../interfaces/CustomRequest';
 import ApiCallStatus from '../models/ApiCallStatusModel';
+import { Types } from 'mongoose';
 
 interface SyncLockOptions<T = any> {
     endpoint: string;
-    syncFunction: (userId: string, ...args: any[]) => Promise<T>;
+    syncFunction: (userId: Types.ObjectId, ...args: any[]) => Promise<T>;
     extractParams?: (req: CustomRequest) => any[] | Promise<any[]>;
     errorMessage?: string;
     staleLockTimeoutMs?: number;

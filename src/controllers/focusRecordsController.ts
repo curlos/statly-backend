@@ -1,17 +1,21 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { CustomRequest } from '../interfaces/CustomRequest';
 import { getFocusRecords, exportFocusRecords } from '../services/focusRecordsService';
 import { parseFocusRecordsQueryParams, parseExportFocusRecordsQueryParams } from '../utils/queryParams.utils';
 
 /**
  * GET / - Fetch focus records with filtering, sorting, and pagination
  */
-export async function getFocusRecordsHandler(req: Request, res: Response) {
+export async function getFocusRecordsHandler(req: CustomRequest, res: Response) {
 	try {
 		// Parse query parameters
 		const queryParams = parseFocusRecordsQueryParams(req);
 
+		// Extract userId from JWT
+		const userId = req.user!.userId;
+
 		// Call service to get focus records
-		const result = await getFocusRecords(queryParams);
+		const result = await getFocusRecords(queryParams, userId);
 
 		// Return success response
 		res.status(200).json(result);
@@ -25,13 +29,16 @@ export async function getFocusRecordsHandler(req: Request, res: Response) {
 /**
  * GET /export - Export focus records with optional grouping
  */
-export async function exportFocusRecordsHandler(req: Request, res: Response) {
+export async function exportFocusRecordsHandler(req: CustomRequest, res: Response) {
 	try {
 		// Parse query parameters
 		const queryParams = await parseExportFocusRecordsQueryParams(req);
 
+		// Extract userId from JWT
+		const userId = req.user!.userId;
+
 		// Call service to export focus records
-		const result = await exportFocusRecords(queryParams);
+		const result = await exportFocusRecords(queryParams, userId);
 
 		// Return success response
 		res.status(200).json(result);

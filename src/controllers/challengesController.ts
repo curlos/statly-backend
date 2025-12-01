@@ -1,11 +1,13 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { CustomRequest } from '../interfaces/CustomRequest';
 import { getFocusHoursChallenges, getCompletedTasksChallenges } from '../services/challengesService';
 import { parseChallengesQueryParams } from '../utils/queryParams.utils';
 
-export async function getFocusChallengesHandler(req: Request, res: Response) {
+export async function getFocusChallengesHandler(req: CustomRequest, res: Response) {
 	try {
 		const queryParams = parseChallengesQueryParams(req);
-		const challenges = await getFocusHoursChallenges(queryParams);
+		const userId = req.user!.userId;
+		const challenges = await getFocusHoursChallenges(queryParams, userId);
 
 		res.status(200).json(challenges);
 	} catch (error) {
@@ -15,10 +17,11 @@ export async function getFocusChallengesHandler(req: Request, res: Response) {
 	}
 }
 
-export async function getTasksChallengesHandler(req: Request, res: Response) {
+export async function getTasksChallengesHandler(req: CustomRequest, res: Response) {
 	try {
 		const queryParams = parseChallengesQueryParams(req);
-		const challenges = await getCompletedTasksChallenges(queryParams);
+		const userId = req.user!.userId;
+		const challenges = await getCompletedTasksChallenges(queryParams, userId);
 
 		res.status(200).json(challenges);
 	} catch (error) {

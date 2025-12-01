@@ -54,8 +54,13 @@ const BaseFocusRecordSchema = new Schema({
 	id: {
 		type: String,
 		required: true,
-		unique: true,
 		index: true,
+	},
+	userId: {
+		type: Schema.Types.ObjectId,
+		ref: 'User',
+		required: true,
+		index: true
 	},
 	source: {
 		type: String,
@@ -93,11 +98,15 @@ const BaseFocusRecordSchema = new Schema({
 	timestamps: false
 });
 
-// Add compound indexes for common query patterns
-BaseFocusRecordSchema.index({ startTime: -1, source: 1 });
-BaseFocusRecordSchema.index({ startTime: -1, 'tasks.projectId': 1 });
-BaseFocusRecordSchema.index({ startTime: -1, 'tasks.taskId': 1 });
-BaseFocusRecordSchema.index({ startTime: -1, crossesMidnight: 1 });
+// Add compound unique index to ensure id is unique per user (not globally unique)
+BaseFocusRecordSchema.index({ id: 1, userId: 1 }, { unique: true });
+
+// Add compound indexes for common query patterns (userId is always first since all queries filter by user)
+BaseFocusRecordSchema.index({ userId: 1, startTime: -1 });
+BaseFocusRecordSchema.index({ userId: 1, source: 1 });
+BaseFocusRecordSchema.index({ userId: 1, 'tasks.projectId': 1 });
+BaseFocusRecordSchema.index({ userId: 1, 'tasks.taskId': 1 });
+BaseFocusRecordSchema.index({ userId: 1, crossesMidnight: 1 });
 
 // Create base model
 const FocusRecord = mongoose.model('FocusRecord', BaseFocusRecordSchema);

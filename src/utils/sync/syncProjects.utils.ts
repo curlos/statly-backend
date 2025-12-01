@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import ProjectGroupTickTick from "../../models/projectGroupModel";
 import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/projectModel";
 import { fetchSessionFocusRecordsWithNoBreaks } from "../focus.utils";
@@ -5,7 +6,7 @@ import { getOrCreateSyncMetadata } from "../helpers.utils";
 import { getAllTodoistProjects } from "../task.utils";
 import { fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from "../ticktick.utils";
 
-export async function syncTickTickProjects(userId: string) {
+export async function syncTickTickProjects(userId: Types.ObjectId) {
 	// Get or create sync metadata for projects
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickProjects');
 
@@ -23,8 +24,8 @@ export async function syncTickTickProjects(userId: string) {
 			// Add project upsert operation to bulk array
 			bulkOps.push({
 				updateOne: {
-					filter: { id: project.id },
-					update: { $set: project },
+					filter: { id: project.id, userId },
+					update: { $set: { ...project, userId } },
 					upsert: true,
 				},
 			});
@@ -48,7 +49,7 @@ export async function syncTickTickProjects(userId: string) {
 	};
 }
 
-export async function syncTickTickProjectGroups(userId: string) {
+export async function syncTickTickProjectGroups(userId: Types.ObjectId) {
 	// Get or create sync metadata for project groups
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickProjectGroups');
 
@@ -60,8 +61,8 @@ export async function syncTickTickProjectGroups(userId: string) {
 	for (const projectGroup of tickTickProjectGroups) {
 		bulkOps.push({
 			updateOne: {
-				filter: { id: projectGroup.id },
-				update: { $set: { ...projectGroup, source: 'ProjectGroupTickTick' } },
+				filter: { id: projectGroup.id, userId },
+				update: { $set: { ...projectGroup, userId, source: 'ProjectGroupTickTick' } },
 				upsert: true,
 			},
 		});
@@ -84,7 +85,7 @@ export async function syncTickTickProjectGroups(userId: string) {
 	};
 }
 
-export async function syncTodoistProjects(userId: string) {
+export async function syncTodoistProjects(userId: Types.ObjectId) {
 	// Get or create sync metadata for todoist projects
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'todoistProjects');
 
@@ -100,6 +101,7 @@ export async function syncTodoistProjects(userId: string) {
 			name: project.name,
 			color: project.color,
 			parentId: project.parent_id,
+			userId,
 
 			// Todoist-specific fields
 			description: project.description || '',
@@ -119,7 +121,7 @@ export async function syncTodoistProjects(userId: string) {
 
 		bulkOps.push({
 			updateOne: {
-				filter: { id: project.id },
+				filter: { id: project.id, userId },
 				update: { $set: normalizedProject },
 				upsert: true,
 			},
@@ -143,7 +145,7 @@ export async function syncTodoistProjects(userId: string) {
 	};
 }
 
-export async function syncSessionProjects(userId: string) {
+export async function syncSessionProjects(userId: Types.ObjectId) {
 	// Get or create sync metadata for session projects
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'sessionProjects');
 
@@ -182,11 +184,12 @@ export async function syncSessionProjects(userId: string) {
 			source: 'ProjectSession',
 			name: category.name,
 			color: category.color,
+			userId,
 		};
 
 		bulkOps.push({
 			updateOne: {
-				filter: { id: category.id },
+				filter: { id: category.id, userId },
 				update: { $set: normalizedProject },
 				upsert: true,
 			},

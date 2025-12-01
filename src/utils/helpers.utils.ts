@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import SyncMetadata from "../models/SyncMetadataModel";
 import { crossesMidnightInTimezone } from "./timezone.utils";
 
@@ -123,8 +124,8 @@ export const getBeFocusedFocusRecordsWithValidDate = (array: any) => {
 };
 
 // Helper function to get or create sync metadata
-export async function getOrCreateSyncMetadata(userId: string, syncType: string) {
-	let syncMetadata = await SyncMetadata.findOne({ syncType });
+export async function getOrCreateSyncMetadata(userId: Types.ObjectId, syncType: string) {
+	let syncMetadata = await SyncMetadata.findOne({ userId, syncType });
 
 	if (!syncMetadata) {
 		syncMetadata = new SyncMetadata({

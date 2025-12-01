@@ -5,7 +5,12 @@ const BaseTaskSchema = new Schema({
 	id: {
 		type: String,
 		required: true,
-		unique: true,
+		index: true
+	},
+	userId: {
+		type: Schema.Types.ObjectId,
+		ref: 'User',
+		required: true,
 		index: true
 	},
 	source: {
@@ -54,9 +59,12 @@ const BaseTaskSchema = new Schema({
 	timestamps: false
 });
 
-// Add compound index for optimal query performance
-// Query pattern: completedTime (range) + source (equality) + projectId (equality)
-BaseTaskSchema.index({ completedTime: 1, source: 1, projectId: 1 });
+// Add compound unique index to ensure id is unique per user (not globally unique)
+BaseTaskSchema.index({ id: 1, userId: 1 }, { unique: true });
+
+// Add compound indexes for optimal query performance (userId is always first since all queries filter by user)
+BaseTaskSchema.index({ userId: 1, completedTime: 1 });
+BaseTaskSchema.index({ userId: 1, source: 1, projectId: 1 });
 
 // Create base model
 const Task = mongoose.model('Task', BaseTaskSchema);

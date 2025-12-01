@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import Task from '../models/TaskModel';
 import Project from '../models/projectModel';
 import FocusRecordTickTick from '../models/FocusRecord';
@@ -18,7 +19,7 @@ export interface OverviewStats {
 	totalTasksCount: number;
 	totalCompletedTasksCount: number;
 	totalProjectsCount: number;
-	numOfDaysSinceAccountCreated: number;
+	activeDays: number;
 	todayCompletedTasksCount?: number;
 	todayFocusRecordCount?: number;
 	todayFocusDuration?: number;
@@ -35,11 +36,12 @@ export interface OverviewStats {
 /**
  * Get task statistics using $facet to run all counts in parallel
  */
-async function getTaskStats(params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean) {
+async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean) {
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
 
 	// Build filter for all tasks
 	const allTasksFilter = buildTaskMatchConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -54,6 +56,7 @@ async function getTaskStats(params: OverviewStatsQueryParams, todayDateString: s
 
 	// Build filter for completed tasks
 	const completedTasksFilter = buildTaskMatchConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -68,6 +71,7 @@ async function getTaskStats(params: OverviewStatsQueryParams, todayDateString: s
 
 	// Build filter for today's completed tasks
 	const todayCompletedTasksFilter = buildTaskMatchConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		todayDateString,
@@ -126,12 +130,13 @@ async function getTaskStats(params: OverviewStatsQueryParams, todayDateString: s
 /**
  * Get focus record statistics using $facet to run today & all-time stats in parallel
  */
-async function getFocusStats(params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean) {
+async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean) {
 	// Build search filter
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 
 	// Build today's focus record filter
 	const { focusRecordMatchConditions: todayFocusMatch } = buildFocusMatchAndFilterConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		todayDateString,
@@ -147,6 +152,7 @@ async function getFocusStats(params: OverviewStatsQueryParams, todayDateString: 
 
 	// Build all-time focus record filter
 	const { focusRecordMatchConditions: totalFocusMatch } = buildFocusMatchAndFilterConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -230,8 +236,8 @@ async function getFocusStats(params: OverviewStatsQueryParams, todayDateString: 
 /**
  * Get project count
  */
-async function getProjectStats(params: OverviewStatsQueryParams) {
-	const projectFilter: any = {};
+async function getProjectStats(userId: Types.ObjectId, params: OverviewStatsQueryParams) {
+	const projectFilter: any = { userId };
 
 	if (params.projectIds.length > 0) {
 		projectFilter.id = { $in: params.projectIds };
@@ -244,15 +250,15 @@ async function getProjectStats(params: OverviewStatsQueryParams) {
 /**
  * Get first task completion date and first focus record date
  */
-async function getFirstData() {
+async function getFirstData(userId: Types.ObjectId) {
 	// Get first completed task (find tasks with non-null completedTime)
-	const firstCompletedTask = await Task.findOne({ completedTime: { $ne: null } })
+	const firstCompletedTask = await Task.findOne({ userId, completedTime: { $ne: null } })
 		.sort({ completedTime: 1 })
 		.select('completedTime')
 		.lean();
 
 	// Get first focus record
-	const firstFocusRecord = await FocusRecordTickTick.findOne()
+	const firstFocusRecord = await FocusRecordTickTick.findOne({ userId })
 		.sort({ startTime: 1 })
 		.select('startTime')
 		.lean();
@@ -264,16 +270,74 @@ async function getFirstData() {
 }
 
 /**
- * Get overview statistics including task counts, project counts, and account age
+ * Calculate the number of active days (days where user either completed a task or added a focus record)
+ */
+async function getActiveDays(userId: Types.ObjectId, timezone: string = 'UTC') {
+	// Get all unique dates where tasks were completed
+	const completedTaskDates = await Task.aggregate([
+		{
+			$match: {
+				userId,
+				completedTime: { $ne: null }
+			}
+		},
+		{
+			$project: {
+				date: {
+					$dateToString: {
+						format: '%Y-%m-%d',
+						date: '$completedTime',
+						timezone
+					}
+				}
+			}
+		},
+		{
+			$group: {
+				_id: '$date'
+			}
+		}
+	]);
+
+	// Get all unique dates where focus records were added
+	const focusRecordDates = await FocusRecordTickTick.aggregate([
+		{
+			$match: {
+				userId
+			}
+		},
+		{
+			$project: {
+				date: {
+					$dateToString: {
+						format: '%Y-%m-%d',
+						date: '$startTime',
+						timezone
+					}
+				}
+			}
+		},
+		{
+			$group: {
+				_id: '$date'
+			}
+		}
+	]);
+
+	// Combine both date sets and count unique dates
+	const uniqueDates = new Set([
+		...completedTaskDates.map((d: any) => d._id),
+		...focusRecordDates.map((d: any) => d._id)
+	]);
+
+	return uniqueDates.size;
+}
+
+/**
+ * Get overview statistics including task counts, project counts, and active days
  * Supports filtering by projects, date range, search query, task sources, and specific taskId
  */
-export async function getOverviewStats(params: OverviewStatsQueryParams): Promise<OverviewStats> {
-	// Account created date (hardcoded as per requirement)
-	const accountCreatedDate = new Date('2020-11-02');
-	const today = new Date();
-	const timeDiff = today.getTime() - accountCreatedDate.getTime();
-	const numOfDaysSinceAccountCreated = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-
+export async function getOverviewStats(params: OverviewStatsQueryParams, userId: Types.ObjectId): Promise<OverviewStats> {
 	// Calculate today's date in user's timezone
 	const tz = params.timezone || 'UTC';
 	const now = new Date();
@@ -289,25 +353,26 @@ export async function getOverviewStats(params: OverviewStatsQueryParams): Promis
 
 	// Build promises array for parallel execution
 	const promises: Promise<any>[] = [
-		getTaskStats(params, todayDateString, skipTodayStats),
-		getFocusStats(params, todayDateString, skipTodayStats),
-		getProjectStats(params)
+		getTaskStats(userId, params, todayDateString, skipTodayStats),
+		getFocusStats(userId, params, todayDateString, skipTodayStats),
+		getProjectStats(userId, params),
+		getActiveDays(userId, tz)
 	];
 
 	if (includeFirstData) {
-		promises.push(getFirstData());
+		promises.push(getFirstData(userId));
 	}
 
 	// Run all stats queries in parallel
 	const results = await Promise.all(promises);
 
-	const [taskStats, focusStats, projectStats, firstData] = results;
+	const [taskStats, focusStats, projectStats, activeDays, firstData] = results;
 
 	const overviewStats: OverviewStats = {
 		...taskStats,
 		...focusStats,
 		...projectStats,
-		numOfDaysSinceAccountCreated
+		activeDays
 	};
 
 	if (includeFirstData && firstData) {

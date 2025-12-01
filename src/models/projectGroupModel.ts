@@ -5,7 +5,6 @@ const ProjectGroupTickTickSchema = new Schema({
 	id: {
 		type: String,
 		required: true,
-		unique: true,
 		index: true
 	},
 	source: {
@@ -35,7 +34,10 @@ const ProjectGroupTickTickSchema = new Schema({
 		default: 0
 	},
 	userId: {
-		type: Number
+		type: Schema.Types.ObjectId,
+		ref: 'User',
+		required: true,
+		index: true
 	},
 	sortType: {
 		type: String
@@ -71,6 +73,9 @@ const ProjectGroupTickTickSchema = new Schema({
 	collection: 'projectGroups',
 	timestamps: false
 });
+
+// Add compound unique index to ensure id is unique per user (not globally unique)
+ProjectGroupTickTickSchema.index({ id: 1, userId: 1 }, { unique: true });
 
 const ProjectGroupTickTick = mongoose.model('ProjectGroupTickTick', ProjectGroupTickTickSchema);
 

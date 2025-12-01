@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import FocusRecordTickTick from '../models/FocusRecord';
 import Project from '../models/projectModel';
 import { addAncestorAndCompletedTasks, addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
@@ -245,13 +246,14 @@ export interface FocusRecordsQueryParams {
 	showEmotionCount?: boolean; // User setting to show emotion counts
 }
 
-export async function getFocusRecords(params: FocusRecordsQueryParams) {
+export async function getFocusRecords(params: FocusRecordsQueryParams, userId: Types.ObjectId) {
 	const skip = params.page * params.limit;
 
 	// Build filters
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 	const sortCriteria = buildSortCriteria(params.sortBy);
 	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -294,7 +296,7 @@ export async function getFocusRecords(params: FocusRecordsQueryParams) {
 	);
 
 	// Add ancestor tasks and completed tasks
-	const { focusRecordsWithCompletedTasks, ancestorTasksById } = await addAncestorAndCompletedTasks(focusRecords);
+	const { focusRecordsWithCompletedTasks, ancestorTasksById } = await addAncestorAndCompletedTasks(focusRecords, userId);
 
 	// Calculate pagination metadata
 	const totalPages = Math.ceil(total / params.limit);
@@ -336,7 +338,7 @@ export interface ExportFocusRecordsQueryParams {
 	timezone?: string;
 }
 
-export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) {
+export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, userId: Types.ObjectId) {
 	// Map special focus app source IDs to friendly names
 	const sourceToAppName: Record<string, string> = {
 		'FocusRecordSession': 'Session',
@@ -346,7 +348,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 	};
 
 	// Fetch all projects and create lookup by ID for current project names
-	const projects = await Project.find({}).lean();
+	const projects = await Project.find({ userId }).lean();
 	const projectsById: Record<string, any> = {};
 	projects.forEach((project: any) => {
 		projectsById[project.id] = project;
@@ -356,6 +358,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 	const sortCriteria = buildSortCriteria(params.sortBy);
 	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -393,7 +396,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams) 
 	);
 
 	// Add ancestor tasks and completed tasks
-	const { focusRecordsWithCompletedTasks, ancestorTasksById } = await addAncestorAndCompletedTasks(focusRecords);
+	const { focusRecordsWithCompletedTasks, ancestorTasksById } = await addAncestorAndCompletedTasks(focusRecords, userId);
 
 	// Build a lookup for tasks not in ancestorTasksById (deleted tasks)
 	// Store the last occurrence of each task from focus records

@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import FocusRecordTickTick from '../models/FocusRecord';
 import Task from '../models/TaskModel';
 import { addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
@@ -34,10 +35,11 @@ export interface FocusRecordsStatsQueryParams {
 
 }
 
-export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams) {
+export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams, userId: Types.ObjectId) {
 	// Build filters (reuse existing filter logic)
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -88,11 +90,11 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams)
 		case 'year':
 			return await groupByYear(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
 		case 'project':
-			return await groupByProject(basePipeline, taskFilterConditions, nested);
+			return await groupByProject(basePipeline, taskFilterConditions, nested, userId);
 		case 'task':
-			return await groupByTask(basePipeline, taskFilterConditions, nested);
+			return await groupByTask(basePipeline, taskFilterConditions, nested, userId);
 		case 'emotion':
-			return await groupByEmotion(basePipeline, taskFilterConditions, nested);
+			return await groupByEmotion(basePipeline, taskFilterConditions, nested, userId);
 		case 'hour':
 			return await groupByHour(basePipeline, taskFilterConditions, params.timezone);
 		case 'timeline':
@@ -176,7 +178,7 @@ function getTaskAggregationStages() {
  * Processes task aggregation results that were already fetched (e.g., from a $facet).
  * Fetches actual task names and ancestor data for TickTick tasks.
  */
-async function processTaskData(taskResults: any[], totalDuration: number) {
+async function processTaskData(taskResults: any[], totalDuration: number, userId: Types.ObjectId) {
 	// Fetch actual task data from MongoDB for TickTick tasks
 	const tickTickTaskIds = taskResults
 		.filter((r: any) => r.source === 'FocusRecordTickTick')
@@ -195,7 +197,7 @@ async function processTaskData(taskResults: any[], totalDuration: number) {
 			return acc;
 		}, {} as Record<string, string>);
 
-		const ancestorData = await buildAncestorData(tasks);
+		const ancestorData = await buildAncestorData(tasks, userId);
 		ancestorTasksById = ancestorData.ancestorTasksById;
 
 		tasks.forEach((task: any) => {
@@ -452,7 +454,7 @@ async function groupByYear(pipeline: any[], startDate?: string, endDate?: string
 	};
 }
 
-async function groupByProject(pipeline: any[], taskFilterConditions: any[] = [], nested: boolean = false) {
+async function groupByProject(pipeline: any[], taskFilterConditions: any[] = [], nested: boolean = false, userId: Types.ObjectId) {
 	// Use $facet to calculate totals and group by project in a single query
 	const facetStages: any = {
 		// Calculate totals using task-level durations
@@ -511,7 +513,7 @@ async function groupByProject(pipeline: any[], taskFilterConditions: any[] = [],
 
 	// If nested, process the task results that were fetched in the same query
 	if (nested) {
-		const { byTask, ancestorTasksById } = await processTaskData(facetResult.byTask, totalDuration);
+		const { byTask, ancestorTasksById } = await processTaskData(facetResult.byTask, totalDuration, userId);
 		response.byTask = byTask;
 		response.ancestorTasksById = ancestorTasksById;
 	}
@@ -519,7 +521,7 @@ async function groupByProject(pipeline: any[], taskFilterConditions: any[] = [],
 	return response;
 }
 
-async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], nested: boolean = false) {
+async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], nested: boolean = false, userId: Types.ObjectId) {
 	// Use $facet to calculate totals and fetch task data in a single query
 	pipeline.push({
 		$facet: {
@@ -537,7 +539,7 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 	const totalDuration = facetResult.totals[0]?.totalDuration || 0;
 
 	// Process the task results that were fetched in the same query
-	const { byTask, ancestorTasksById } = await processTaskData(facetResult.byTask, totalDuration);
+	const { byTask, ancestorTasksById } = await processTaskData(facetResult.byTask, totalDuration, userId);
 
 	const response: any = {
 		summary: {
@@ -552,7 +554,7 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 	return response;
 }
 
-async function aggregateProjectAndTaskDataByEmotion(basePipeline: any[], emotions: string[], totalDuration: number) {
+async function aggregateProjectAndTaskDataByEmotion(basePipeline: any[], emotions: string[], totalDuration: number, userId: Types.ObjectId) {
 	// Run all emotion queries in parallel for better performance
 	const emotionPromises = emotions.map(async (emotion) => {
 		// Create emotion-filtered pipeline
@@ -615,7 +617,7 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: any[], emotion
 		});
 
 		// Process the task results that were fetched in the same query
-		const { byTask, ancestorTasksById } = await processTaskData(facetResult.byTask, totalDuration);
+		const { byTask, ancestorTasksById } = await processTaskData(facetResult.byTask, totalDuration, userId);
 
 		return {
 			emotion,
@@ -639,7 +641,7 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: any[], emotion
 	return byEmotionWithTasks;
 }
 
-async function groupByEmotion(pipeline: any[], taskFilterConditions: any[] = [], nested: boolean = false) {
+async function groupByEmotion(pipeline: any[], taskFilterConditions: any[] = [], nested: boolean = false, userId: Types.ObjectId) {
 	// Save a clean copy of the pipeline before adding $facet (needed for nested queries)
 	const cleanPipeline = [...pipeline];
 
@@ -716,7 +718,7 @@ async function groupByEmotion(pipeline: any[], taskFilterConditions: any[] = [],
 		const emotions = results.map((r: any) => r._id); // Get list of emotion names
 		// Note: Runs 1 query per emotion in parallel (projects + tasks via $facet, all emotions simultaneously)
 		// Pass the clean pipeline (without $facet) to allow further aggregation
-		const byEmotionWithTasks = await aggregateProjectAndTaskDataByEmotion(cleanPipeline, emotions, totalDuration);
+		const byEmotionWithTasks = await aggregateProjectAndTaskDataByEmotion(cleanPipeline, emotions, totalDuration, userId);
 		response.byEmotionWithTasks = byEmotionWithTasks;
 	}
 

@@ -1,4 +1,5 @@
 import { parseDateInTimezone } from './timezone.utils';
+import { Types } from 'mongoose';
 
 // ============================================================================
 // Focus Records - App Source Mapping
@@ -36,6 +37,7 @@ export function buildFocusSearchFilter(searchQuery?: string) {
 // ============================================================================
 
 export function buildFocusMatchAndFilterConditions(
+	userId: Types.ObjectId,
 	taskId: string | undefined,
 	projectIds: string[],
 	startDate: string | undefined,
@@ -51,6 +53,9 @@ export function buildFocusMatchAndFilterConditions(
 	const focusRecordMatchConditions: any = {};
 	const taskFilterConditions: any[] = [];
 	const andedOrConditions: any[] = []; // Collect all $or conditions here to be AND-ed together
+
+	// Add userId filter - critical for data isolation
+	focusRecordMatchConditions.userId = userId;
 
 	// Two-tier date filtering:
 	// 1. First tier: Filter Sidebar dates (startDate, endDate) - broad filter at MongoDB level

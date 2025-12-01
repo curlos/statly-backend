@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { CustomRequest } from '../interfaces/CustomRequest';
 import { getOverviewStats } from '../services/statsOverviewService';
 import { getFocusRecordsStats } from '../services/statsFocusService';
 import { getCompletedTasksStats } from '../services/statsTaskService';
@@ -7,8 +8,11 @@ import { parseBaseQueryParams } from '../utils/queryParams.utils';
 /**
  * GET /stats/overview - Fetch overview statistics
  */
-export async function getOverviewStatsHandler(req: Request, res: Response) {
+export async function getOverviewStatsHandler(req: CustomRequest, res: Response) {
 	try {
+		// Extract userId from JWT
+		const userId = req.user!.userId;
+
 		// Parse base query parameters (filters)
 		const baseParams = parseBaseQueryParams(req);
 
@@ -17,11 +21,14 @@ export async function getOverviewStatsHandler(req: Request, res: Response) {
 		const includeFirstData = req.query.includeFirstData === 'true';
 
 		// Call service to get overview stats with filters
-		const result = await getOverviewStats({
-			...baseParams,
-			skipTodayStats,
-			includeFirstData
-		});
+		const result = await getOverviewStats(
+			{
+				...baseParams,
+				skipTodayStats,
+				includeFirstData
+			},
+			userId
+		);
 
 		// Return success response
 		res.status(200).json(result);
@@ -35,7 +42,7 @@ export async function getOverviewStatsHandler(req: Request, res: Response) {
 /**
  * GET /stats/focus - Fetch aggregated focus records stats
  */
-export async function getStatsFocusHandler(req: Request, res: Response) {
+export async function getStatsFocusHandler(req: CustomRequest, res: Response) {
 	try {
 		// Parse base query parameters (filters)
 		const baseParams = parseBaseQueryParams(req);
@@ -57,12 +64,18 @@ export async function getStatsFocusHandler(req: Request, res: Response) {
 		// Get nested parameter
 		const nested = req.query.nested === 'true';
 
+		// Extract userId from JWT
+		const userId = req.user!.userId;
+
 		// Call service to get aggregated stats
-		const result = await getFocusRecordsStats({
-			...baseParams,
-			groupBy,
-			nested
-		});
+		const result = await getFocusRecordsStats(
+			{
+				...baseParams,
+				groupBy,
+				nested
+			},
+			userId
+		);
 
 		// Return success response
 		res.status(200).json(result);
@@ -76,7 +89,7 @@ export async function getStatsFocusHandler(req: Request, res: Response) {
 /**
  * GET /stats/tasks - Fetch aggregated completed tasks stats
  */
-export async function getStatsTasksHandler(req: Request, res: Response) {
+export async function getStatsTasksHandler(req: CustomRequest, res: Response) {
 	try {
 		// Parse base query parameters (filters)
 		const baseParams = parseBaseQueryParams(req);
@@ -98,21 +111,27 @@ export async function getStatsTasksHandler(req: Request, res: Response) {
 		// Get nested parameter
 		const nested = req.query.nested === 'true';
 
+		// Extract userId from JWT
+		const userId = req.user!.userId;
+
 		// Call service to get aggregated stats
-		const result = await getCompletedTasksStats({
-			projectIds: baseParams.projectIds,
-			taskId: baseParams.taskId,
-			startDate: baseParams.startDate,
-			endDate: baseParams.endDate,
-			intervalStartDate: baseParams.intervalStartDate,
-			intervalEndDate: baseParams.intervalEndDate,
-			taskIdIncludeSubtasks: baseParams.taskIdIncludeFocusRecordsFromSubtasks,
-			searchQuery: baseParams.searchQuery,
-			toDoListAppSources: baseParams.toDoListAppSources,
-			timezone: baseParams.timezone,
-			groupBy,
-			nested
-		});
+		const result = await getCompletedTasksStats(
+			{
+				projectIds: baseParams.projectIds,
+				taskId: baseParams.taskId,
+				startDate: baseParams.startDate,
+				endDate: baseParams.endDate,
+				intervalStartDate: baseParams.intervalStartDate,
+				intervalEndDate: baseParams.intervalEndDate,
+				taskIdIncludeSubtasks: baseParams.taskIdIncludeFocusRecordsFromSubtasks,
+				searchQuery: baseParams.searchQuery,
+				toDoListAppSources: baseParams.toDoListAppSources,
+				timezone: baseParams.timezone,
+				groupBy,
+				nested
+			},
+			userId
+		);
 
 		// Return success response
 		res.status(200).json(result);

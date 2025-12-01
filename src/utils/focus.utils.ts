@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Types } from 'mongoose';
 import { getTodayTimeBounds, sortArrayByProperty, arrayToObjectByKey } from './helpers.utils';
 import FocusRecordTickTick from '../models/FocusRecord';
 import Task from '../models/TaskModel';
@@ -91,7 +92,7 @@ export const fetchTickTickFocusRecords = async (options: FetchFocusRecordsOption
 };
 
 // Helper function to add ancestor tasks and completed tasks to focus records
-export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
+export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: Types.ObjectId) => {
 	// Extract all unique task IDs from focus records
 	const allTaskIds = new Set<string>();
 	focusRecords.forEach((record: any) => {
@@ -105,12 +106,12 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
 	});
 
 	// Fetch full task documents to get ancestorIds
-	const tasksWithAncestors = await Task.find({ id: { $in: Array.from(allTaskIds) } })
+	const tasksWithAncestors = await Task.find({ userId, id: { $in: Array.from(allTaskIds) } })
 		.select('id title parentId ancestorIds projectId')
 		.lean();
 
 	// Build ancestor data
-	const { ancestorTasksById } = await buildAncestorData(tasksWithAncestors);
+	const { ancestorTasksById } = await buildAncestorData(tasksWithAncestors, userId);
 
 	// Add the child tasks themselves to the map
 	tasksWithAncestors.forEach((task: any) => {
@@ -175,6 +176,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
 	} else if (mergedRanges.length === 1) {
 		// Single range - use simple query
 		const tasks = await Task.find({
+			userId,
 			completedTime: {
 				$exists: true,
 				$ne: null,
@@ -197,7 +199,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[]) => {
 			}
 		}));
 
-		const tasks = await Task.find({ $or: orConditions })
+		const tasks = await Task.find({ userId, $or: orConditions })
 			.sort({ completedTime: 1 })
 			.select('title completedTime -_id')
 			.lean();

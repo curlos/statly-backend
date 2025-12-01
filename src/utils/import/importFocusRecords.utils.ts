@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from "../../models/FocusRecord";
 import { isValidDate, ImportCategoryResult } from "./importBackup.utils";
 
@@ -36,7 +37,7 @@ export function validateFocusRecord(doc: any, requiredFields: string[], validSou
 /**
  * Imports focus records with validation
  */
-export async function importFocusRecords(records: any[]): Promise<ImportCategoryResult> {
+export async function importFocusRecords(records: any[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
     const errors: string[] = [];
 
     // Declare validation constants once for all records
@@ -69,7 +70,9 @@ export async function importFocusRecords(records: any[]): Promise<ImportCategory
 
         const source = record.source;
         if (recordsBySource[source]) {
-            recordsBySource[source].push(record);
+            // Remove _id to allow MongoDB to generate new unique IDs for each user
+            const { _id, ...recordWithoutMongoDbId } = record;
+            recordsBySource[source].push({ ...recordWithoutMongoDbId, userId });
         } else {
             errors.push(`Focus record ${record.id}: Unknown source ${source}`);
         }
@@ -94,7 +97,7 @@ export async function importFocusRecords(records: any[]): Promise<ImportCategory
 
         const bulkOps = sourceRecords.map(record => ({
             updateOne: {
-                filter: { id: record.id },
+                filter: { id: record.id, userId },
                 update: { $set: record },
                 upsert: true,
             },

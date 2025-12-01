@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { FocusRecord } from '../models/FocusRecord';
 import { Task } from '../models/TaskModel';
 import {
@@ -98,10 +99,11 @@ function calculateChallengesFromDailyTotals(
 // Main Service Methods
 // ============================================================================
 
-export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
+export async function getFocusHoursChallenges(params: ChallengesQueryParams, userId: Types.ObjectId) {
 	// Build filters
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -160,10 +162,11 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams) {
 	);
 }
 
-export async function getCompletedTasksChallenges(params: ChallengesQueryParams) {
+export async function getCompletedTasksChallenges(params: ChallengesQueryParams, userId: Types.ObjectId) {
 	// Build filters using shared builder
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
 	const matchFilter = buildTaskMatchConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,

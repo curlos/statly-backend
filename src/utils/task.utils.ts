@@ -1,8 +1,9 @@
+import { Types } from 'mongoose';
 import { Task } from '../models/TaskModel';
 import { getJsonData } from './mongoose.utils';
 
 // Helper function to build ancestor data for tasks (optimized with pre-computed ancestorIds)
-export async function buildAncestorData(tasks: any[]) {
+export async function buildAncestorData(tasks: any[], userId: Types.ObjectId) {
 	// Step 1: Collect ALL unique ancestor IDs from tasks (using pre-computed ancestorIds)
 	const allAncestorIds = new Set<string>();
 
@@ -20,6 +21,7 @@ export async function buildAncestorData(tasks: any[]) {
 
 	// Step 2: Fetch ALL ancestor tasks in ONE batch query (only needed fields)
 	const ancestorTasks = await Task.find({
+		userId,
 		id: { $in: Array.from(allAncestorIds) }
 	})
 		.select('id title parentId ancestorIds projectId')

@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/projectModel";
 import type { ImportCategoryResult } from "./importBackup.utils";
 
@@ -21,7 +22,7 @@ export function validateProject(doc: any, requiredFields: string[], validSources
 /**
  * Imports projects with validation
  */
-export async function importProjects(projects: any[]): Promise<ImportCategoryResult> {
+export async function importProjects(projects: any[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
     const errors: string[] = [];
 
     // Declare validation constants once for all projects
@@ -46,7 +47,9 @@ export async function importProjects(projects: any[]): Promise<ImportCategoryRes
 
         const source = project.source;
         if (projectsBySource[source]) {
-            projectsBySource[source].push(project);
+            // Remove _id to allow MongoDB to generate new unique IDs for each user
+            const { _id, ...projectWithoutMongoDbId } = project;
+            projectsBySource[source].push({ ...projectWithoutMongoDbId, userId });
         } else {
             errors.push(`Project ${project.id}: Unknown source ${source}`);
         }
@@ -69,7 +72,7 @@ export async function importProjects(projects: any[]): Promise<ImportCategoryRes
 
         const bulkOps = sourceProjects.map(project => ({
             updateOne: {
-                filter: { id: project.id },
+                filter: { id: project.id, userId },
                 update: { $set: project },
                 upsert: true,
             },

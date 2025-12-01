@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { Types } from 'mongoose';
 import { FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from "../../models/FocusRecord";
 import { TaskTickTick } from "../../models/TaskModel";
 import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks, fetchTickTickFocusRecords, fetchTideAppFocusRecords } from "../focus.utils";
@@ -40,7 +41,7 @@ function getCachedCrossesMidnight(
 	return crossesMidnight;
 }
 
-export async function syncTickTickFocusRecords(userId: string, timezone: string = 'UTC') {
+export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone: string = 'UTC') {
 	// Get or create sync metadata for focus records
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickFocusRecords');
 
@@ -63,6 +64,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 			.map(r => r.id);
 
 		const existingRecords = await FocusRecordTickTick.find({
+			userId,
 			id: { $in: recordIds }
 		}).select('id note emotions').lean();
 
@@ -88,6 +90,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 	const tasksById: Record<string, any> = {};
 	if (allTaskIds.size > 0) {
 		const fullTasks = await TaskTickTick.find({
+			userId,
 			id: { $in: Array.from(allTaskIds) }
 		}).select('id projectId ancestorIds').lean();
 
@@ -138,6 +141,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 			// Normalize the focus record to match our schema
 			const normalizedRecord = {
 				...record,
+				userId,
 				duration: realFocusDuration,
 				tasks: tasksWithDuration,
 				crossesMidnight,
@@ -165,7 +169,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 			// Add upsert operation to bulk array
 			bulkOps.push({
 				updateOne: {
-					filter: { id: record.id },
+					filter: { id: record.id, userId },
 					update: { $set: normalizedRecord },
 					upsert: true,
 				},
@@ -192,13 +196,14 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 
 			// Fetch the MongoDB _id values for these records (using their TickTick IDs)
 			const recordsToAnalyze = await FocusRecordTickTick.find({
+				userId,
 				id: { $in: recordsNeedingEmotionAnalysis }
 			}).select('_id').lean();
 
 			const mongoIds = recordsToAnalyze.map((r: any) => r._id.toString());
 
 			if (mongoIds.length > 0) {
-				emotionAnalysisResult = await analyzeNoteEmotionsCore(mongoIds);
+				emotionAnalysisResult = await analyzeNoteEmotionsCore(mongoIds, userId);
 				console.log(`✅ Emotion analysis complete: ${emotionAnalysisResult.analyzed} analyzed, ${emotionAnalysisResult.failed} failed`);
 			} else {
 				console.log('⚠️ No records found to analyze');
@@ -222,7 +227,7 @@ export async function syncTickTickFocusRecords(userId: string, timezone: string 
 	};
 }
 
-export async function syncBeFocusedFocusRecords(userId: string, timezone: string = 'UTC') {
+export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone: string = 'UTC') {
 	// Get or create sync metadata
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'beFocusedFocusRecords');
 
@@ -252,6 +257,7 @@ export async function syncBeFocusedFocusRecords(userId: string, timezone: string
 
 		return {
 			id,
+			userId,
 			source: focusAppSource,
 			startTime: startDate, // Date object for MongoDB
 			endTime: endDate, // Date object for MongoDB
@@ -274,7 +280,7 @@ export async function syncBeFocusedFocusRecords(userId: string, timezone: string
 	// Bulk upsert to database
 	const bulkOps = normalizedRecords.map((record: any) => ({
 		updateOne: {
-			filter: { id: record.id },
+			filter: { id: record.id, userId },
 			update: { $set: record },
 			upsert: true
 		}
@@ -295,7 +301,7 @@ export async function syncBeFocusedFocusRecords(userId: string, timezone: string
 	};
 }
 
-export async function syncForestFocusRecords(userId: string, timezone: string = 'UTC') {
+export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: string = 'UTC') {
 	// Get or create sync metadata
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'forestFocusRecords');
 
@@ -328,6 +334,7 @@ export async function syncForestFocusRecords(userId: string, timezone: string = 
 
 		return {
 			id,
+			userId,
 			source: focusAppSource,
 			startTime: startDate, // Date object for MongoDB
 			endTime: endDate, // Date object for MongoDB
@@ -353,7 +360,7 @@ export async function syncForestFocusRecords(userId: string, timezone: string = 
 	// Bulk upsert to database
 	const bulkOps = normalizedRecords.map((record: any) => ({
 		updateOne: {
-			filter: { id: record.id },
+			filter: { id: record.id, userId },
 			update: { $set: record },
 			upsert: true
 		}
@@ -374,7 +381,7 @@ export async function syncForestFocusRecords(userId: string, timezone: string = 
 	};
 }
 
-export async function syncTideFocusRecords(userId: string, timezone: string = 'UTC') {
+export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: string = 'UTC') {
 	// Get or create sync metadata
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tideFocusRecords');
 
@@ -420,6 +427,7 @@ export async function syncTideFocusRecords(userId: string, timezone: string = 'U
 
 		return {
 			id,
+			userId,
 			source: focusAppSource,
 			startTime: startDate, // Date object for MongoDB
 			endTime: endDate, // Date object for MongoDB
@@ -442,7 +450,7 @@ export async function syncTideFocusRecords(userId: string, timezone: string = 'U
 	// Bulk upsert to database
 	const bulkOps = normalizedRecords.map((record: any) => ({
 		updateOne: {
-			filter: { id: record.id },
+			filter: { id: record.id, userId },
 			update: { $set: record },
 			upsert: true
 		}
@@ -463,7 +471,7 @@ export async function syncTideFocusRecords(userId: string, timezone: string = 'U
 	};
 }
 
-export async function syncSessionFocusRecords(userId: string, timezone: string = 'UTC') {
+export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: string = 'UTC') {
 	// Get or create sync metadata
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'sessionFocusRecords');
 
@@ -546,6 +554,7 @@ export async function syncSessionFocusRecords(userId: string, timezone: string =
 
 		return {
 			id,
+			userId,
 			source: 'FocusRecordSession',
 			startTime: startDate,
 			endTime: endDate,
@@ -560,7 +569,7 @@ export async function syncSessionFocusRecords(userId: string, timezone: string =
 	// Bulk upsert to database
 	const bulkOps = normalizedRecords.map((record: any) => ({
 		updateOne: {
-			filter: { id: record.id },
+			filter: { id: record.id, userId },
 			update: { $set: record },
 			upsert: true
 		}

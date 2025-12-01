@@ -1,4 +1,5 @@
 import express from 'express';
+import { CustomRequest } from '../../interfaces/CustomRequest';
 import { verifyToken } from '../../middleware/verifyToken';
 import { fetchSessionFocusRecordsWithNoBreaks, fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchTideAppFocusRecords } from '../../utils/focus.utils';
 import { getFocusRecordsHandler, exportFocusRecordsHandler } from '../../controllers/focusRecordsController';
@@ -19,19 +20,20 @@ router.post('/analyze-note-emotions', verifyToken, analyzeNoteEmotionsHandler);
 router.post('/revalidate-crosses-midnight', verifyToken, revalidateCrossesMidnightHandler);
 
 // GET /all - Returns all focus records with pagination support
-router.get('/all', verifyToken, async (req, res) => {
+router.get('/all', verifyToken, async (req: CustomRequest, res) => {
 	try {
+		const userId = req.user!.userId;
 		const page = parseInt(req.query.page as string) || 1;
 		const limit = parseInt(req.query.limit as string) || 5000;
 		const skip = (page - 1) * limit;
 
 		// Get total count for pagination metadata
-		const total = await FocusRecord.countDocuments({});
+		const total = await FocusRecord.countDocuments({ userId });
 		const totalPages = Math.ceil(total / limit);
 
 		// Fetch paginated focus records with .lean() for better performance
 		// Sort by startTime descending (newest first)
-		const focusRecords = await FocusRecord.find({})
+		const focusRecords = await FocusRecord.find({ userId })
 			.sort({ startTime: -1 })
 			.skip(skip)
 			.limit(limit)

@@ -1,6 +1,7 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Response, NextFunction } from 'express';
 import { CustomRequest } from '../interfaces/CustomRequest';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -15,7 +16,11 @@ export const verifyToken = (req: CustomRequest, res: Response, next: NextFunctio
 	try {
 		const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
 		
-		req.user = decoded; // Attach the user payload from the token to the request object
+		// Convert userId string to ObjectId for MongoDB queries
+		req.user = {
+			...decoded,
+			userId: mongoose.Types.ObjectId.createFromHexString(decoded.userId)
+		};
 		next();
 	} catch (error) {
 		res.status(401).json({ message: 'Invalid token' });

@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import Task from '../models/TaskModel';
 import { buildAncestorData } from '../utils/task.utils';
 import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
@@ -22,10 +23,11 @@ export interface CompletedTasksStatsQueryParams {
 	nested?: boolean; // If true, include ancestorTasksById for nested display
 }
 
-export async function getCompletedTasksStats(params: CompletedTasksStatsQueryParams) {
+export async function getCompletedTasksStats(params: CompletedTasksStatsQueryParams, userId: Types.ObjectId) {
 	// Build filters (reuse existing filter logic)
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
 	const matchConditions = buildTaskMatchConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -66,9 +68,9 @@ export async function getCompletedTasksStats(params: CompletedTasksStatsQueryPar
 		case 'year':
 			return await groupByYear(basePipeline, effectiveStartDate, effectiveEndDate, params.timezone);
 		case 'project':
-			return await groupByProject(basePipeline, nested);
+			return await groupByProject(basePipeline, nested, userId);
 		case 'task':
-			return await groupByTask(basePipeline, nested);
+			return await groupByTask(basePipeline, nested, userId);
 		default:
 			throw new Error(`Invalid group-by parameter: ${params.groupBy}`);
 	}
@@ -82,11 +84,11 @@ export async function getCompletedTasksStats(params: CompletedTasksStatsQueryPar
  * Shared helper to process task results and fetch ancestor information.
  * This processes task documents that were already fetched (e.g., from a $facet).
  */
-async function processTaskResults(taskResults: any[], totalCount: number) {
+async function processTaskResults(taskResults: any[], totalCount: number, userId: Types.ObjectId) {
 	let ancestorTasksById: Record<string, any> = {};
 
 	if (taskResults.length > 0) {
-		const ancestorData = await buildAncestorData(taskResults);
+		const ancestorData = await buildAncestorData(taskResults, userId);
 		ancestorTasksById = ancestorData.ancestorTasksById;
 
 		taskResults.forEach((task: any) => {
@@ -322,7 +324,7 @@ async function groupByYear(pipeline: any[], startDate?: string, endDate?: string
 	};
 }
 
-async function groupByProject(pipeline: any[], nested: boolean = false) {
+async function groupByProject(pipeline: any[], nested: boolean = false, userId: Types.ObjectId) {
 	// Use $facet to calculate totals and group by project in a single query
 	const aggPipeline = [...pipeline];
 
@@ -375,7 +377,7 @@ async function groupByProject(pipeline: any[], nested: boolean = false) {
 
 	// If nested, process the task results that were fetched in the same query
 	if (nested) {
-		const { byTask, ancestorTasksById } = await processTaskResults(facetResult.tasks, totalCount);
+		const { byTask, ancestorTasksById } = await processTaskResults(facetResult.tasks, totalCount, userId);
 		response.byTask = byTask;
 		response.ancestorTasksById = ancestorTasksById;
 	}
@@ -383,7 +385,7 @@ async function groupByProject(pipeline: any[], nested: boolean = false) {
 	return response;
 }
 
-async function groupByTask(pipeline: any[], nested: boolean = false) {
+async function groupByTask(pipeline: any[], nested: boolean = false, userId: Types.ObjectId) {
 	// Use $facet to calculate totals and fetch all tasks in a single query
 	const aggPipeline = [...pipeline];
 
@@ -401,7 +403,7 @@ async function groupByTask(pipeline: any[], nested: boolean = false) {
 	const totalCount = facetResult.totals[0]?.totalCount || 0;
 
 	// Process the task results that were fetched in the same query
-	const { byTask, ancestorTasksById } = await processTaskResults(facetResult.tasks, totalCount);
+	const { byTask, ancestorTasksById } = await processTaskResults(facetResult.tasks, totalCount, userId);
 
 	const response: any = {
 		summary: {

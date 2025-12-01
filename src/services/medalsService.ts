@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { FocusRecord } from '../models/FocusRecord';
 import { Task } from '../models/TaskModel';
 import {
@@ -325,10 +326,11 @@ function splitMidnightCrossingRecordsForMedals(
 // Main Service Methods
 // ============================================================================
 
-export async function getFocusHoursMedals(params: MedalsQueryParams) {
+export async function getFocusHoursMedals(params: MedalsQueryParams, userId: Types.ObjectId) {
 	// Build filters
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -377,10 +379,11 @@ export async function getFocusHoursMedals(params: MedalsQueryParams) {
 	return calculateMedalsFromPeriodTotals(periodTotals, medals, params.interval, 'focus');
 }
 
-export async function getCompletedTasksMedals(params: MedalsQueryParams) {
+export async function getCompletedTasksMedals(params: MedalsQueryParams, userId: Types.ObjectId) {
 	// Build filters using shared builder
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
 	const matchFilter = buildTaskMatchConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,

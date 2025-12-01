@@ -1,4 +1,5 @@
 import { parseDateInTimezone } from './timezone.utils';
+import { Types } from 'mongoose';
 
 // ============================================================================
 // Tasks - App Source Mapping
@@ -65,6 +66,7 @@ function buildDateRangeFilter(startDate?: string, endDate?: string, timezone?: s
 // ============================================================================
 
 export function buildTaskMatchConditions(
+	userId: Types.ObjectId,
 	taskId: string | undefined,
 	projectIds: string[],
 	startDate: string | undefined,
@@ -77,6 +79,9 @@ export function buildTaskMatchConditions(
 	timezone?: string
 ) {
 	const matchFilter: any = {};
+
+	// Add userId filter - critical for data isolation
+	matchFilter.userId = userId;
 
 	// Only apply completedTime requirement and date filter if timeField is 'completedTime'. Otherwise, if timeField is 'createdTime', skip date filtering entirely.
 	if (timeField === 'completedTime') {

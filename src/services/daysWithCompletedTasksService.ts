@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { Task } from '../models/TaskModel';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { buildAncestorData } from '../utils/task.utils';
@@ -28,11 +29,13 @@ function buildSortStage(sortBy: string) {
 
 async function executeCompletedTasksAggregation(
 	params: DaysWithCompletedTasksQueryParams | ExportDaysWithCompletedTasksQueryParams,
+	userId: Types.ObjectId,
 	pagination?: { page: number; maxDaysPerPage: number }
 ) {
 	// Build filters using shared builder
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
 	const matchFilter = buildTaskMatchConditions(
+		userId,
 		params.taskId,
 		params.projectIds,
 		params.startDate,
@@ -544,15 +547,15 @@ function exportDaysWithNestedStructure(
 // Main Service Method
 // ============================================================================
 
-export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQueryParams) {
+export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQueryParams, userId: Types.ObjectId) {
 	// Execute aggregation with pagination (now includes counts via $facet)
-	const { result, allTasks, totalTasks, totalDays } = await executeCompletedTasksAggregation(params, {
+	const { result, allTasks, totalTasks, totalDays } = await executeCompletedTasksAggregation(params, userId, {
 		page: params.page,
 		maxDaysPerPage: params.maxDaysPerPage
 	});
 
 	// Build ancestor data for all tasks
-	const { ancestorTasksById } = await buildAncestorData(allTasks);
+	const { ancestorTasksById } = await buildAncestorData(allTasks, userId);
 
 	const totalPages = Math.ceil(totalDays / params.maxDaysPerPage);
 
@@ -574,19 +577,19 @@ export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQu
 // Export Service Method
 // ============================================================================
 
-export async function exportDaysWithCompletedTasks(params: ExportDaysWithCompletedTasksQueryParams) {
+export async function exportDaysWithCompletedTasks(params: ExportDaysWithCompletedTasksQueryParams, userId: Types.ObjectId) {
 	// Fetch all projects and create lookup by ID for current project names
-	const projects = await Project.find({}).lean();
+	const projects = await Project.find({ userId }).lean();
 	const projectsById: Record<string, any> = {};
 	projects.forEach((project: any) => {
 		projectsById[project.id] = project;
 	});
 
 	// Execute aggregation without pagination
-	const { result, allTasks } = await executeCompletedTasksAggregation(params);
+	const { result, allTasks } = await executeCompletedTasksAggregation(params, userId);
 
 	// Build ancestor data for all tasks
-	const { ancestorTasksById } = await buildAncestorData(allTasks);
+	const { ancestorTasksById } = await buildAncestorData(allTasks, userId);
 
 	// If nested export mode, use nested structure
 	if (params.exportMode === 'nested') {

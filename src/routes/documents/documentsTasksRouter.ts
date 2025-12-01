@@ -1,4 +1,5 @@
 import express from 'express';
+import { CustomRequest } from '../../interfaces/CustomRequest';
 import { Task } from '../../models/TaskModel'
 import { verifyToken } from '../../middleware/verifyToken';
 import { getJsonData } from '../../utils/mongoose.utils';
@@ -18,19 +19,20 @@ router.get('/days-with-completed-tasks', verifyToken, getDaysWithCompletedTasksH
 router.get('/days-with-completed-tasks/export', verifyToken, exportDaysWithCompletedTasksHandler);
 
 // GET /all - Returns all tasks with pagination support
-router.get('/all', verifyToken, async (req, res) => {
+router.get('/all', verifyToken, async (req: CustomRequest, res) => {
 	try {
+		const userId = req.user!.userId;
 		const page = parseInt(req.query.page as string) || 1;
 		const limit = parseInt(req.query.limit as string) || 5000;
 		const skip = (page - 1) * limit;
 
 		// Get total count for pagination metadata
-		const total = await Task.countDocuments({});
+		const total = await Task.countDocuments({ userId });
 		const totalPages = Math.ceil(total / limit);
 
 		// Fetch paginated tasks with .lean() for better performance
 		// Sort by completedTime (if exists), then createdTime, then added_at - all descending (newest first)
-		const tasks = await Task.find({})
+		const tasks = await Task.find({ userId })
 			.sort({ completedTime: -1, createdTime: -1, added_at: -1 })
 			.skip(skip)
 			.limit(limit)

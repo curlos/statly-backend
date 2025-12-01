@@ -1,7 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { CustomRequest } from '../interfaces/CustomRequest';
 import FocusRecord from '../models/FocusRecord';
 import axios from 'axios';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 
 interface EmotionResult {
 	emotion: string;
@@ -29,9 +30,10 @@ const HUGGINGFACE_SPACE_URL = process.env.HUGGINGFACE_SPACE_URL;
  * Core function to analyze emotions for a batch of record IDs
  * Can be called from API handlers or other services
  * @param recordIds - Array of record IDs to analyze
+ * @param userId - User ID to filter records
  * @returns Object with analyzed and failed counts
  */
-export async function analyzeNoteEmotionsCore(recordIds: string[]): Promise<{ analyzed: number; failed: number }> {
+export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types.ObjectId): Promise<{ analyzed: number; failed: number }> {
 	if (!recordIds || !Array.isArray(recordIds) || recordIds.length === 0) {
 		throw new Error('recordIds array is required and must not be empty');
 	}
@@ -44,6 +46,7 @@ export async function analyzeNoteEmotionsCore(recordIds: string[]): Promise<{ an
 
 	// Fetch the specific records by ID
 	const records = await FocusRecord.find({
+		userId,
 		_id: { $in: recordIds }
 	}).select('_id note').lean();
 
@@ -135,14 +138,16 @@ export async function analyzeNoteEmotionsCore(recordIds: string[]): Promise<{ an
  * GET /api/focus-records/analyze-sentiment/ids
  * Returns array of record IDs that need sentiment analysis
  */
-export async function getFocusRecordsNeedingSentiment(req: Request, res: Response) {
+export async function getFocusRecordsNeedingSentiment(req: CustomRequest, res: Response) {
 	try {
+		const userId = req.user!.userId;
 		// Find all records that need sentiment analysis
 		// Records need analysis if:
 		// 1. They don't have an "emotions" field OR
 		// 2. "emotions" is empty/null
 		// 3. AND they have a non-empty "note" field
 		const records = await FocusRecord.find({
+			userId,
 			$and: [
 				{
 					$or: [
@@ -174,8 +179,9 @@ export async function getFocusRecordsNeedingSentiment(req: Request, res: Respons
  * Analyzes sentiment for a specific batch of record IDs
  * Body: { recordIds: string[] }
  */
-export async function analyzeNoteEmotionsHandler(req: Request, res: Response) {
+export async function analyzeNoteEmotionsHandler(req: CustomRequest, res: Response) {
 	try {
+		const userId = req.user!.userId;
 		const { recordIds } = req.body;
 
 		if (!recordIds || !Array.isArray(recordIds) || recordIds.length === 0) {
@@ -185,7 +191,7 @@ export async function analyzeNoteEmotionsHandler(req: Request, res: Response) {
 		}
 
 		// Call the core function
-		const result = await analyzeNoteEmotionsCore(recordIds);
+		const result = await analyzeNoteEmotionsCore(recordIds, userId);
 
 		res.status(200).json(result);
 	} catch (error: any) {

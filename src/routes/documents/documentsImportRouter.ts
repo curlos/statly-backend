@@ -26,6 +26,8 @@ const upload = multer({
  */
 router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: CustomRequest, res) => {
 	try {
+		const userId = req.user!.userId;
+
 		if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
 			return res.status(400).json({
 				message: 'No files provided. Please upload JSON files.',
@@ -99,10 +101,10 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 
 		// Import each category in parallel
 		const [focusRecordsResult, tasksResult, projectsResult, projectGroupsResult] = await Promise.all([
-			importFocusRecords(focusRecords),
-			importTasks(tasks),
-			importProjects(projects),
-			importProjectGroups(projectGroups),
+			importFocusRecords(focusRecords, userId),
+			importTasks(tasks, userId),
+			importProjects(projects, userId),
+			importProjectGroups(projectGroups, userId),
 		]);
 
 		// Combine results

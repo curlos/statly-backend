@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { CustomRequest } from '../interfaces/CustomRequest';
 import FocusRecord from '../models/FocusRecord';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { crossesMidnightInTimezone } from '../utils/timezone.utils';
 
 interface RevalidationResult {
@@ -17,14 +18,15 @@ interface RevalidationResult {
  * @returns Object with detailed statistics
  */
 export async function revalidateCrossesMidnightCore(
-	timezone: string
+	timezone: string,
+	userId: Types.ObjectId
 ): Promise<RevalidationResult> {
 	if (!timezone) {
 		throw new Error('timezone is required');
 	}
 
 	// Fetch all records with necessary fields
-	const records = await FocusRecord.find({})
+	const records = await FocusRecord.find({ userId })
 		.select('_id startTime endTime crossesMidnight')
 		.lean();
 
@@ -115,9 +117,10 @@ export async function revalidateCrossesMidnightCore(
  * Revalidates crossesMidnight for all records
  * Body: { timezone: string }
  */
-export async function revalidateCrossesMidnightHandler(req: Request, res: Response) {
+export async function revalidateCrossesMidnightHandler(req: CustomRequest, res: Response) {
 	try {
 		const { timezone } = req.body;
+		const userId = req.user!.userId;
 
 		if (!timezone) {
 			return res.status(400).json({
@@ -126,7 +129,7 @@ export async function revalidateCrossesMidnightHandler(req: Request, res: Respon
 		}
 
 		// Call the core function
-		const result = await revalidateCrossesMidnightCore(timezone);
+		const result = await revalidateCrossesMidnightCore(timezone, userId);
 
 		res.status(200).json(result);
 	} catch (error: any) {

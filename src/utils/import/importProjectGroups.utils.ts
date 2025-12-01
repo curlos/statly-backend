@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import ProjectGroupTickTick from "../../models/projectGroupModel";
 import type { ImportCategoryResult } from "./importBackup.utils";
 
@@ -17,7 +18,7 @@ export function validateProjectGroup(doc: any, requiredFields: string[]): { vali
 /**
  * Imports project groups with validation
  */
-export async function importProjectGroups(projectGroups: any[]): Promise<ImportCategoryResult> {
+export async function importProjectGroups(projectGroups: any[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
 	const errors: string[] = [];
 
 	// Declare validation constants once for all project groups
@@ -33,10 +34,13 @@ export async function importProjectGroups(projectGroups: any[]): Promise<ImportC
 			continue;
 		}
 
+		// Remove _id to allow MongoDB to generate new unique IDs for each user
+		const { _id, ...groupWithoutMongoDbId } = group;
+
 		bulkOps.push({
 			updateOne: {
-				filter: { id: group.id },
-				update: { $set: group },
+				filter: { id: groupWithoutMongoDbId.id, userId },
+				update: { $set: { ...groupWithoutMongoDbId, userId } },
 				upsert: true,
 			},
 		});

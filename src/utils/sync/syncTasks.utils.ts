@@ -1,10 +1,11 @@
+import { Types } from 'mongoose';
 import { FocusRecordTickTick } from "../../models/FocusRecord";
 import { TaskTickTick, TaskTodoist } from "../../models/TaskModel";
 import { getOrCreateSyncMetadata } from "../helpers.utils";
 import { fetchAllTickTickTasks } from "../ticktick.utils";
 import { getAllTodoistTasks } from "../task.utils";
 
-export async function syncTickTickTasks(userId: string, options?: {
+export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 	archivedProjectIds?: string[];
 	getTasksFromNonArchivedProjects?: boolean;
 }) {
@@ -24,6 +25,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 	// Fetch only the task IDs that are being synced (much faster than fetching all tasks)
 	const taskIdsToCheck = tickTickTasks.map((t: any) => t.id);
 	const existingTaskIds = await TaskTickTick.distinct('id', {
+		userId,
 		id: { $in: taskIdsToCheck }
 	});
 	const existingTaskIdsSet = new Set(existingTaskIds);
@@ -100,6 +102,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 			// Normalize the FULL task
 			const normalizedFullTask = {
 				...task,
+				userId,
 				taskType: 'full',
 				title: task.title,
 				description: task.desc || task.description || '',
@@ -115,7 +118,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 			// Add full task upsert operation to bulk array
 			bulkOps.push({
 				updateOne: {
-					filter: { id: task.id },
+					filter: { id: task.id, userId },
 					update: { $set: normalizedFullTask },
 					upsert: true,
 				},
@@ -135,6 +138,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 					// Normalize item task
 					const normalizedItemTask = {
 						...item,
+						userId,
 						taskType: 'item',
 						title: item.title,
 						description: '',
@@ -151,7 +155,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 					// Add item task upsert operation to bulk array
 					bulkOps.push({
 						updateOne: {
-							filter: { id: item.id },
+							filter: { id: item.id, userId },
 							update: { $set: normalizedItemTask },
 							upsert: true,
 						},
@@ -172,6 +176,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 		// Find all focus records that contain any of the modified tasks
 		// Only fetch fields we need (id and tasks) for better performance
 		const focusRecordsToUpdate = await FocusRecordTickTick.find({
+			userId,
 			'tasks.taskId': { $in: modifiedTaskIds }
 		})
 		.select('id tasks')
@@ -205,7 +210,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 			if (Object.keys(updateFields).length > 0) {
 				focusRecordBulkOps.push({
 					updateOne: {
-						filter: { id: focusRecord.id },
+						filter: { id: focusRecord.id, userId },
 						update: { $set: updateFields }
 					}
 				});
@@ -237,7 +242,7 @@ export async function syncTickTickTasks(userId: string, options?: {
 	};
 }
 
-export async function syncTodoistTasks(userId: string) {
+export async function syncTodoistTasks(userId: Types.ObjectId) {
 	// Get or create sync metadata for todoist tasks
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'todoistTasks');
 
@@ -294,6 +299,7 @@ export async function syncTodoistTasks(userId: string) {
 		// Normalize the Todoist task to match our schema
 		const normalizedTask = {
 			...task,
+			userId,
 			id: taskId,
 			title: task.content || task.title || '',
 			description: task.description || '',
@@ -307,7 +313,7 @@ export async function syncTodoistTasks(userId: string) {
 		// Add upsert operation to bulk array
 		bulkOps.push({
 			updateOne: {
-				filter: { id: taskId },
+				filter: { id: taskId, userId },
 				update: { $set: normalizedTask },
 				upsert: true,
 			},

@@ -11,9 +11,10 @@ import { withSyncLock } from '../../utils/withSyncLock';
 
 const router = express.Router();
 
-router.get('/metadata', verifyToken, async (req, res) => {
+router.get('/metadata', verifyToken, async (req: CustomRequest, res) => {
     try {
-        const syncMetadata = await SyncMetadata.find({})
+        const userId = req.user!.userId;
+        const syncMetadata = await SyncMetadata.find({ userId })
 
         if (!syncMetadata) {
             return res.status(404).json({
@@ -43,6 +44,7 @@ router.post('/ticktick/tasks', verifyToken, withSyncLock({
 
         // Check if first sync
         const lastSync = await SyncMetadata.findOne({
+            userId,
             syncType: 'tickTickTasks'
         });
 
@@ -55,6 +57,7 @@ router.post('/ticktick/tasks', verifyToken, withSyncLock({
             await syncTickTickProjects(userId);
 
             const archivedProjects = await ProjectTickTick.find({
+                userId,
                 closed: true
             }).lean();
             archivedProjectIds = archivedProjects.map((p: any) => p.id);
@@ -178,6 +181,7 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
 
         // Check if first sync for tasks
         const lastTasksSync = await SyncMetadata.findOne({
+            userId,
             syncType: 'tickTickTasks'
         });
 
@@ -195,6 +199,7 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
             projectsResult = await syncTickTickProjects(userId);
 
             const archivedProjects = await ProjectTickTick.find({
+                userId,
                 closed: true
             }).lean();
             archivedProjectIds = archivedProjects.map((p: any) => p.id);

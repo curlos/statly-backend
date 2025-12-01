@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { TaskTickTick, TaskTodoist } from "../../models/TaskModel";
 import type { ImportCategoryResult } from "./importBackup.utils";
 
@@ -26,7 +27,7 @@ export function validateTask(doc: any, requiredFields: string[], validSourcesSet
 /**
  * Imports tasks with validation
  */
-export async function importTasks(tasks: any[]): Promise<ImportCategoryResult> {
+export async function importTasks(tasks: any[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
 	const errors: string[] = [];
 
 	// Declare validation constants once for all tasks
@@ -50,7 +51,9 @@ export async function importTasks(tasks: any[]): Promise<ImportCategoryResult> {
 
 		const source = task.source;
 		if (tasksBySource[source]) {
-			tasksBySource[source].push(task);
+			// Remove _id to allow MongoDB to generate new unique IDs for each user
+			const { _id, ...taskWithoutMongoDbId } = task;
+			tasksBySource[source].push({ ...taskWithoutMongoDbId, userId });
 		} else {
 			errors.push(`Task ${task.id}: Unknown source ${source}`);
 		}
@@ -72,7 +75,7 @@ export async function importTasks(tasks: any[]): Promise<ImportCategoryResult> {
 
 		const bulkOps = sourceTasks.map(task => ({
 			updateOne: {
-				filter: { id: task.id },
+				filter: { id: task.id, userId },
 				update: { $set: task },
 				upsert: true,
 			},
