@@ -133,7 +133,8 @@ async function executeQuery(
 				completedTasks: 1,
 				emotions: 1,
 				tasks: 1,
-				pauseDuration: 1
+				pauseDuration: 1,
+				source: 1
 			}
 		}
 	);

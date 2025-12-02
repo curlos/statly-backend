@@ -71,7 +71,7 @@ const UserSettingsSchema = new Schema(
 					showTaskProjectName: { type: Boolean, default: true },
 					taskIdIncludeFocusRecordsFromSubtasks: { type: Boolean, default: true },
 					filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
-					maxFocusRecordsPerPage: { type: Number, default: 50 },
+					maxFocusRecordsPerPage: { type: Number, default: 25 },
 					onlyExportTasksWithNoParent: { type: Boolean, default: true },
 					showMedals: { type: Boolean, default: false },
 					selectedMedalImage: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007663/Statly/battlefield-1-medals/weapons/28_5HFD732.webp" },

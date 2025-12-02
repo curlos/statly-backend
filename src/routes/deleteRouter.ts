@@ -8,6 +8,30 @@ import ProjectGroupTickTick from '../models/projectGroupModel';
 import SyncMetadata from '../models/SyncMetadataModel';
 const router = express.Router();
 
+// Delete single focus record by ID for logged in user
+router.delete('/focus-record/:id', verifyToken, async (req: CustomRequest, res) => {
+	const user = req.user;
+	// @ts-ignore
+	const { userId } = user;
+	const { id } = req.params;
+
+	try {
+		// Delete focus record only if it belongs to this user
+		const result = await FocusRecord.deleteOne({ id, userId });
+
+		if (result.deletedCount === 0) {
+			return res.status(404).json({ message: 'Focus record not found' });
+		}
+
+		res.json({
+			deletedCount: result.deletedCount,
+			message: 'Focus record deleted successfully'
+		});
+	} catch (error) {
+		res.status(500).json({ message: error instanceof Error ? error.message : error });
+	}
+});
+
 // Delete focus records for logged in user
 router.delete('/focus-records', verifyToken, async (req: CustomRequest, res) => {
 	const user = req.user;
