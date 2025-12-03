@@ -6,8 +6,6 @@ import compression from 'compression';
 import connectDB from './db/database'; // Import the connectDB function
 
 // Routes
-import ticktickRouter from './routes/ticktickRouter';
-import tempRouter from './routes/tempRouter';
 import usersRouter from './routes/usersRouter';
 import settingsRouter from './routes/userSettingsRouter';
 import deleteRouter from './routes/deleteRouter';
@@ -78,8 +76,6 @@ app.use('/user-settings', settingsRouter);
 app.use('/delete', deleteRouter);
 
 // Old routes
-app.use('/ticktick', ticktickRouter);
-app.use('/ticktick', tempRouter);
 app.use('/old-focus-apps', oldFocusAppsRouter);
 
 app.get('/', (req, res) => {

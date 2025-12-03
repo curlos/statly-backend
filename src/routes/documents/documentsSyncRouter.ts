@@ -29,8 +29,9 @@ router.get('/metadata', verifyToken, async (req: CustomRequest, res) => {
         }, {});
 
         res.status(200).json(syncMetadataByType);
-    } catch (error) {
-        res.status(500).json({
+    } catch (error: any) {
+        const statusCode = error?.statusCode || 500;
+        res.status(statusCode).json({
             message: error instanceof Error ? error.message : 'An error occurred fetching sync metadata.',
         });
     }

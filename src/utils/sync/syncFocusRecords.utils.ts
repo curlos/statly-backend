@@ -4,7 +4,7 @@ import { FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusReco
 import { TaskTickTick } from "../../models/TaskModel";
 import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks, fetchTickTickFocusRecords, fetchTideAppFocusRecords } from "../focus.utils";
 import { crossesMidnightInTimezone } from "../timezone.utils";
-import { getOrCreateSyncMetadata } from "../helpers.utils";
+import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { analyzeNoteEmotionsCore } from "../../controllers/sentimentBatchController";
 import UserSettings from "../../models/UserSettingsModel";
 
@@ -45,15 +45,20 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 	// Get or create sync metadata for focus records
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickFocusRecords');
 
+	// Get user's TickTick cookie
+	const cookie = await getTickTickCookie(userId);
+
+	// Get user settings for emotion analysis feature
+	const userSettings = await UserSettings.findOne({ userId });
+
 	const lastSyncTime = syncMetadata.lastSyncTime;
-	const focusRecords = await fetchTickTickFocusRecords();
+	const focusRecords = await fetchTickTickFocusRecords(cookie, userId);
 
 	// Calculate the cutoff date (3 days before last sync)
 	const threeDaysBeforeLastSync = new Date(lastSyncTime);
 	threeDaysBeforeLastSync.setDate(threeDaysBeforeLastSync.getDate() - 3);
 
 	// Check if we should analyze emotions (do this early to avoid unnecessary work)
-	const userSettings = await UserSettings.findOne({ userId });
 	const shouldAnalyzeEmotions = userSettings?.tickTickOne?.pages?.focusRecords?.analyzeNoteEmotionsWhileSyncingFocusRecords || false;
 
 	// Only fetch existing records if we need to analyze emotions
@@ -139,8 +144,10 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 			const crossesMidnight = getCachedCrossesMidnight(startTime, endTime, timezone, midnightCache);
 
 			// Normalize the focus record to match our schema
+			// Remove _id to prevent duplicate key errors on upsert
+			const { _id, ...recordWithoutMongoDbId } = record;
 			const normalizedRecord = {
-				...record,
+				...recordWithoutMongoDbId,
 				userId,
 				duration: realFocusDuration,
 				tasks: tasksWithDuration,

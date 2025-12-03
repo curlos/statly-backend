@@ -5,6 +5,7 @@ interface IUserSettings extends Document {
 		color?: string;
 		fontFamily?: string;
 	};
+	tickTickCookie?: string;
 	tickTickOne?: {
 		pages?: {
 			focusRecords?: {
@@ -61,6 +62,7 @@ const UserSettingsSchema = new Schema(
 			color: { type: String, default: 'blue-500' },
 			fontFamily: { type: String, default: 'Default' }
 		},
+		tickTickCookie: { type: String, default: '' },
 		tickTickOne: {
 			pages: {
 				focusRecords: {

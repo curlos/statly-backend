@@ -1,6 +1,8 @@
 import { Types } from 'mongoose';
 import SyncMetadata from "../models/SyncMetadataModel";
+import UserSettings from "../models/UserSettingsModel";
 import { crossesMidnightInTimezone } from "./timezone.utils";
+import { decrypt } from "./encryption.utils";
 
 export const sortArrayByProperty = (array: any[], property: string, type = 'descending') => {
 	// Create a deep copy of the array to avoid modifying the original
@@ -125,19 +127,55 @@ export const getBeFocusedFocusRecordsWithValidDate = (array: any) => {
 
 // Helper function to get or create sync metadata
 export async function getOrCreateSyncMetadata(userId: Types.ObjectId, syncType: string) {
+	// Use findOne first to avoid creating unnecessary documents
 	let syncMetadata = await SyncMetadata.findOne({ userId, syncType });
 
 	if (!syncMetadata) {
+		// Create in-memory document but don't save yet
+		// This prevents saving epoch date when sync fails
 		syncMetadata = new SyncMetadata({
 			userId,
 			syncType,
 			lastSyncTime: new Date(0), // Set to epoch so all data is synced initially
 		});
-		// Save immediately to prevent duplicate metadata creation if sync is interrupted
-		await syncMetadata.save();
 	}
 
 	return syncMetadata;
+}
+
+// Helper function to get user's TickTick cookie with validation
+export async function getTickTickCookie(userId: Types.ObjectId): Promise<string> {
+	const userSettings = await UserSettings.findOne({ userId });
+	const encryptedCookie = userSettings?.tickTickCookie;
+
+	if (!encryptedCookie) {
+		throw new Error('TickTick cookie not set. Please add your TickTick cookie in settings.');
+	}
+
+	// Decrypt the cookie before returning it
+	const decryptedCookie = decrypt(encryptedCookie);
+
+	return decryptedCookie;
+}
+
+/**
+ * Wraps axios calls to TickTick API and extracts meaningful error messages
+ * from TickTick's error response structure
+ */
+export async function handleTickTickApiCall<T>(apiCall: () => Promise<T>): Promise<T> {
+	try {
+		return await apiCall();
+	} catch (error: any) {
+		// Check if this is an axios error with a response from TickTick
+		if (error?.response?.data?.errorMessage) {
+			// Create error with TickTick's message and preserve status code
+			const tickTickError: any = new Error(error.response.data.errorMessage);
+			tickTickError.statusCode = error.response.status;
+			throw tickTickError;
+		}
+		// Fallback to original error
+		throw error;
+	}
 }
 
 /**

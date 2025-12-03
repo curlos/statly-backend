@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { FocusRecordTickTick } from "../../models/FocusRecord";
 import { TaskTickTick, TaskTodoist } from "../../models/TaskModel";
-import { getOrCreateSyncMetadata } from "../helpers.utils";
+import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { fetchAllTickTickTasks } from "../ticktick.utils";
 import { getAllTodoistTasks } from "../task.utils";
 
@@ -12,8 +12,11 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 	// Get or create sync metadata
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickTasks');
 
+	// Get user's TickTick cookie
+	const cookie = await getTickTickCookie(userId);
+
 	const lastSyncTime = syncMetadata.lastSyncTime;
-	const tickTickTasks = await fetchAllTickTickTasks({
+	const tickTickTasks = await fetchAllTickTickTasks(cookie, {
 		archivedProjectIds: options?.archivedProjectIds,
 		getTasksFromNonArchivedProjects: options?.getTasksFromNonArchivedProjects
 	});
@@ -100,8 +103,10 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 			};
 
 			// Normalize the FULL task
+			// Remove _id to prevent duplicate key errors on upsert
+			const { _id, ...taskWithoutMongoDbId } = task;
 			const normalizedFullTask = {
-				...task,
+				...taskWithoutMongoDbId,
 				userId,
 				taskType: 'full',
 				title: task.title,
@@ -136,8 +141,10 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 					});
 
 					// Normalize item task
+					// Remove _id to prevent duplicate key errors on upsert
+					const { _id: itemMongoId, ...itemWithoutMongoDbId } = item;
 					const normalizedItemTask = {
-						...item,
+						...itemWithoutMongoDbId,
 						userId,
 						taskType: 'item',
 						title: item.title,
@@ -297,8 +304,10 @@ export async function syncTodoistTasks(userId: Types.ObjectId) {
 		});
 
 		// Normalize the Todoist task to match our schema
+		// Remove _id to prevent duplicate key errors on upsert
+		const { _id, ...taskWithoutMongoDbId } = task;
 		const normalizedTask = {
-			...task,
+			...taskWithoutMongoDbId,
 			userId,
 			id: taskId,
 			title: task.content || task.title || '',

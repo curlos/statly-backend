@@ -1,57 +1,39 @@
 import axios from 'axios';
 import { Types } from 'mongoose';
-import { getTodayTimeBounds, sortArrayByProperty, arrayToObjectByKey } from './helpers.utils';
+import { getTodayTimeBounds, sortArrayByProperty, arrayToObjectByKey, handleTickTickApiCall } from './helpers.utils';
 import FocusRecordTickTick from '../models/FocusRecord';
 import Task from '../models/TaskModel';
 import { buildAncestorData } from './task.utils';
 import { getJsonData } from './mongoose.utils';
 
-const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
-const cookie = TICKTICK_API_COOKIE;
 // new Date(2705792451783) = September 28, 2055. This is to make sure all my tasks are fetched properly. I doubt I'll have to worry about this expiring since I'll be long past TickTick and humans coding anything will be a thing of the past by then with GPT-20 out by then.
 const farAwayDateInMs = 2705792451783;
 
-interface FetchFocusRecordsOptions {
-	todayOnly?: boolean;
-	doNotUseMongoDB?: boolean;
-	localSortedAllFocusData?: any;
-}
-
-export const fetchTickTickFocusRecords = async (options: FetchFocusRecordsOptions = {}) => {
-	const { todayOnly = false, doNotUseMongoDB = false, localSortedAllFocusData = {} } = options;
-
-	const localFocusData = doNotUseMongoDB
-		? localSortedAllFocusData
-		: await FocusRecordTickTick.find().sort({ startTime: -1 }).limit(21).lean();
+export const fetchTickTickFocusRecords = async (cookie: string, userId: Types.ObjectId) => {
+	const localFocusData = await FocusRecordTickTick.find({ userId }).sort({ startTime: -1 }).limit(21).lean()
 
 	let fromMs = 0;
 	let toMs = farAwayDateInMs;
 
-	if (todayOnly) {
-		const { startMs, endMs } = getTodayTimeBounds();
-		fromMs = startMs;
-		toMs = endMs;
+	// Check if localFocusData exists and has at least 21 records
+	if (localFocusData && localFocusData.length > 20) {
+		// Get the local focus data from MongoDB and since the focus records are already sorted by startTime, get the very first focus record in the array and get it's startTime and set the "toMs" variable to that startTime in MS - 1 ms.
+		const semiRecentFocusRecord = localFocusData[20];
+		const semiRecentStartTimeDate = new Date(semiRecentFocusRecord.startTime);
+		const semiRecentStartTimeInMs = semiRecentStartTimeDate.getTime();
+
+		const todayMs = new Date().getTime();
+
+		// Subtract 1 MS to not include latest focus record in our search.
+		fromMs = semiRecentStartTimeInMs;
+		toMs = todayMs;
 	} else {
-		// Check if localFocusData exists and has at least 21 records
-		if (localFocusData && localFocusData.length > 20) {
-			// Get the local focus data from MongoDB and since the focus records are already sorted by startTime, get the very first focus record in the array and get it's startTime and set the "toMs" variable to that startTime in MS - 1 ms.
-			const semiRecentFocusRecord = localFocusData[20];
-			const semiRecentStartTimeDate = new Date(semiRecentFocusRecord.startTime);
-			const semiRecentStartTimeInMs = semiRecentStartTimeDate.getTime();
-
-			const todayMs = new Date().getTime();
-
-			// Subtract 1 MS to not include latest focus record in our search.
-			fromMs = semiRecentStartTimeInMs;
-			toMs = todayMs;
-		} else {
-			// If no local focus records or less than 21, fetch from the beginning
-			fromMs = 0;
-			toMs = farAwayDateInMs;
-		}
+		// If no local focus records or less than 21, fetch from the beginning
+		fromMs = 0;
+		toMs = farAwayDateInMs;
 	}
 
-	const [focusDataPomos, focusDataStopwatch] = await Promise.all([
+	const [focusDataPomos, focusDataStopwatch] = await handleTickTickApiCall(() => Promise.all([
 		axios.get(`https://api.ticktick.com/api/v2/pomodoros?from=${fromMs}&to=${toMs}`, {
 			headers: {
 				Cookie: cookie,
@@ -62,7 +44,7 @@ export const fetchTickTickFocusRecords = async (options: FetchFocusRecordsOption
 				Cookie: cookie,
 			},
 		})
-	]);
+	]));
 
 	const tickTickOneApiFocusData = [...focusDataPomos.data, ...focusDataStopwatch.data];
 	const tickTickOneApiFocusDataById = arrayToObjectByKey(tickTickOneApiFocusData, 'id');

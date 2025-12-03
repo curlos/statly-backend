@@ -68,7 +68,7 @@ export function withSyncLock<T = any>(options: SyncLockOptions<T>) {
             await apiCallStatus.save();
 
             res.status(200).json(result);
-        } catch (error) {
+        } catch (error: any) {
             // Release lock on error
             try {
                 const apiCallStatus = await ApiCallStatus.findOne({
@@ -83,7 +83,8 @@ export function withSyncLock<T = any>(options: SyncLockOptions<T>) {
                 console.error('Failed to release lock:', lockError);
             }
 
-            res.status(500).json({
+            const statusCode = error?.statusCode || 500;
+            res.status(statusCode).json({
                 message: error instanceof Error ? error.message : errorMessage,
             });
         }

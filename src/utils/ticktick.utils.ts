@@ -1,13 +1,7 @@
 import axios from 'axios';
-import { getDayAfterToday } from './helpers.utils';
-import dotenv from 'dotenv';
+import { getDayAfterToday, handleTickTickApiCall } from './helpers.utils';
 
-dotenv.config();
-
-const TICKTICK_API_COOKIE = process.env.TICKTICK_API_COOKIE;
-const cookie = TICKTICK_API_COOKIE;
-
-export async function fetchActiveAndCompletedTasksFromTickTick(projectIds: string[]) {
+export async function fetchActiveAndCompletedTasksFromTickTick(projectIds: string[], cookie: string) {
 	const dayAfterTodayStr = getDayAfterToday();
 
 	// Build all API call promises (2 per project: active + completed)
@@ -33,7 +27,7 @@ export async function fetchActiveAndCompletedTasksFromTickTick(projectIds: strin
 	]);
 
 	// Execute all API calls in parallel
-	const responses = await Promise.all(allPromises);
+	const responses = await handleTickTickApiCall(() => Promise.all(allPromises));
 
 	// Flatten all response data into a single tasks array
 	const tasks = responses.flatMap(response => response.data);
@@ -41,7 +35,7 @@ export async function fetchActiveAndCompletedTasksFromTickTick(projectIds: strin
 	return tasks;
 }
 
-export async function fetchAllTickTickTasks(options?: {
+export async function fetchAllTickTickTasks(cookie: string, options?: {
 	archivedProjectIds?: string[];
 	getTasksFromNonArchivedProjects?: boolean;
 }) {
@@ -53,7 +47,7 @@ export async function fetchAllTickTickTasks(options?: {
 	if (shouldGetRegularTasks) {
 		const dayAfterTodayStr = getDayAfterToday();
 
-		const [batchCheckResponse, completedTasksResponse, willNotDoTasksResponse, trashTasksResponse] = await Promise.all([
+		const [batchCheckResponse, completedTasksResponse, willNotDoTasksResponse, trashTasksResponse] = await handleTickTickApiCall(() => Promise.all([
 			axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
 				headers: {
 					Cookie: cookie,
@@ -86,7 +80,7 @@ export async function fetchAllTickTickTasks(options?: {
 					},
 				}
 			)
-		]);
+		]));
 
 		const tasksToBeUpdated = batchCheckResponse.data.syncTaskBean.update;
 		const completedTasks = completedTasksResponse.data;
@@ -104,35 +98,39 @@ export async function fetchAllTickTickTasks(options?: {
 	// If archived project IDs provided, fetch their tasks
 	let archivedTasks: any[] = [];
 	if (options?.archivedProjectIds && options.archivedProjectIds.length > 0) {
-		archivedTasks = await fetchActiveAndCompletedTasksFromTickTick(options.archivedProjectIds);
+		archivedTasks = await fetchActiveAndCompletedTasksFromTickTick(options.archivedProjectIds, cookie);
 	}
 
 	return [...regularTasks, ...archivedTasks];
 }
 
-export async function fetchAllTickTickProjects() {
-	const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
-		headers: {
-			Cookie: cookie,
-			'x-device': JSON.stringify({
-				platform: 'web'
-			}),
-		},
-	});
+export async function fetchAllTickTickProjects(cookie: string) {
+	const batchCheckResponse = await handleTickTickApiCall(() =>
+		axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
+			headers: {
+				Cookie: cookie,
+				'x-device': JSON.stringify({
+					platform: 'web'
+				}),
+			},
+		})
+	);
 
 	const projects = batchCheckResponse.data.projectProfiles || [];
 	return projects;
 }
 
-export async function fetchAllTickTickProjectGroups() {
-	const batchCheckResponse = await axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
-		headers: {
-			Cookie: cookie,
-			'x-device': JSON.stringify({
-				platform: 'web'
-			}),
-		},
-	});
+export async function fetchAllTickTickProjectGroups(cookie: string) {
+	const batchCheckResponse = await handleTickTickApiCall(() =>
+		axios.get('https://api.ticktick.com/api/v2/batch/check/0', {
+			headers: {
+				Cookie: cookie,
+				'x-device': JSON.stringify({
+					platform: 'web'
+				}),
+			},
+		})
+	);
 
 	const projectGroups = batchCheckResponse.data.projectGroups || [];
 	return projectGroups;

@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import ProjectGroupTickTick from "../../models/projectGroupModel";
 import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/projectModel";
 import { fetchSessionFocusRecordsWithNoBreaks } from "../focus.utils";
-import { getOrCreateSyncMetadata } from "../helpers.utils";
+import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { getAllTodoistProjects } from "../task.utils";
 import { fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from "../ticktick.utils";
 
@@ -10,8 +10,11 @@ export async function syncTickTickProjects(userId: Types.ObjectId) {
 	// Get or create sync metadata for projects
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickProjects');
 
+	// Get user's TickTick cookie
+	const cookie = await getTickTickCookie(userId);
+
 	const lastSyncTime = syncMetadata.lastSyncTime;
-	const tickTickProjects = await fetchAllTickTickProjects();
+	const tickTickProjects = await fetchAllTickTickProjects(cookie);
 
 	const bulkOps = [];
 
@@ -21,11 +24,13 @@ export async function syncTickTickProjects(userId: Types.ObjectId) {
 		const shouldUpdateProject = !projectModifiedTime || projectModifiedTime >= lastSyncTime;
 
 		if (shouldUpdateProject) {
+			// Remove _id to prevent duplicate key errors on upsert
+			const { _id, ...projectWithoutMongoDbId } = project;
 			// Add project upsert operation to bulk array
 			bulkOps.push({
 				updateOne: {
 					filter: { id: project.id, userId },
-					update: { $set: { ...project, userId } },
+					update: { $set: { ...projectWithoutMongoDbId, userId } },
 					upsert: true,
 				},
 			});
@@ -53,16 +58,21 @@ export async function syncTickTickProjectGroups(userId: Types.ObjectId) {
 	// Get or create sync metadata for project groups
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickProjectGroups');
 
-	const tickTickProjectGroups = await fetchAllTickTickProjectGroups();
+	// Get user's TickTick cookie
+	const cookie = await getTickTickCookie(userId);
+
+	const tickTickProjectGroups = await fetchAllTickTickProjectGroups(cookie);
 
 	const bulkOps = [];
 
 	// Always update all project groups since there's no modifiedTime
 	for (const projectGroup of tickTickProjectGroups) {
+		// Remove _id to prevent duplicate key errors on upsert
+		const { _id, ...projectGroupWithoutMongoDbId } = projectGroup;
 		bulkOps.push({
 			updateOne: {
 				filter: { id: projectGroup.id, userId },
-				update: { $set: { ...projectGroup, userId, source: 'ProjectGroupTickTick' } },
+				update: { $set: { ...projectGroupWithoutMongoDbId, userId, source: 'ProjectGroupTickTick' } },
 				upsert: true,
 			},
 		});

@@ -6,6 +6,7 @@ import FocusRecord from '../models/FocusRecord';
 import Task from '../models/TaskModel';
 import Project from '../models/projectModel';
 import ProjectGroupTickTick from '../models/projectGroupModel';
+import { encrypt } from '../utils/encryption.utils';
 const router = express.Router();
 
 // Get user settings for logged in user
@@ -22,7 +23,15 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 			return res.status(404).json({ message: 'User Settings not found' });
 		}
 
-		res.json(userSettings);
+		// Convert to plain object and remove sensitive cookie value
+		const userSettingsObj: any = userSettings.toObject();
+
+		// Replace cookie with status indicator
+		const hasCookie = !!userSettingsObj.tickTickCookie;
+		delete userSettingsObj.tickTickCookie;
+		userSettingsObj.tickTickCookieSet = hasCookie;
+
+		res.json(userSettingsObj);
 	} catch (error) {
 		res.status(500).json({ message: error instanceof Error ? error.message : error });
 	}
@@ -33,7 +42,7 @@ router.put('/edit', verifyToken, async (req: CustomRequest, res) => {
 	// @ts-ignore
 	const { userId } = user;
 
-	const { userId: bodyUserId } = req.body;
+	const { userId: bodyUserId, tickTickCookie } = req.body;
 
 	// Remove userId from req.body to prevent it from being updated
 	delete req.body.userId;
@@ -44,13 +53,31 @@ router.put('/edit', verifyToken, async (req: CustomRequest, res) => {
 			return res.status(400).json({ message: 'Changing userId is not allowed' });
 		}
 
+		// If tickTickCookie is being updated, encrypt it
+		if (tickTickCookie) {
+			// Check if it's already encrypted (to avoid double encryption)
+			const looksEncrypted = /^[0-9a-f]{192,}$/i.test(tickTickCookie);
+
+			if (!looksEncrypted) {
+				req.body.tickTickCookie = encrypt(tickTickCookie);
+			}
+		}
+
 		const updatedUserSettings = await UserSettings.findOneAndUpdate({ userId }, req.body, { new: true });
 
 		if (!updatedUserSettings) {
 			return res.status(404).json({ message: 'User Settings not found' });
 		}
 
-		res.json(updatedUserSettings);
+		// Convert to plain object and remove sensitive cookie value
+		const userSettingsObj: any = updatedUserSettings.toObject();
+
+		// Replace cookie with status indicator
+		const hasCookie = !!userSettingsObj.tickTickCookie;
+		delete userSettingsObj.tickTickCookie;
+		userSettingsObj.tickTickCookieSet = hasCookie;
+
+		res.json(userSettingsObj);
 	} catch (error) {
 		res.status(400).json({ message: error instanceof Error ? error.message : error });
 	}
