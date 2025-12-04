@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { applyUserIdEnforcement } from '../utils/schema.utils';
 
 interface IUserSettings extends Document {
 	theme?: {
@@ -115,6 +116,9 @@ const UserSettingsSchema = new Schema(
 		timestamps: true,
 	}
 );
+
+// Apply userId enforcement middleware
+applyUserIdEnforcement(UserSettingsSchema);
 
 const UserSettings = mongoose.model<IUserSettings>('UserSettings', UserSettingsSchema, 'user-settings');
 

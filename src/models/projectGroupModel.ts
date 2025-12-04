@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { applyUserIdEnforcement } from '../utils/schema.utils';
 
 // TickTick Project Group Schema
 const ProjectGroupTickTickSchema = new Schema({
@@ -76,6 +77,9 @@ const ProjectGroupTickTickSchema = new Schema({
 
 // Add compound unique index to ensure id is unique per user (not globally unique)
 ProjectGroupTickTickSchema.index({ id: 1, userId: 1 }, { unique: true });
+
+// Apply userId enforcement middleware
+applyUserIdEnforcement(ProjectGroupTickTickSchema);
 
 const ProjectGroupTickTick = mongoose.model('ProjectGroupTickTick', ProjectGroupTickTickSchema);
 

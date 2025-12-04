@@ -78,6 +78,11 @@ export function buildTaskMatchConditions(
 	intervalEndDate?: string,
 	timezone?: string
 ) {
+	// Validate userId is provided - critical for data isolation
+	if (!userId) {
+		throw new Error('buildTaskMatchConditions requires userId parameter');
+	}
+
 	const matchFilter: any = {};
 
 	// Add userId filter - critical for data isolation

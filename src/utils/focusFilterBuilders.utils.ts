@@ -50,6 +50,11 @@ export function buildFocusMatchAndFilterConditions(
 	emotions?: string[],
 	timezone?: string
 ) {
+	// Validate userId is provided - critical for data isolation
+	if (!userId) {
+		throw new Error('buildFocusMatchAndFilterConditions requires userId parameter');
+	}
+
 	const focusRecordMatchConditions: any = {};
 	const taskFilterConditions: any[] = [];
 	const andedOrConditions: any[] = []; // Collect all $or conditions here to be AND-ed together

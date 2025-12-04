@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { applyUserIdEnforcement } from '../utils/schema.utils';
 
 // Base schema with NORMALIZED shared fields for ALL projects (TickTick, Todoist, and Session)
 const BaseProjectSchema = new Schema({
@@ -85,6 +86,9 @@ BaseProjectSchema.index({ id: 1, userId: 1 }, { unique: true });
 // Add compound indexes for common query patterns (userId is always first since all queries filter by user)
 BaseProjectSchema.index({ userId: 1, source: 1 });
 BaseProjectSchema.index({ userId: 1, closed: 1 });
+
+// Apply userId enforcement middleware
+applyUserIdEnforcement(BaseProjectSchema);
 
 // Create base model
 const Project = mongoose.model('Project', BaseProjectSchema);

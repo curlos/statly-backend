@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { applyUserIdEnforcement } from '../utils/schema.utils';
 
 // Base embedded schema for tasks within a focus record (common fields for all apps)
 const BaseFocusRecordTaskSchema = new Schema({
@@ -107,6 +108,9 @@ BaseFocusRecordSchema.index({ userId: 1, source: 1 });
 BaseFocusRecordSchema.index({ userId: 1, 'tasks.projectId': 1 });
 BaseFocusRecordSchema.index({ userId: 1, 'tasks.taskId': 1 });
 BaseFocusRecordSchema.index({ userId: 1, crossesMidnight: 1 });
+
+// Apply userId enforcement middleware
+applyUserIdEnforcement(BaseFocusRecordSchema);
 
 // Create base model
 const FocusRecord = mongoose.model('FocusRecord', BaseFocusRecordSchema);

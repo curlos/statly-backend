@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import FocusRecordTickTick from '../models/FocusRecord';
+import FocusRecord from '../models/FocusRecord';
 import Project from '../models/projectModel';
 import { addAncestorAndCompletedTasks, addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
 import {
@@ -187,7 +187,7 @@ async function executeQuery(
 	});
 
 	// Execute the combined query (1 database call instead of 4)
-	const result = await FocusRecordTickTick.aggregate(basePipeline);
+	const result = await FocusRecord.aggregate(basePipeline);
 
 	// Extract results from facet
 	const facetResult = result[0];

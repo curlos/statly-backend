@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { applyUserIdEnforcement } from '../utils/schema.utils';
 
 interface IApiCallStatus extends Document {
 	userId: mongoose.Types.ObjectId;
@@ -32,6 +33,9 @@ const apiCallStatusSchema = new Schema<IApiCallStatus>({
 
 // Compound unique index to ensure one status per user per endpoint
 apiCallStatusSchema.index({ userId: 1, apiEndpoint: 1 }, { unique: true });
+
+// Apply userId enforcement middleware
+applyUserIdEnforcement(apiCallStatusSchema);
 
 const ApiCallStatus = mongoose.model<IApiCallStatus>('ApiCallStatus', apiCallStatusSchema);
 

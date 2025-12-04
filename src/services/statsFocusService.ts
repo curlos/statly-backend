@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import FocusRecordTickTick from '../models/FocusRecord';
+import FocusRecord from '../models/FocusRecord';
 import Task from '../models/TaskModel';
 import { addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
 import {
@@ -254,7 +254,7 @@ async function groupByDay(pipeline: any[], startDate?: string, endDate?: string,
 		}
 	});
 
-	const result = await FocusRecordTickTick.aggregate(pipeline);
+	const result = await FocusRecord.aggregate(pipeline);
 	const facetResult = result[0];
 
 	const totalRecords = facetResult.totals[0]?.total || 0;
@@ -317,7 +317,7 @@ async function groupByWeek(pipeline: any[], startDate?: string, endDate?: string
 		}
 	});
 
-	const result = await FocusRecordTickTick.aggregate(pipeline);
+	const result = await FocusRecord.aggregate(pipeline);
 	const facetResult = result[0];
 
 	const totalRecords = facetResult.totals[0]?.total || 0;
@@ -374,7 +374,7 @@ async function groupByMonth(pipeline: any[], startDate?: string, endDate?: strin
 		}
 	});
 
-	const result = await FocusRecordTickTick.aggregate(pipeline);
+	const result = await FocusRecord.aggregate(pipeline);
 	const facetResult = result[0];
 
 	const totalRecords = facetResult.totals[0]?.total || 0;
@@ -433,7 +433,7 @@ async function groupByYear(pipeline: any[], startDate?: string, endDate?: string
 		}
 	});
 
-	const result = await FocusRecordTickTick.aggregate(pipeline);
+	const result = await FocusRecord.aggregate(pipeline);
 	const facetResult = result[0];
 
 	const totalRecords = facetResult.totals[0]?.total || 0;
@@ -485,7 +485,7 @@ async function groupByProject(pipeline: any[], taskFilterConditions: any[] = [],
 
 	pipeline.push({ $facet: facetStages });
 
-	const result = await FocusRecordTickTick.aggregate(pipeline);
+	const result = await FocusRecord.aggregate(pipeline);
 	const facetResult = result[0];
 
 	const totalRecords = facetResult.totals[0]?.total || 0;
@@ -532,7 +532,7 @@ async function groupByTask(pipeline: any[], taskFilterConditions: any[] = [], ne
 		}
 	});
 
-	const result = await FocusRecordTickTick.aggregate(pipeline);
+	const result = await FocusRecord.aggregate(pipeline);
 	const facetResult = result[0];
 
 	const totalRecords = facetResult.totals[0]?.total || 0;
@@ -601,7 +601,7 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: any[], emotion
 			}
 		});
 
-		const result = await FocusRecordTickTick.aggregate(emotionPipeline);
+		const result = await FocusRecord.aggregate(emotionPipeline);
 		const facetResult = result[0];
 
 		const byProject = facetResult.byProject.map((r: any) => {
@@ -683,7 +683,7 @@ async function groupByEmotion(pipeline: any[], taskFilterConditions: any[] = [],
 		}
 	});
 
-	const result = await FocusRecordTickTick.aggregate(pipeline);
+	const result = await FocusRecord.aggregate(pipeline);
 	const facetResult = result[0];
 
 	// Extract totals
@@ -820,7 +820,7 @@ async function groupByHour(pipeline: any[], taskFilterConditions: any[] = [], ti
 		}
 	});
 
-	const result = await FocusRecordTickTick.aggregate(pipeline);
+	const result = await FocusRecord.aggregate(pipeline);
 	const facetResult = result[0];
 
 	// Extract totals
@@ -862,7 +862,7 @@ async function groupByRecord(pipeline: any[], startDate?: string, endDate?: stri
 		}
 	});
 
-	const result = await FocusRecordTickTick.aggregate(pipeline);
+	const result = await FocusRecord.aggregate(pipeline);
 	const facetResult = result[0];
 
 	// Extract totals
@@ -894,7 +894,7 @@ async function getTimeline(pipeline: any[], timezone: string = 'UTC') {
 	// Sort by start time
 	aggPipeline.push({ $sort: { startTime: 1 } });
 
-	const focusRecords = await FocusRecordTickTick.aggregate(aggPipeline);
+	const focusRecords = await FocusRecord.aggregate(aggPipeline);
 
 	// Calculate summary
 	const totalDuration = focusRecords.reduce((sum, record) => sum + (record.duration || 0), 0);

@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { applyUserIdEnforcement } from '../utils/schema.utils';
 
 // Base schema with NORMALIZED shared fields for ALL tasks (TickTick and Todoist)
 const BaseTaskSchema = new Schema({
@@ -65,6 +66,9 @@ BaseTaskSchema.index({ id: 1, userId: 1 }, { unique: true });
 // Add compound indexes for optimal query performance (userId is always first since all queries filter by user)
 BaseTaskSchema.index({ userId: 1, completedTime: 1 });
 BaseTaskSchema.index({ userId: 1, source: 1, projectId: 1 });
+
+// Apply userId enforcement middleware
+applyUserIdEnforcement(BaseTaskSchema);
 
 // Create base model
 const Task = mongoose.model('Task', BaseTaskSchema);
