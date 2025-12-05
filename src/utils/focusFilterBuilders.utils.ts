@@ -1,4 +1,5 @@
 import { parseDateInTimezone } from './timezone.utils';
+import { addMidnightRecordDurationAdjustment } from './focus.utils';
 import { Types } from 'mongoose';
 
 // ============================================================================
@@ -461,4 +462,86 @@ export function extractFocusTotalsFromResult(
 			onlyTasksTotalDuration: result[0]?.tasksDuration[0]?.total || 0
 		};
 	}
+}
+
+// ============================================================================
+// Reusable Focus Filter Pipeline Builder
+// ============================================================================
+
+export interface BuildFocusFilterPipelineParams {
+	userId: Types.ObjectId;
+	searchQuery?: string;
+	taskId?: string;
+	projectIds?: string[];
+	startDate?: string;
+	endDate?: string;
+	taskIdIncludeFocusRecordsFromSubtasks?: boolean;
+	focusAppSources?: string[];
+	crossesMidnight?: boolean;
+	intervalStartDate?: string | null;
+	intervalEndDate?: string | null;
+	emotions?: string[];
+	timezone: string;
+}
+
+/**
+ * Builds a complete focus filter pipeline with all filters and adjustments applied.
+ * This is the shared filtering logic used across stats, streaks, and other focus-related services.
+ *
+ * @param params - All filter parameters
+ * @returns An object containing the pipeline and additional filter data
+ */
+export function buildFocusFilterPipeline(params: BuildFocusFilterPipelineParams): {
+	pipeline: any[];
+	effectiveStartDate?: string;
+	effectiveEndDate?: string;
+	taskFilterConditions: any[];
+} {
+	// Build filters (reuse existing filter logic)
+	const searchFilter = buildFocusSearchFilter(params.searchQuery);
+	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
+		params.userId,
+		params.taskId,
+		params.projectIds || [],
+		params.startDate,
+		params.endDate,
+		params.taskIdIncludeFocusRecordsFromSubtasks || false,
+		params.focusAppSources || [],
+		params.crossesMidnight,
+		params.intervalStartDate,
+		params.intervalEndDate,
+		params.emotions,
+		params.timezone
+	);
+
+	// Calculate the date boundaries for duration adjustment
+	// Use interval dates if provided (second tier), otherwise use filter sidebar dates (first tier)
+	const effectiveStartDate = params.intervalStartDate || params.startDate;
+	const effectiveEndDate = params.intervalEndDate || params.endDate;
+
+	const tz = params.timezone || 'UTC';
+	const startDateBoundary = effectiveStartDate ? parseDateInTimezone(effectiveStartDate, tz) : null;
+	let endDateBoundary: Date | null = null;
+	if (effectiveEndDate) {
+		endDateBoundary = parseDateInTimezone(effectiveEndDate, tz);
+		endDateBoundary.setUTCDate(endDateBoundary.getUTCDate() + 1);
+	}
+
+	// Build base pipeline with shared filters
+	const basePipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
+
+	// Add duration adjustment for midnight crossing
+	if (startDateBoundary || endDateBoundary) {
+		addMidnightRecordDurationAdjustment(basePipeline, startDateBoundary, endDateBoundary);
+	}
+
+	// Add task filtering and duration recalculation (does not preserve original duration)
+	addTaskFilteringAndDurationRecalculation(basePipeline, taskFilterConditions, false);
+
+	return {
+		pipeline: basePipeline,
+		effectiveStartDate,
+		effectiveEndDate,
+		taskFilterConditions
+	};
 }

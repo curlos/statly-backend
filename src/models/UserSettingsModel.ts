@@ -38,6 +38,7 @@ interface IUserSettings extends Document {
 			};
 			focusHoursGoal?: {
 				projects?: Record<string, any>;
+				goalSeconds?: number;
 			};
 			challenges?: {
 				selectedChallengeCardImage?: {
@@ -95,7 +96,8 @@ const UserSettingsSchema = new Schema(
 					maxDaysPerPage: { type: Number, default: 7 }
 				},
 				focusHoursGoal: {
-					projects: { type: Object, default: {} }
+					projects: { type: Object, default: {} },
+					goalSeconds: { type: Number, default: 21600 } // Default: 6 hours
 				},
 				challenges: {
 					selectedChallengeCardImage: {

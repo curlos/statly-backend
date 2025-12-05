@@ -1,16 +1,9 @@
 import { Types } from 'mongoose';
 import FocusRecord from '../models/FocusRecord';
 import Task from '../models/TaskModel';
-import { addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
-import {
-	buildFocusSearchFilter,
-	buildFocusMatchAndFilterConditions,
-	buildFocusBasePipeline,
-	addTaskFilteringAndDurationRecalculation,
-} from '../utils/focusFilterBuilders.utils';
+import { buildFocusFilterPipeline } from '../utils/focusFilterBuilders.utils';
 import { buildAncestorData } from '../utils/task.utils';
 import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
-import { parseDateInTimezone } from '../utils/timezone.utils';
 
 // ============================================================================
 // Stats Aggregation Service
@@ -36,46 +29,11 @@ export interface FocusRecordsStatsQueryParams {
 }
 
 export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams, userId: Types.ObjectId) {
-	// Build filters (reuse existing filter logic)
-	const searchFilter = buildFocusSearchFilter(params.searchQuery);
-	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
-		userId,
-		params.taskId,
-		params.projectIds,
-		params.startDate,
-		params.endDate,
-		params.taskIdIncludeFocusRecordsFromSubtasks,
-		params.focusAppSources,
-		params.crossesMidnight,
-		params.intervalStartDate,
-		params.intervalEndDate,
-		params.emotions,
-		params.timezone
-	);
-
-	// Calculate the date boundaries for duration adjustment
-	// Use interval dates if provided (second tier), otherwise use filter sidebar dates (first tier)
-	const effectiveStartDate = params.intervalStartDate || params.startDate;
-	const effectiveEndDate = params.intervalEndDate || params.endDate;
-
-	const tz = params.timezone || 'UTC';
-	const startDateBoundary = effectiveStartDate ? parseDateInTimezone(effectiveStartDate, tz) : null;
-	let endDateBoundary: Date | null = null;
-	if (effectiveEndDate) {
-		endDateBoundary = parseDateInTimezone(effectiveEndDate, tz);
-		endDateBoundary.setUTCDate(endDateBoundary.getUTCDate() + 1);
-	}
-
-	// Build base pipeline with shared filters
-	const basePipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
-
-	// Add duration adjustment for midnight crossing
-	if (startDateBoundary || endDateBoundary) {
-		addMidnightRecordDurationAdjustment(basePipeline, startDateBoundary, endDateBoundary);
-	}
-
-	// Add task filtering and duration recalculation (does not preserve original duration)
-	addTaskFilteringAndDurationRecalculation(basePipeline, taskFilterConditions, false);
+	// Build complete filter pipeline using shared utility
+	const { pipeline: basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions } = buildFocusFilterPipeline({
+		...params,
+		userId
+	});
 
 	// Apply grouping based on groupBy parameter
 	const nested = params.nested ?? false;
