@@ -7,6 +7,7 @@ interface IUserSettings extends Document {
 		fontFamily?: string;
 	};
 	tickTickCookie?: string;
+	autoSyncEnabled?: boolean;
 	tickTickOne?: {
 		pages?: {
 			focusRecords?: {
@@ -64,6 +65,7 @@ const UserSettingsSchema = new Schema(
 			fontFamily: { type: String, default: 'Default' }
 		},
 		tickTickCookie: { type: String, default: '' },
+		autoSyncEnabled: { type: Boolean, default: false },
 		tickTickOne: {
 			pages: {
 				focusRecords: {
