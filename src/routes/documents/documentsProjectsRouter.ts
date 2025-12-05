@@ -6,14 +6,20 @@ import { verifyToken } from '../../middleware/verifyToken';
 
 const router = express.Router();
 
-// GET /projects - Returns all projects with only necessary fields
+// GET /projects - Returns all projects with conditional field selection
 router.get('/', verifyToken, async (req: CustomRequest, res) => {
 	try {
 		const userId = req.user!.userId;
-		// Only select fields actually used by frontend (reduces payload by ~90%)
-		const projects = await Project.find({ userId })
-			.select('id name color closed groupId source')
-			.lean();
+		const fullData = req.query.fullData === 'true';
+
+		const query = Project.find({ userId });
+
+		// Only select limited fields if fullData is not requested
+		if (!fullData) {
+			query.select('id name color closed groupId source');
+		}
+
+		const projects = await query.lean();
 		res.status(200).json(projects);
 	} catch (error) {
 		res.status(500).json({
@@ -22,14 +28,20 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 	}
 });
 
-// GET /project-groups - Returns all project groups with only necessary fields
+// GET /project-groups - Returns all project groups with conditional field selection
 router.get('/project-groups', verifyToken, async (req: CustomRequest, res) => {
 	try {
 		const userId = req.user!.userId;
-		// Only select fields actually used by frontend (id, name, and source for backup/import)
-		const projectGroups = await ProjectGroupTickTick.find({ userId })
-			.select('id name source')
-			.lean();
+		const fullData = req.query.fullData === 'true';
+
+		const query = ProjectGroupTickTick.find({ userId });
+
+		// Only select limited fields if fullData is not requested
+		if (!fullData) {
+			query.select('id name source');
+		}
+
+		const projectGroups = await query.lean();
 		res.status(200).json(projectGroups);
 	} catch (error) {
 		res.status(500).json({
