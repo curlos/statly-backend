@@ -91,7 +91,7 @@ function calculateStreaks(
 		} else {
 			// Streak broken (either goal not met or gap in dates)
 			// Check if we should update longest before resetting
-			if (tempStreak.days > longestStreak.days) {
+			if (tempStreak.days >= longestStreak.days) {
 				longestStreak = { ...tempStreak };
 			}
 
@@ -112,7 +112,7 @@ function calculateStreaks(
 		const expectedNextDay = getNextDay(lastDate);
 		if (expectedNextDay !== todayDateKey && lastDate !== todayDateKey) {
 			// Gap exists - streak is broken, this is not the current streak
-			if (tempStreak.days > longestStreak.days) {
+			if (tempStreak.days >= longestStreak.days) {
 				longestStreak = { ...tempStreak };
 			}
 			tempStreak = { days: 0, from: null, to: null };
@@ -120,7 +120,7 @@ function calculateStreaks(
 	}
 
 	// Final check: if tempStreak is still ongoing, it might be the longest
-	if (tempStreak.days > longestStreak.days) {
+	if (tempStreak.days >= longestStreak.days) {
 		longestStreak = { ...tempStreak };
 	}
 
