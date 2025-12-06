@@ -61,7 +61,8 @@ function calculateStreaks(
 	if (dailyTotals.length === 0) {
 		return {
 			currentStreak: { days: 0, from: null as string | null, to: null as string | null },
-			longestStreak: { days: 0, from: null as string | null, to: null as string | null }
+			longestStreak: { days: 0, from: null as string | null, to: null as string | null },
+			allStreaks: []
 		};
 	}
 
@@ -71,6 +72,7 @@ function calculateStreaks(
 	let currentStreak = { days: 0, from: null as string | null, to: null as string | null };
 	let longestStreak = { days: 0, from: null as string | null, to: null as string | null };
 	let tempStreak = { days: 0, from: null as string | null, to: null as string | null };
+	let allStreaks: Array<{ days: number; from: string | null; to: string | null }> = [];
 	let lastDate: string | null = null;
 
 	for (const { date, duration } of dailyTotals) {
@@ -90,6 +92,11 @@ function calculateStreaks(
 			continue;
 		} else {
 			// Streak broken (either goal not met or gap in dates)
+			// Save the completed streak to allStreaks
+			if (tempStreak.days > 0) {
+				allStreaks.push({ ...tempStreak });
+			}
+
 			// Check if we should update longest before resetting
 			if (tempStreak.days >= longestStreak.days) {
 				longestStreak = { ...tempStreak };
@@ -112,6 +119,11 @@ function calculateStreaks(
 		const expectedNextDay = getNextDay(lastDate);
 		if (expectedNextDay !== todayDateKey && lastDate !== todayDateKey) {
 			// Gap exists - streak is broken, this is not the current streak
+			// Save the completed streak to allStreaks
+			if (tempStreak.days > 0) {
+				allStreaks.push({ ...tempStreak });
+			}
+
 			if (tempStreak.days >= longestStreak.days) {
 				longestStreak = { ...tempStreak };
 			}
@@ -127,9 +139,14 @@ function calculateStreaks(
 	// Current streak is the temp streak if it's still ongoing
 	if (tempStreak.days > 0) {
 		currentStreak = tempStreak;
+		// Add the current ongoing streak to allStreaks
+		allStreaks.push({ ...tempStreak });
 	}
 
-	return { currentStreak, longestStreak };
+	// Filter to only include streaks with 1+ days (no need to sort here - frontend will handle it)
+	const filteredStreaks = allStreaks.filter(streak => streak.days >= 1);
+
+	return { currentStreak, longestStreak, allStreaks: filteredStreaks };
 }
 
 /**
@@ -265,7 +282,7 @@ export async function getStreakHistory(
 	const dailyTotals = await getDailyFocusDurations(basePipeline, params.timezone);
 
 	// Calculate both current and longest streaks (no need to fill missing days!)
-	const { currentStreak, longestStreak } = calculateStreaks(dailyTotals, goalSeconds, params.timezone);
+	const { currentStreak, longestStreak, allStreaks } = calculateStreaks(dailyTotals, goalSeconds, params.timezone);
 
 	// Convert dailyTotals to a map for easy lookup
 	const dailyDurationsMap: Record<string, number> = {};
@@ -276,6 +293,7 @@ export async function getStreakHistory(
 	return {
 		currentStreak,
 		longestStreak,
+		allStreaks,
 		dailyDurationsMap
 	};
 }
