@@ -235,10 +235,6 @@ export async function getTodayFocusData(
 	params: StreaksQueryParams,
 	userId: Types.ObjectId
 ) {
-	// Get user settings for goalSeconds
-	const userSettings = await UserSettings.findOne({ userId });
-	const goalSeconds = userSettings?.tickTickOne?.pages?.focusHoursGoal?.goalSeconds || 21600; // Default: 6 hours
-
 	// Build complete filter pipeline using shared utility
 	const { pipeline: basePipeline } = buildFocusFilterPipeline({
 		...params,
@@ -250,9 +246,7 @@ export async function getTodayFocusData(
 
 	return {
 		todayData: {
-			goalSeconds,
-			totalFocusDurationForDay,
-			percentageOfFocusedGoalHours: (totalFocusDurationForDay / goalSeconds) * 100
+			totalFocusDurationForDay
 		}
 	};
 }
