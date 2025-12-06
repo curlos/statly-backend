@@ -14,8 +14,9 @@ import { fromZonedTime } from 'date-fns-tz';
  * // Returns: Date object for Oct 10, 2025 00:00:00 EST = Oct 10, 2025 05:00:00 UTC
  */
 export function parseDateInTimezone(dateString: string, timezone: string = 'UTC'): Date {
-	const date = new Date(dateString);
-	const dateString24h = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} 00:00:00`;
+	// Parse the date in UTC first to extract components reliably
+	const date = new Date(dateString + ' 00:00:00 UTC');
+	const dateString24h = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')} 00:00:00`;
 	return fromZonedTime(dateString24h, timezone);
 }
 

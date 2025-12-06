@@ -75,8 +75,12 @@ export function buildFocusMatchAndFilterConditions(
 		const startBoundary = startDate ? parseDateInTimezone(startDate, tz) : null;
 		let endBoundary = null;
 		if (endDate) {
-			endBoundary = parseDateInTimezone(endDate, tz);
-			endBoundary.setUTCDate(endBoundary.getUTCDate() + 1);
+			// Parse the end date, then add 1 day to the date string BEFORE parsing
+			// This ensures DST transitions are handled correctly
+			const endDateObj = new Date(endDate + ' 00:00:00 UTC');
+			endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
+			const nextDayFormatted = endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+			endBoundary = parseDateInTimezone(nextDayFormatted, tz);
 		}
 
 		// Build $or condition: record is included if it starts OR ends within the range
@@ -112,8 +116,12 @@ export function buildFocusMatchAndFilterConditions(
 		const intervalStartBoundary = intervalStartDate ? parseDateInTimezone(intervalStartDate, tz) : null;
 		let intervalEndBoundary = null;
 		if (intervalEndDate) {
-			intervalEndBoundary = parseDateInTimezone(intervalEndDate, tz);
-			intervalEndBoundary.setUTCDate(intervalEndBoundary.getUTCDate() + 1);
+			// Parse the end date, then add 1 day to the date string BEFORE parsing
+			// This ensures DST transitions are handled correctly
+			const endDateObj = new Date(intervalEndDate + ' 00:00:00 UTC');
+			endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
+			const nextDayFormatted = endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+			intervalEndBoundary = parseDateInTimezone(nextDayFormatted, tz);
 		}
 
 		// Build interval date conditions
