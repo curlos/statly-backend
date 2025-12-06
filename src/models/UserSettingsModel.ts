@@ -39,6 +39,7 @@ interface IUserSettings extends Document {
 			focusHoursGoal?: {
 				projects?: Record<string, any>;
 				goalSeconds?: number;
+				showStreakCount?: boolean;
 			};
 			challenges?: {
 				selectedChallengeCardImage?: {
@@ -97,7 +98,8 @@ const UserSettingsSchema = new Schema(
 				},
 				focusHoursGoal: {
 					projects: { type: Object, default: {} },
-					goalSeconds: { type: Number, default: 21600 } // Default: 6 hours
+					goalSeconds: { type: Number, default: 21600 }, // Default: 6 hours
+					showStreakCount: { type: Boolean, default: true }
 				},
 				challenges: {
 					selectedChallengeCardImage: {
