@@ -18,6 +18,35 @@ export type StreaksQueryParams = BaseQueryParams;
 // ============================================================================
 
 /**
+ * Extract project IDs from user settings where the value is true
+ * Returns array of project IDs
+ */
+function getProjectIdsFromUserSettings(userSettings: any): string[] {
+	const projects = userSettings?.tickTickOne?.pages?.focusHoursGoal?.projects;
+
+	if (!projects || typeof projects !== 'object') {
+		return [];
+	}
+
+	// Filter projects where value is true and get their IDs
+	return Object.entries(projects)
+		.filter(([_, value]) => value === true)
+		.map(([projectId, _]) => projectId);
+}
+
+/**
+ * Merge project IDs from user settings with existing params
+ * Uses Set to avoid duplicates, then converts back to array
+ */
+function mergeProjectIds(paramsProjectIds: string[] | undefined, settingsProjectIds: string[]): string[] | undefined {
+	const existingIds = paramsProjectIds || [];
+	const combinedSet = new Set([...existingIds, ...settingsProjectIds]);
+	const mergedArray = Array.from(combinedSet);
+
+	return mergedArray.length > 0 ? mergedArray : undefined;
+}
+
+/**
  * Get today's date key in the user's timezone (YYYY-MM-DD format)
  */
 function getTodayDateKey(timezone: string): string {
@@ -235,9 +264,17 @@ export async function getTodayFocusData(
 	params: StreaksQueryParams,
 	userId: Types.ObjectId
 ) {
+	// Get user settings to extract project filters
+	const userSettings = await UserSettings.findOne({ userId });
+	const projectIdsFromSettings = getProjectIdsFromUserSettings(userSettings);
+
+	// Merge project IDs from user settings with params
+	const mergedProjectIds = mergeProjectIds(params.projectIds, projectIdsFromSettings);
+
 	// Build complete filter pipeline using shared utility
 	const { pipeline: basePipeline } = buildFocusFilterPipeline({
 		...params,
+		projectIds: mergedProjectIds,
 		userId
 	});
 
@@ -262,13 +299,18 @@ export async function getStreakHistory(
 	params: StreaksQueryParams,
 	userId: Types.ObjectId
 ) {
-	// Get user settings for goalSeconds
+	// Get user settings for goalSeconds and project filters
 	const userSettings = await UserSettings.findOne({ userId });
 	const goalSeconds = userSettings?.tickTickOne?.pages?.focusHoursGoal?.goalSeconds || 21600; // Default: 6 hours
+	const projectIdsFromSettings = getProjectIdsFromUserSettings(userSettings);
+
+	// Merge project IDs from user settings with params
+	const mergedProjectIds = mergeProjectIds(params.projectIds, projectIdsFromSettings);
 
 	// Build complete filter pipeline using shared utility (respects all filters)
 	const { pipeline: basePipeline } = buildFocusFilterPipeline({
 		...params,
+		projectIds: mergedProjectIds,
 		userId
 	});
 
