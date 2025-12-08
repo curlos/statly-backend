@@ -71,6 +71,60 @@ function getNextDay(dateString: string): string {
 }
 
 /**
+ * Helper: Get the day of week for a date in user's timezone
+ * Returns lowercase day name (e.g., 'monday', 'tuesday', etc.)
+ */
+function getDayOfWeek(dateString: string, timezone: string): string {
+	// Parse the YYYY-MM-DD string in the user's timezone
+	const date = new Date(dateString + 'T12:00:00Z'); // Use noon to avoid timezone edge cases
+	const dayName = date.toLocaleDateString('en-US', {
+		weekday: 'long',
+		timeZone: timezone
+	});
+	return dayName.toLowerCase();
+}
+
+/**
+ * Helper: Check if two dates are consecutive, accounting for freebie days
+ * Two dates are consecutive if all days between them (exclusive) are freebie days
+ */
+function isConsecutiveWithFreebies(
+	currentDate: string,
+	lastDate: string | null,
+	timezone: string,
+	selectedDaysOfWeek?: Record<string, boolean>
+): boolean {
+	// If no last date, this is the first date
+	if (lastDate === null) {
+		return true;
+	}
+
+	// Check each day between lastDate and currentDate
+	let checkDate = lastDate;
+
+	while (checkDate < currentDate) {
+		checkDate = getNextDay(checkDate);
+
+		// If we've reached the current date, they're consecutive (with possible freebie days in between)
+		if (checkDate === currentDate) {
+			return true;
+		}
+
+		// Check if this intermediate day is a freebie day
+		const dayOfWeek = getDayOfWeek(checkDate, timezone);
+		const isDaySelected = selectedDaysOfWeek?.[dayOfWeek] ?? true;
+
+		// If we hit a selected day (non-freebie) between lastDate and currentDate, they're NOT consecutive
+		if (isDaySelected) {
+			return false;
+		}
+	}
+
+	// If we exit the loop without reaching currentDate, they're not consecutive
+	return false;
+}
+
+/**
  * Calculate streaks from daily totals (no need to fill missing days!)
  * Tracks BOTH current streak (up to today) AND longest streak ever
  *
@@ -85,7 +139,8 @@ function getNextDay(dateString: string): string {
 function calculateStreaks(
 	dailyTotals: Array<{ date: string; duration: number }>,
 	goalSeconds: number,
-	timezone: string
+	timezone: string,
+	selectedDaysOfWeek?: Record<string, boolean>
 ) {
 	if (dailyTotals.length === 0) {
 		return {
@@ -105,22 +160,30 @@ function calculateStreaks(
 	let lastDate: string | null = null;
 
 	for (const { date, duration } of dailyTotals) {
+		const dayOfWeek = getDayOfWeek(date, timezone);
+		const isDaySelected = selectedDaysOfWeek?.[dayOfWeek] ?? true; // Default: all days can break streak
+
 		const goalMet = duration >= offsetGoalSeconds;
 
-		// Check if this date is consecutive to the last date
-		const isConsecutive = lastDate === null || date === getNextDay(lastDate);
+		// Check if this date is consecutive to the last date, accounting for freebie days
+		const isConsecutive = isConsecutiveWithFreebies(date, lastDate, timezone, selectedDaysOfWeek);
 
 		if (goalMet && isConsecutive) {
-			// Continue or start streak
+			// Goal met (regardless of whether day is selected) → continue streak
 			tempStreak.days += 1;
 			if (!tempStreak.from) tempStreak.from = date;
 			tempStreak.to = date;
+			lastDate = date;
+		} else if (!isDaySelected && isConsecutive) {
+			// Unselected day where goal not met → don't break streak (freebie day)
+			// Don't increment streak, but update lastDate to maintain consecutive tracking
+			lastDate = date;
 		} else if (!goalMet && date === todayDateKey) {
 			// Today doesn't break the streak (still have time to meet goal)
 			// Don't reset tempStreak, don't update lastDate
 			continue;
 		} else {
-			// Streak broken (either goal not met or gap in dates)
+			// Streak broken (goal not met on a SELECTED day, OR gap in dates)
 			// Save the completed streak to allStreaks
 			if (tempStreak.days > 0) {
 				allStreaks.push({ ...tempStreak });
@@ -138,14 +201,15 @@ function calculateStreaks(
 			if (goalMet) {
 				tempStreak = { days: 1, from: date, to: date };
 			}
-		}
 
-		lastDate = date;
+			lastDate = date;
+		}
 	}
 
 	// Check if there's a gap between the last record and today
 	if (tempStreak.days > 0 && lastDate) {
 		const expectedNextDay = getNextDay(lastDate);
+
 		if (expectedNextDay !== todayDateKey && lastDate !== todayDateKey) {
 			// Gap exists - streak is broken, this is not the current streak
 			// Save the completed streak to allStreaks
@@ -299,9 +363,10 @@ export async function getStreakHistory(
 	params: StreaksQueryParams,
 	userId: Types.ObjectId
 ) {
-	// Get user settings for goalSeconds and project filters
+	// Get user settings for goalSeconds, selectedDaysOfWeek, and project filters
 	const userSettings = await UserSettings.findOne({ userId });
 	const goalSeconds = userSettings?.tickTickOne?.pages?.focusHoursGoal?.goalSeconds || 21600; // Default: 6 hours
+	const selectedDaysOfWeek = userSettings?.tickTickOne?.pages?.focusHoursGoal?.selectedDaysOfWeek;
 	const projectIdsFromSettings = getProjectIdsFromUserSettings(userSettings);
 
 	// Merge project IDs from user settings with params
@@ -318,7 +383,12 @@ export async function getStreakHistory(
 	const dailyTotals = await getDailyFocusDurations(basePipeline, params.timezone);
 
 	// Calculate both current and longest streaks (no need to fill missing days!)
-	const { currentStreak, longestStreak, allStreaks } = calculateStreaks(dailyTotals, goalSeconds, params.timezone);
+	const { currentStreak, longestStreak, allStreaks } = calculateStreaks(
+		dailyTotals,
+		goalSeconds,
+		params.timezone,
+		selectedDaysOfWeek
+	);
 
 	// Convert dailyTotals to a map for easy lookup
 	const dailyDurationsMap: Record<string, number> = {};

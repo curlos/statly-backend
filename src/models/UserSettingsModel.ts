@@ -42,6 +42,15 @@ interface IUserSettings extends Document {
 				showStreakCount?: boolean;
 				goalDays?: number;
 				showGoalDays?: boolean;
+				selectedDaysOfWeek?: {
+					monday?: boolean;
+					tuesday?: boolean;
+					wednesday?: boolean;
+					thursday?: boolean;
+					friday?: boolean;
+					saturday?: boolean;
+					sunday?: boolean;
+				};
 			};
 			challenges?: {
 				selectedChallengeCardImage?: {
@@ -103,7 +112,16 @@ const UserSettingsSchema = new Schema(
 					goalSeconds: { type: Number, default: 3600 }, // Default: 1 hour
 					showStreakCount: { type: Boolean, default: true },
 					goalDays: { type: Number, default: 7 },
-					showGoalDays: { type: Boolean, default: true }
+					showGoalDays: { type: Boolean, default: true },
+					selectedDaysOfWeek: {
+						monday: { type: Boolean, default: true },
+						tuesday: { type: Boolean, default: true },
+						wednesday: { type: Boolean, default: true },
+						thursday: { type: Boolean, default: true },
+						friday: { type: Boolean, default: true },
+						saturday: { type: Boolean, default: true },
+						sunday: { type: Boolean, default: true }
+					}
 				},
 				challenges: {
 					selectedChallengeCardImage: {
