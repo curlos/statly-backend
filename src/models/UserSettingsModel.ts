@@ -52,6 +52,7 @@ interface IUserSettings extends Document {
 					sunday?: boolean;
 				};
 				restDays?: Record<string, boolean>;
+				customDailyFocusGoal?: Record<string, number>;
 			};
 			challenges?: {
 				selectedChallengeCardImage?: {
@@ -123,7 +124,8 @@ const UserSettingsSchema = new Schema(
 						saturday: { type: Boolean, default: true },
 						sunday: { type: Boolean, default: true }
 					},
-					restDays: { type: Object, default: {} }
+					restDays: { type: Object, default: {} },
+					customDailyFocusGoal: { type: Object, default: {} }
 				},
 				challenges: {
 					selectedChallengeCardImage: {
