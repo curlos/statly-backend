@@ -140,7 +140,8 @@ function calculateStreaks(
 	dailyTotals: Array<{ date: string; duration: number }>,
 	goalSeconds: number,
 	timezone: string,
-	selectedDaysOfWeek?: Record<string, boolean>
+	selectedDaysOfWeek?: Record<string, boolean>,
+	restDays?: Record<string, boolean>
 ) {
 	if (dailyTotals.length === 0) {
 		return {
@@ -161,7 +162,8 @@ function calculateStreaks(
 
 	for (const { date, duration } of dailyTotals) {
 		const dayOfWeek = getDayOfWeek(date, timezone);
-		const isDaySelected = selectedDaysOfWeek?.[dayOfWeek] ?? true; // Default: all days can break streak
+		const isFreebieDay = !(selectedDaysOfWeek?.[dayOfWeek] ?? true); // Default: all days can break streak
+		const isRestDay = restDays?.[date] ?? false; // Check if this date is a rest day
 
 		const goalMet = duration >= offsetGoalSeconds;
 
@@ -174,8 +176,8 @@ function calculateStreaks(
 			if (!tempStreak.from) tempStreak.from = date;
 			tempStreak.to = date;
 			lastDate = date;
-		} else if (!isDaySelected && isConsecutive) {
-			// Unselected day where goal not met → don't break streak (freebie day)
+		} else if ((isFreebieDay || isRestDay) && isConsecutive) {
+			// Unselected day where goal not met → don't break streak (freebie day) OR Rest day where goal not met → don't break streak
 			// Don't increment streak, but update lastDate to maintain consecutive tracking
 			lastDate = date;
 		} else if (!goalMet && date === todayDateKey) {
@@ -363,10 +365,11 @@ export async function getStreakHistory(
 	params: StreaksQueryParams,
 	userId: Types.ObjectId
 ) {
-	// Get user settings for goalSeconds, selectedDaysOfWeek, and project filters
+	// Get user settings for goalSeconds, selectedDaysOfWeek, restDays, and project filters
 	const userSettings = await UserSettings.findOne({ userId });
 	const goalSeconds = userSettings?.tickTickOne?.pages?.focusHoursGoal?.goalSeconds || 21600; // Default: 6 hours
 	const selectedDaysOfWeek = userSettings?.tickTickOne?.pages?.focusHoursGoal?.selectedDaysOfWeek;
+	const restDays = userSettings?.tickTickOne?.pages?.focusHoursGoal?.restDays || {};
 	const projectIdsFromSettings = getProjectIdsFromUserSettings(userSettings);
 
 	// Merge project IDs from user settings with params
@@ -387,7 +390,8 @@ export async function getStreakHistory(
 		dailyTotals,
 		goalSeconds,
 		params.timezone,
-		selectedDaysOfWeek
+		selectedDaysOfWeek,
+		restDays
 	);
 
 	// Convert dailyTotals to a map for easy lookup
