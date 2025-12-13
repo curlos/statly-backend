@@ -1,17 +1,20 @@
 import { Response } from 'express';
 import { CustomRequest } from '../interfaces/CustomRequest';
-import { getStreakHistory as getStreakHistoryService, getTodayFocusData as getTodayFocusDataService } from '../services/streaksService';
+import {
+	getTodayFocusDataForAllRings,
+	getStreakHistoryForAllRings
+} from '../services/streaksService';
 import { parseBaseQueryParams } from '../utils/queryParams.utils';
 
 /**
  * GET /api/streaks/today
- * Get today's focus hours only (fast endpoint)
+ * Get today's focus hours for all active rings
  */
 export async function getTodayFocus(req: CustomRequest, res: Response) {
 	try {
 		const userId = req.user!.userId;
 		const params = parseBaseQueryParams(req);
-		const result = await getTodayFocusDataService(params, userId);
+		const result = await getTodayFocusDataForAllRings(params, userId);
 		res.json(result);
 	} catch (error: any) {
 		console.error('Error in getTodayFocus:', error);
@@ -21,13 +24,13 @@ export async function getTodayFocus(req: CustomRequest, res: Response) {
 
 /**
  * GET /api/streaks/history
- * Calculate full streak history (current + longest streaks)
+ * Get streak history for all active rings
  */
 export async function getStreakHistory(req: CustomRequest, res: Response) {
 	try {
 		const userId = req.user!.userId;
 		const params = parseBaseQueryParams(req);
-		const result = await getStreakHistoryService(params, userId);
+		const result = await getStreakHistoryForAllRings(params, userId);
 		res.json(result);
 	} catch (error: any) {
 		console.error('Error in getStreakHistory:', error);

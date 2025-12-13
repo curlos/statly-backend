@@ -17,12 +17,54 @@ export type StreaksQueryParams = BaseQueryParams;
 // Helper Functions
 // ============================================================================
 
+
 /**
- * Extract project IDs from user settings where the value is true
+ * Get all active rings from user settings
+ */
+function getActiveRings(userSettings: any): any[] {
+	const rings = userSettings?.tickTickOne?.pages?.focusHoursGoal?.rings;
+
+	if (!rings || !Array.isArray(rings)) {
+		return [];
+	}
+
+	return rings.filter((ring: any) => ring.isActive === true);
+}
+
+/**
+ * Check if a date falls within any inactive period
+ */
+function isDateInInactivePeriod(dateString: string, inactivePeriods: any[]): boolean {
+	if (!inactivePeriods || inactivePeriods.length === 0) {
+		return false;
+	}
+
+	for (const period of inactivePeriods) {
+		const { startDate, endDate } = period;
+
+		// If endDate is null, period is still active (currently inactive)
+		// Check if date is >= startDate
+		if (endDate === null) {
+			if (dateString >= startDate) {
+				return true;
+			}
+		} else {
+			// Check if date is within the closed period [startDate, endDate]
+			if (dateString >= startDate && dateString <= endDate) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Extract project IDs from ring settings where the value is true
  * Returns array of project IDs
  */
-function getProjectIdsFromUserSettings(userSettings: any): string[] {
-	const projects = userSettings?.tickTickOne?.pages?.focusHoursGoal?.projects;
+function getProjectIdsFromRing(ring: any): string[] {
+	const projects = ring?.projects;
 
 	if (!projects || typeof projects !== 'object') {
 		return [];
@@ -85,14 +127,16 @@ function getDayOfWeek(dateString: string, timezone: string): string {
 }
 
 /**
- * Helper: Check if two dates are consecutive, accounting for freebie days
- * Two dates are consecutive if all days between them (exclusive) are freebie days
+ * Helper: Check if two dates are consecutive, accounting for freebie days, rest days, and inactive periods
+ * Two dates are consecutive if all days between them (exclusive) are optional days (freebie/rest/inactive)
  */
 function isConsecutiveWithFreebies(
 	currentDate: string,
 	lastDate: string | null,
 	timezone: string,
-	selectedDaysOfWeek?: Record<string, boolean>
+	selectedDaysOfWeek?: Record<string, boolean>,
+	restDays?: Record<string, boolean>,
+	inactivePeriods?: Array<{ startDate: string; endDate: string | null }>
 ): boolean {
 	// If no last date, this is the first date
 	if (lastDate === null) {
@@ -105,17 +149,19 @@ function isConsecutiveWithFreebies(
 	while (checkDate < currentDate) {
 		checkDate = getNextDay(checkDate);
 
-		// If we've reached the current date, they're consecutive (with possible freebie days in between)
+		// If we've reached the current date, they're consecutive (with possible optional days in between)
 		if (checkDate === currentDate) {
 			return true;
 		}
 
-		// Check if this intermediate day is a freebie day
+		// Check if this intermediate day is an optional day (freebie/rest/inactive)
 		const dayOfWeek = getDayOfWeek(checkDate, timezone);
-		const isDaySelected = selectedDaysOfWeek?.[dayOfWeek] ?? true;
+		const isFreebieDay = !(selectedDaysOfWeek?.[dayOfWeek] ?? true);
+		const isRestDay = restDays?.[checkDate] ?? false;
+		const isInactivePeriodDay = isDateInInactivePeriod(checkDate, inactivePeriods || []);
 
-		// If we hit a selected day (non-freebie) between lastDate and currentDate, they're NOT consecutive
-		if (isDaySelected) {
+		// If we hit a non-optional day (required work day) between lastDate and currentDate, they're NOT consecutive
+		if (!isFreebieDay && !isRestDay && !isInactivePeriodDay) {
 			return false;
 		}
 	}
@@ -142,7 +188,8 @@ function calculateStreaks(
 	timezone: string,
 	selectedDaysOfWeek?: Record<string, boolean>,
 	restDays?: Record<string, boolean>,
-	customDailyFocusGoal?: Record<string, number>
+	customDailyFocusGoal?: Record<string, number>,
+	inactivePeriods?: Array<{ startDate: string; endDate: string | null }>
 ) {
 	if (dailyTotals.length === 0) {
 		return {
@@ -164,6 +211,7 @@ function calculateStreaks(
 		const dayOfWeek = getDayOfWeek(date, timezone);
 		const isFreebieDay = !(selectedDaysOfWeek?.[dayOfWeek] ?? true); // Default: all days can break streak
 		const isRestDay = restDays?.[date] ?? false; // Check if this date is a rest day
+		const isInactivePeriodDay = isDateInInactivePeriod(date, inactivePeriods || []); // Check if date falls in inactive period
 
 		// Use custom daily goal if set for this date, otherwise use default goal
 		const dailyGoalSeconds = customDailyFocusGoal?.[date] ?? goalSeconds;
@@ -171,8 +219,8 @@ function calculateStreaks(
 
 		const goalMet = duration >= offsetDailyGoal;
 
-		// Check if this date is consecutive to the last date, accounting for freebie days
-		const isConsecutive = isConsecutiveWithFreebies(date, lastDate, timezone, selectedDaysOfWeek);
+		// Check if this date is consecutive to the last date, accounting for freebie/rest/inactive days
+		const isConsecutive = isConsecutiveWithFreebies(date, lastDate, timezone, selectedDaysOfWeek, restDays, inactivePeriods);
 
 		if (goalMet && isConsecutive) {
 			// Goal met (regardless of whether day is selected) → continue streak
@@ -180,8 +228,8 @@ function calculateStreaks(
 			if (!tempStreak.from) tempStreak.from = date;
 			tempStreak.to = date;
 			lastDate = date;
-		} else if ((isFreebieDay || isRestDay) && isConsecutive) {
-			// Unselected day where goal not met → don't break streak (freebie day) OR Rest day where goal not met → don't break streak
+		} else if ((isFreebieDay || isRestDay || isInactivePeriodDay) && isConsecutive) {
+			// Freebie day OR rest day OR inactive period day where goal not met → don't break streak
 			// Don't increment streak, but update lastDate to maintain consecutive tracking
 			lastDate = date;
 		} else if (!goalMet && date === todayDateKey) {
@@ -326,20 +374,24 @@ async function getTodayFocusDuration(
 // Main Service Functions
 // ============================================================================
 
-/**
- * Get today's focus data only (fast, optimized for single day)
- * Endpoint: GET /streaks/today
- */
-export async function getTodayFocusData(
-	params: StreaksQueryParams,
-	userId: Types.ObjectId
-) {
-	// Get user settings to extract project filters
-	const userSettings = await UserSettings.findOne({ userId });
-	const projectIdsFromSettings = getProjectIdsFromUserSettings(userSettings);
+// ============================================================================
+// Ring-Specific Functions
+// ============================================================================
 
-	// Merge project IDs from user settings with params
-	const mergedProjectIds = mergeProjectIds(params.projectIds, projectIdsFromSettings);
+/**
+ * Get today's focus data for a specific ring
+ * Used internally by getTodayFocusDataForAllRings
+ */
+export async function getTodayFocusDataForRing(
+	params: StreaksQueryParams,
+	userId: Types.ObjectId,
+	ring: any
+) {
+	// Get project IDs from ring settings
+	const projectIdsFromRing = getProjectIdsFromRing(ring);
+
+	// Merge project IDs from ring settings with params
+	const mergedProjectIds = mergeProjectIds(params.projectIds, projectIdsFromRing);
 
 	// Build complete filter pipeline using shared utility
 	const { pipeline: basePipeline } = buildFocusFilterPipeline({
@@ -353,32 +405,32 @@ export async function getTodayFocusData(
 
 	return {
 		todayData: {
-			totalFocusDurationForDay
+			totalFocusDurationForDay,
+			ringId: ring.id,
+			ringName: ring.name
 		}
 	};
 }
 
 /**
- * Get full streak history (current + longest streaks)
- * Endpoint: GET /streaks/history
- *
- * Note: Respects ALL filters including date ranges, projects, tasks, emotions, etc.
- * Streaks are calculated only from the filtered data.
+ * Get streak history for a specific ring
+ * Used internally by getStreakHistoryForAllRings
  */
-export async function getStreakHistory(
+export async function getStreakHistoryForRing(
 	params: StreaksQueryParams,
-	userId: Types.ObjectId
+	userId: Types.ObjectId,
+	ring: any
 ) {
-	// Get user settings for goalSeconds, selectedDaysOfWeek, restDays, customDailyFocusGoal, and project filters
-	const userSettings = await UserSettings.findOne({ userId });
-	const goalSeconds = userSettings?.tickTickOne?.pages?.focusHoursGoal?.goalSeconds || 21600; // Default: 6 hours
-	const selectedDaysOfWeek = userSettings?.tickTickOne?.pages?.focusHoursGoal?.selectedDaysOfWeek;
-	const restDays = userSettings?.tickTickOne?.pages?.focusHoursGoal?.restDays || {};
-	const customDailyFocusGoal = userSettings?.tickTickOne?.pages?.focusHoursGoal?.customDailyFocusGoal || {};
-	const projectIdsFromSettings = getProjectIdsFromUserSettings(userSettings);
+	// Extract ring-specific settings
+	const goalSeconds = ring.goalSeconds || 3600; // Default: 1 hour
+	const selectedDaysOfWeek = ring.selectedDaysOfWeek;
+	const restDays = ring.restDays || {};
+	const customDailyFocusGoal = ring.customDailyFocusGoal || {};
+	const inactivePeriods = ring.inactivePeriods || [];
+	const projectIdsFromRing = getProjectIdsFromRing(ring);
 
-	// Merge project IDs from user settings with params
-	const mergedProjectIds = mergeProjectIds(params.projectIds, projectIdsFromSettings);
+	// Merge project IDs from ring settings with params
+	const mergedProjectIds = mergeProjectIds(params.projectIds, projectIdsFromRing);
 
 	// Build complete filter pipeline using shared utility (respects all filters)
 	const { pipeline: basePipeline } = buildFocusFilterPipeline({
@@ -390,14 +442,15 @@ export async function getStreakHistory(
 	// Get daily totals (filtered by user's applied filters)
 	const dailyTotals = await getDailyFocusDurations(basePipeline, params.timezone);
 
-	// Calculate both current and longest streaks (no need to fill missing days!)
+	// Calculate both current and longest streaks
 	const { currentStreak, longestStreak, allStreaks } = calculateStreaks(
 		dailyTotals,
 		goalSeconds,
 		params.timezone,
 		selectedDaysOfWeek,
 		restDays,
-		customDailyFocusGoal
+		customDailyFocusGoal,
+		inactivePeriods
 	);
 
 	// Convert dailyTotals to a map for easy lookup
@@ -410,6 +463,62 @@ export async function getStreakHistory(
 		currentStreak,
 		longestStreak,
 		allStreaks,
-		dailyDurationsMap
+		dailyDurationsMap,
+		ringId: ring.id,
+		ringName: ring.name
+	};
+}
+
+/**
+ * Get today's focus data for all active rings
+ * Endpoint: GET /streaks/today
+ */
+export async function getTodayFocusDataForAllRings(
+	params: StreaksQueryParams,
+	userId: Types.ObjectId
+) {
+	const userSettings = await UserSettings.findOne({ userId });
+	const activeRings = getActiveRings(userSettings);
+
+	if (activeRings.length === 0) {
+		return { rings: [] };
+	}
+
+	// Fetch data for all active rings in parallel
+	const ringDataPromises = activeRings.map(ring =>
+		getTodayFocusDataForRing(params, userId, ring)
+	);
+
+	const ringDataArray = await Promise.all(ringDataPromises);
+
+	return {
+		rings: ringDataArray
+	};
+}
+
+/**
+ * Get streak history for all active rings
+ * Endpoint: GET /streaks/history
+ */
+export async function getStreakHistoryForAllRings(
+	params: StreaksQueryParams,
+	userId: Types.ObjectId
+) {
+	const userSettings = await UserSettings.findOne({ userId });
+	const activeRings = getActiveRings(userSettings);
+
+	if (activeRings.length === 0) {
+		return { rings: [] };
+	}
+
+	// Fetch data for all active rings in parallel
+	const ringDataPromises = activeRings.map(ring =>
+		getStreakHistoryForRing(params, userId, ring)
+	);
+
+	const ringDataArray = await Promise.all(ringDataPromises);
+
+	return {
+		rings: ringDataArray
 	};
 }

@@ -120,12 +120,66 @@ router.post('/register', async (req, res) => {
 		});
 		await user.save();
 
-		// Create default settings for the new user
+		// Create default settings for the new user with 3 rings
+		const now = new Date().toISOString();
+		// Base defaults shared by all rings
+		const baseRingDefaults = {
+			useThemeColor: false,
+			projects: {},
+			goalSeconds: 3600,
+			showStreakCount: true,
+			goalDays: 7,
+			showGoalDays: true,
+			selectedDaysOfWeek: {
+				monday: true,
+				tuesday: true,
+				wednesday: true,
+				thursday: true,
+				friday: true,
+				saturday: true,
+				sunday: true
+			},
+			restDays: {},
+			customDailyFocusGoal: {},
+			inactivePeriods: [],
+			createdAt: now,
+			updatedAt: now
+		};
+
 		const userSettings = new UserSettings({
 			userId: user._id,
 			habit: {
 				showInTimedSmartLists: true,
 			},
+			tickTickOne: {
+				pages: {
+					focusHoursGoal: {
+						rings: [
+							{
+								...baseRingDefaults,
+								id: `ring-1-${user._id}`,
+								name: 'Ring 1',
+								color: '#fa114f',
+								isActive: true
+							},
+							{
+								...baseRingDefaults,
+								id: `ring-2-${user._id}`,
+								name: 'Ring 2',
+								color: '#a6ff00',
+								isActive: false
+							},
+							{
+								...baseRingDefaults,
+								id: `ring-3-${user._id}`,
+								name: 'Ring 3',
+								color: '#00fff6',
+								isActive: false
+							}
+						]
+					}
+				}
+			}
 		});
 		await userSettings.save();
 

@@ -37,22 +37,35 @@ interface IUserSettings extends Document {
 				maxDaysPerPage?: number;
 			};
 			focusHoursGoal?: {
-				projects?: Record<string, any>;
-				goalSeconds?: number;
-				showStreakCount?: boolean;
-				goalDays?: number;
-				showGoalDays?: boolean;
-				selectedDaysOfWeek?: {
-					monday?: boolean;
-					tuesday?: boolean;
-					wednesday?: boolean;
-					thursday?: boolean;
-					friday?: boolean;
-					saturday?: boolean;
-					sunday?: boolean;
-				};
-				restDays?: Record<string, boolean>;
-				customDailyFocusGoal?: Record<string, number>;
+				rings?: Array<{
+					id: string;
+					name: string;
+					color: string | null;
+					useThemeColor?: boolean;
+					isActive: boolean;
+					projects?: Record<string, any>;
+					goalSeconds?: number;
+					showStreakCount?: boolean;
+					goalDays?: number;
+					showGoalDays?: boolean;
+					selectedDaysOfWeek?: {
+						monday?: boolean;
+						tuesday?: boolean;
+						wednesday?: boolean;
+						thursday?: boolean;
+						friday?: boolean;
+						saturday?: boolean;
+						sunday?: boolean;
+					};
+					restDays?: Record<string, boolean>;
+					customDailyFocusGoal?: Record<string, number>;
+					inactivePeriods?: Array<{
+						startDate: string;
+						endDate: string | null;
+					}>;
+					createdAt: string;
+					updatedAt: string;
+				}>;
 			};
 			challenges?: {
 				selectedChallengeCardImage?: {
@@ -110,22 +123,45 @@ const UserSettingsSchema = new Schema(
 					maxDaysPerPage: { type: Number, default: 7 }
 				},
 				focusHoursGoal: {
-					projects: { type: Object, default: {} },
-					goalSeconds: { type: Number, default: 3600 }, // Default: 1 hour
-					showStreakCount: { type: Boolean, default: true },
-					goalDays: { type: Number, default: 7 },
-					showGoalDays: { type: Boolean, default: true },
-					selectedDaysOfWeek: {
-						monday: { type: Boolean, default: true },
-						tuesday: { type: Boolean, default: true },
-						wednesday: { type: Boolean, default: true },
-						thursday: { type: Boolean, default: true },
-						friday: { type: Boolean, default: true },
-						saturday: { type: Boolean, default: true },
-						sunday: { type: Boolean, default: true }
-					},
-					restDays: { type: Object, default: {} },
-					customDailyFocusGoal: { type: Object, default: {} }
+					rings: {
+						type: [
+							{
+								id: { type: String, required: true },
+								name: { type: String, required: true },
+								color: { type: String, default: null },
+								useThemeColor: { type: Boolean, default: false },
+								isActive: { type: Boolean, required: true },
+								projects: { type: Object, default: {} },
+								goalSeconds: { type: Number, default: 3600 },
+								showStreakCount: { type: Boolean, default: true },
+								goalDays: { type: Number, default: 7 },
+								showGoalDays: { type: Boolean, default: true },
+								selectedDaysOfWeek: {
+									monday: { type: Boolean, default: true },
+									tuesday: { type: Boolean, default: true },
+									wednesday: { type: Boolean, default: true },
+									thursday: { type: Boolean, default: true },
+									friday: { type: Boolean, default: true },
+									saturday: { type: Boolean, default: true },
+									sunday: { type: Boolean, default: true }
+								},
+								restDays: { type: Object, default: {} },
+								customDailyFocusGoal: { type: Object, default: {} },
+								inactivePeriods: {
+									type: [
+										{
+											startDate: { type: String, required: true },
+											endDate: { type: String, default: null }
+										}
+									],
+									default: []
+								},
+								createdAt: { type: String, required: true },
+								updatedAt: { type: String, required: true }
+							}
+						],
+						default: []
+					}
 				},
 				challenges: {
 					selectedChallengeCardImage: {
