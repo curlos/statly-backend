@@ -66,6 +66,7 @@ interface IUserSettings extends Document {
 					createdAt: string;
 					updatedAt: string;
 				}>;
+				showMultiRingViewForOneActiveRing?: boolean;
 			};
 			challenges?: {
 				selectedChallengeCardImage?: {
@@ -161,7 +162,8 @@ const UserSettingsSchema = new Schema(
 							}
 						],
 						default: []
-					}
+					},
+					showMultiRingViewForOneActiveRing: { type: Boolean, default: false }
 				},
 				challenges: {
 					selectedChallengeCardImage: {
