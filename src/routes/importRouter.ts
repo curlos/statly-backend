@@ -1,15 +1,12 @@
 import express from 'express';
 import multer from 'multer';
-import { CustomRequest } from '../../interfaces/CustomRequest';
-import { verifyToken } from '../../middleware/verifyToken';
-import {
-	detectDocumentType,
-	ImportResult,
-} from '../../utils/import/importBackup.utils';
-import { importFocusRecords } from '../../utils/import/importFocusRecords.utils';
-import { importProjectGroups } from '../../utils/import/importProjectGroups.utils';
-import { importProjects } from '../../utils/import/importProjects.utils';
-import { importTasks } from '../../utils/import/importTasks.utils';
+import { CustomRequest } from '../interfaces/CustomRequest';
+import { verifyToken } from '../middleware/verifyToken';
+import { detectDocumentType, ImportResult } from '../utils/import/importBackup.utils';
+import { importFocusRecords } from '../utils/import/importFocusRecords.utils';
+import { importProjectGroups } from '../utils/import/importProjectGroups.utils';
+import { importProjects } from '../utils/import/importProjects.utils';
+import { importTasks } from '../utils/import/importTasks.utils';
 
 const router = express.Router();
 
@@ -20,7 +17,7 @@ const upload = multer({
 });
 
 /**
- * POST /documents/import/backup
+ * POST /import/backup
  * Imports backup data from JSON file uploaded as binary data
  * Accepts: multipart/form-data with file field
  */

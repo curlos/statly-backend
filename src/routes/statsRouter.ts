@@ -1,6 +1,6 @@
 import express from 'express';
-import { verifyToken } from '../../middleware/verifyToken';
-import { getOverviewStatsHandler, getStatsFocusHandler, getStatsTasksHandler } from '../../controllers/statsOverviewController';
+import { getOverviewStatsHandler, getStatsFocusHandler, getStatsTasksHandler } from '../controllers/statsOverviewController';
+import { verifyToken } from '../middleware/verifyToken';
 
 const router = express.Router();
 

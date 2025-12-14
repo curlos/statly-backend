@@ -1,8 +1,8 @@
 import express from 'express';
-import { CustomRequest } from '../../interfaces/CustomRequest';
-import { Project } from '../../models/projectModel';
-import { ProjectGroupTickTick } from '../../models/projectGroupModel';
-import { verifyToken } from '../../middleware/verifyToken';
+import { CustomRequest } from '../interfaces/CustomRequest';
+import { verifyToken } from '../middleware/verifyToken';
+import ProjectGroupTickTick from '../models/projectGroupModel';
+import Project from '../models/projectModel';
 
 const router = express.Router();
 

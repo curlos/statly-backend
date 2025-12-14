@@ -1,13 +1,13 @@
 import express from 'express';
-import { CustomRequest } from '../../interfaces/CustomRequest';
-import { verifyToken } from '../../middleware/verifyToken';
-import SyncMetadata from '../../models/SyncMetadataModel';
-import ApiCallStatus from '../../models/ApiCallStatusModel';
-import { ProjectTickTick } from '../../models/projectModel';
-import { syncTickTickFocusRecords, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../../utils/sync/syncFocusRecords.utils';
-import { syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects, syncSessionProjects } from '../../utils/sync/syncProjects.utils';
-import { syncTickTickTasks, syncTodoistTasks } from '../../utils/sync/syncTasks.utils';
-import { withSyncLock } from '../../utils/withSyncLock';
+import { CustomRequest } from '../interfaces/CustomRequest';
+import { verifyToken } from '../middleware/verifyToken';
+import ApiCallStatus from '../models/ApiCallStatusModel';
+import { ProjectTickTick } from '../models/projectModel';
+import SyncMetadata from '../models/SyncMetadataModel';
+import { syncTickTickFocusRecords, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../utils/sync/syncFocusRecords.utils';
+import { syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects, syncSessionProjects } from '../utils/sync/syncProjects.utils';
+import { syncTickTickTasks, syncTodoistTasks } from '../utils/sync/syncTasks.utils';
+import { withSyncLock } from '../utils/withSyncLock';
 
 const router = express.Router();
 
@@ -38,7 +38,7 @@ router.get('/metadata', verifyToken, async (req: CustomRequest, res) => {
 });
 
 router.post('/ticktick/tasks', verifyToken, withSyncLock({
-    endpoint: '/documents/sync/ticktick/tasks',
+    endpoint: '/sync/ticktick/tasks',
     syncFunction: syncTickTickTasks,
     extractParams: async (req) => {
         const userId = req.user!.userId;
@@ -107,13 +107,13 @@ router.post('/todoist/tasks', verifyToken, async (req: CustomRequest, res) => {
 });
 
 router.post('/ticktick/projects', verifyToken, withSyncLock({
-    endpoint: '/documents/sync/ticktick/projects',
+    endpoint: '/sync/ticktick/projects',
     syncFunction: syncTickTickProjects,
     errorMessage: 'An error occurred syncing TickTick projects.'
 }));
 
 router.post('/ticktick/project-groups', verifyToken, withSyncLock({
-    endpoint: '/documents/sync/ticktick/project-groups',
+    endpoint: '/sync/ticktick/project-groups',
     syncFunction: syncTickTickProjectGroups,
     errorMessage: 'An error occurred syncing TickTick project groups.'
 }));
@@ -142,7 +142,7 @@ router.post('/session/projects', verifyToken, async (req: CustomRequest, res) =>
 
 router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
     const userId = req.user!.userId;
-    const apiEndpoint = '/documents/sync/ticktick/all';
+    const apiEndpoint = '/sync/ticktick/all';
 
     try {
         // Check for existing sync in progress
@@ -247,7 +247,7 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
 });
 
 router.post('/ticktick/focus-records', verifyToken, withSyncLock({
-    endpoint: '/documents/sync/ticktick/focus-records',
+    endpoint: '/sync/ticktick/focus-records',
     syncFunction: syncTickTickFocusRecords,
     extractParams: (req) => {
         const timezone = req.body.timezone || 'UTC';

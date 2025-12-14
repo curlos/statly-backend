@@ -10,12 +10,12 @@ import usersRouter from './routes/usersRouter';
 import settingsRouter from './routes/userSettingsRouter';
 import deleteRouter from './routes/deleteRouter';
 import streaksRouter from './routes/streaksRouter';
-import documentsFocusRecordsRouter from './routes/documents/documentsFocusRecordsRouter';
-import documentsTasksRouter from './routes/documents/documentsTasksRouter'
-import documentsSyncRouter from './routes/documents/documentsSyncRouter'
-import documentsProjectsRouter from './routes/documents/documentsProjectsRouter'
-import documentsStatsRouter from './routes/documents/documentsStatsRouter'
-import documentsImportRouter from './routes/documents/documentsImportRouter'
+import focusRecordsRouter from './routes/focusRecordsRouter';
+import tasksRouter from './routes/tasksRouter'
+import syncRouter from './routes/syncRouter'
+import projectsRouter from './routes/projectsRouter'
+import statsRouter from './routes/statsRouter'
+import importRouter from './routes/importRouter'
 
 dotenv.config();
 
@@ -65,12 +65,12 @@ app.get('/health', (req, res) => {
 	});
 });
 
-app.use('/documents/focus-records', documentsFocusRecordsRouter);
-app.use('/documents/tasks', documentsTasksRouter);
-app.use('/documents/projects', documentsProjectsRouter);
-app.use('/documents/sync', documentsSyncRouter);
-app.use('/documents/stats', documentsStatsRouter);
-app.use('/documents/import', documentsImportRouter);
+app.use('/focus-records', focusRecordsRouter);
+app.use('/tasks', tasksRouter);
+app.use('/projects', projectsRouter);
+app.use('/sync', syncRouter);
+app.use('/stats', statsRouter);
+app.use('/import', importRouter);
 app.use('/users', usersRouter);
 app.use('/user-settings', settingsRouter);
 app.use('/delete', deleteRouter);

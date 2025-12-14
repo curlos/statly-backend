@@ -4,7 +4,7 @@ import { getFocusHoursMedals, getCompletedTasksMedals } from '../services/medals
 import { parseMedalsQueryParams } from '../utils/queryParams.utils';
 
 /**
- * GET /documents/focus-records/medals - Fetch focus hours medals with filtering
+ * GET /focus-records/medals - Fetch focus hours medals with filtering
  */
 export async function getFocusMedalsHandler(req: CustomRequest, res: Response) {
 	try {
@@ -25,7 +25,7 @@ export async function getFocusMedalsHandler(req: CustomRequest, res: Response) {
 }
 
 /**
- * GET /documents/tasks/medals - Fetch completed tasks medals with filtering
+ * GET /tasks/medals - Fetch completed tasks medals with filtering
  */
 export async function getTasksMedalsHandler(req: CustomRequest, res: Response) {
 	try {

@@ -1,19 +1,16 @@
 import express from 'express';
-import { CustomRequest } from '../../interfaces/CustomRequest';
-import { Task } from '../../models/TaskModel'
-import { verifyToken } from '../../middleware/verifyToken';
-import { getTasksMedalsHandler } from '../../controllers/medalsController';
-import { getTasksChallengesHandler } from '../../controllers/challengesController';
-import { getDaysWithCompletedTasksHandler, exportDaysWithCompletedTasksHandler } from '../../controllers/daysWithCompletedTasksController';
+import { getTasksChallengesHandler } from '../controllers/challengesController';
+import { getDaysWithCompletedTasksHandler, exportDaysWithCompletedTasksHandler } from '../controllers/daysWithCompletedTasksController';
+import { getTasksMedalsHandler } from '../controllers/medalsController';
+import { CustomRequest } from '../interfaces/CustomRequest';
+import { verifyToken } from '../middleware/verifyToken';
+import Task from '../models/TaskModel';
 
 const router = express.Router();
 
 router.get('/medals', verifyToken, getTasksMedalsHandler);
-
 router.get('/challenges', verifyToken, getTasksChallengesHandler);
-
 router.get('/days-with-completed-tasks', verifyToken, getDaysWithCompletedTasksHandler);
-
 router.get('/days-with-completed-tasks/export', verifyToken, exportDaysWithCompletedTasksHandler);
 
 // GET /all - Returns all tasks with pagination support
