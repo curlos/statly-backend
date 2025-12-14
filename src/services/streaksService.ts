@@ -22,7 +22,7 @@ export type StreaksQueryParams = BaseQueryParams;
  * Get all active rings from user settings
  */
 function getActiveRings(userSettings: any): any[] {
-	const rings = userSettings?.tickTickOne?.pages?.focusHoursGoal?.rings;
+	const rings = userSettings?.pages?.focusHoursGoal?.rings;
 
 	if (!rings || !Array.isArray(rings)) {
 		return [];

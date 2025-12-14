@@ -151,33 +151,31 @@ router.post('/register', async (req, res) => {
 			habit: {
 				showInTimedSmartLists: true,
 			},
-			tickTickOne: {
-				pages: {
-					focusHoursGoal: {
-						rings: [
-							{
-								...baseRingDefaults,
-								id: `ring-1-${user._id}`,
-								name: 'Ring 1',
-								color: '#fa114f',
-								isActive: true
-							},
-							{
-								...baseRingDefaults,
-								id: `ring-2-${user._id}`,
-								name: 'Ring 2',
-								color: '#a6ff00',
-								isActive: false
-							},
-							{
-								...baseRingDefaults,
-								id: `ring-3-${user._id}`,
-								name: 'Ring 3',
-								color: '#00fff6',
-								isActive: false
-							}
-						]
-					}
+			pages: {
+				focusHoursGoal: {
+					rings: [
+						{
+							...baseRingDefaults,
+							id: `ring-1-${user._id}`,
+							name: 'Ring 1',
+							color: '#fa114f',
+							isActive: true
+						},
+						{
+							...baseRingDefaults,
+							id: `ring-2-${user._id}`,
+							name: 'Ring 2',
+							color: '#a6ff00',
+							isActive: false
+						},
+						{
+							...baseRingDefaults,
+							id: `ring-3-${user._id}`,
+							name: 'Ring 3',
+							color: '#00fff6',
+							isActive: false
+						}
+					]
 				}
 			}
 		});

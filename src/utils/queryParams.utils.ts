@@ -167,7 +167,7 @@ export async function parseExportFocusRecordsQueryParams(req: Request) {
 	let onlyExportTasksWithNoParent = true; // Default value
 	if (userId) {
 		const userSettings = await UserSettings.findOne({ userId }).lean();
-		const settingValue = userSettings?.tickTickOne?.pages?.focusRecords?.onlyExportTasksWithNoParent;
+		const settingValue = userSettings?.pages?.focusRecords?.onlyExportTasksWithNoParent;
 		// Only use default if the setting is undefined/null, not if it's explicitly false
 		onlyExportTasksWithNoParent = settingValue !== undefined && settingValue !== null ? settingValue : true;
 	}

@@ -59,7 +59,7 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 	threeDaysBeforeLastSync.setDate(threeDaysBeforeLastSync.getDate() - 3);
 
 	// Check if we should analyze emotions (do this early to avoid unnecessary work)
-	const shouldAnalyzeEmotions = userSettings?.tickTickOne?.pages?.focusRecords?.analyzeNoteEmotionsWhileSyncingFocusRecords || false;
+	const shouldAnalyzeEmotions = userSettings?.pages?.focusRecords?.analyzeNoteEmotionsWhileSyncingFocusRecords || false;
 
 	// Only fetch existing records if we need to analyze emotions
 	let existingRecordsMap = new Map<string, { note: string; emotions: any }>();
