@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/projectModel";
+import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/ProjectModel";
 import type { ImportCategoryResult } from "./importBackup.utils";
 
 /**

@@ -2,7 +2,7 @@ import express from 'express';
 import { CustomRequest } from '../interfaces/CustomRequest';
 import { verifyToken } from '../middleware/verifyToken';
 import ApiCallStatus from '../models/ApiCallStatusModel';
-import { ProjectTickTick } from '../models/projectModel';
+import { ProjectTickTick } from '../models/ProjectModel';
 import SyncMetadata from '../models/SyncMetadataModel';
 import { syncTickTickFocusRecords, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../utils/sync/syncFocusRecords.utils';
 import { syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects, syncSessionProjects } from '../utils/sync/syncProjects.utils';

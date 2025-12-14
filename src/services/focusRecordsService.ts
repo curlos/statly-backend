@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import FocusRecord from '../models/FocusRecord';
-import Project from '../models/projectModel';
+import Project from '../models/ProjectModel';
 import { addAncestorAndCompletedTasks, addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
 import {
 	buildFocusSearchFilter,

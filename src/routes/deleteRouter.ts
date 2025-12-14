@@ -3,8 +3,8 @@ import { verifyToken } from '../middleware/verifyToken';
 import { CustomRequest } from '../interfaces/CustomRequest';
 import FocusRecord from '../models/FocusRecord';
 import Task from '../models/TaskModel';
-import Project from '../models/projectModel';
-import ProjectGroupTickTick from '../models/projectGroupModel';
+import Project from '../models/ProjectModel';
+import ProjectGroupTickTick from '../models/ProjectGroupModel';
 import SyncMetadata from '../models/SyncMetadataModel';
 const router = express.Router();
 

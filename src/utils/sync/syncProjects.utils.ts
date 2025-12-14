@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
-import ProjectGroupTickTick from "../../models/projectGroupModel";
-import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/projectModel";
+import ProjectGroupTickTick from "../../models/ProjectGroupModel";
+import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/ProjectModel";
 import { fetchSessionFocusRecordsWithNoBreaks } from "../focus.utils";
 import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { getAllTodoistProjects } from "../task.utils";

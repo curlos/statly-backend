@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import Task from '../models/TaskModel';
-import Project from '../models/projectModel';
+import Project from '../models/ProjectModel';
 import FocusRecordTickTick from '../models/FocusRecord';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { buildFocusMatchAndFilterConditions, buildFocusSearchFilter } from '../utils/focusFilterBuilders.utils';

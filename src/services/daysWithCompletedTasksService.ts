@@ -3,7 +3,7 @@ import { Task } from '../models/TaskModel';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { buildAncestorData } from '../utils/task.utils';
 import { DaysWithCompletedTasksQueryParams, ExportDaysWithCompletedTasksQueryParams } from '../utils/queryParams.utils';
-import Project from '../models/projectModel';
+import Project from '../models/ProjectModel';
 
 // ============================================================================
 // Sort Criteria Builder
