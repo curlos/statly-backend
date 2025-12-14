@@ -9,7 +9,6 @@ import connectDB from './db/database'; // Import the connectDB function
 import usersRouter from './routes/usersRouter';
 import settingsRouter from './routes/userSettingsRouter';
 import deleteRouter from './routes/deleteRouter';
-import oldFocusAppsRouter from './routes/oldFocusAppsRouter';
 import streaksRouter from './routes/streaksRouter';
 import documentsFocusRecordsRouter from './routes/documents/documentsFocusRecordsRouter';
 import documentsTasksRouter from './routes/documents/documentsTasksRouter'
@@ -76,9 +75,6 @@ app.use('/users', usersRouter);
 app.use('/user-settings', settingsRouter);
 app.use('/delete', deleteRouter);
 app.use('/streaks', streaksRouter);
-
-// Old routes
-app.use('/old-focus-apps', oldFocusAppsRouter);
 
 app.get('/', (req, res) => {
 	res.send('Hello World!');
