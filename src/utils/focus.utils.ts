@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Types } from 'mongoose';
-import { getTodayTimeBounds, sortArrayByProperty, arrayToObjectByKey, handleTickTickApiCall } from './helpers.utils';
+import { sortArrayByProperty, arrayToObjectByKey, handleTickTickApiCall } from './helpers.utils';
 import FocusRecordTickTick from '../models/FocusRecord';
 import Task from '../models/TaskModel';
 import { buildAncestorData } from './task.utils';
