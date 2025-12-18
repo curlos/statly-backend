@@ -4,6 +4,7 @@ import { TaskTickTick, TaskTodoist } from "../../models/TaskModel";
 import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { fetchAllTickTickTasks } from "../ticktick.utils";
 import { getAllTodoistTasks } from "../task.utils";
+import { TickTickTaskRaw } from "../../types/externalApis";
 
 export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 	archivedProjectIds?: string[];
@@ -16,17 +17,19 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 	const cookie = await getTickTickCookie(userId);
 
 	const lastSyncTime = syncMetadata.lastSyncTime;
+	// fetchAllTickTickTasks returns ITask[] but we know they're all ITaskTickTick
 	const tickTickTasks = await fetchAllTickTickTasks(cookie, {
 		archivedProjectIds: options?.archivedProjectIds,
 		getTasksFromNonArchivedProjects: options?.getTasksFromNonArchivedProjects
-	});
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	}) as any[];
 
 	// Calculate threshold for recently completed tasks (1 week ago)
 	const oneWeekAgo = new Date();
 	oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
 	// Fetch only the task IDs that are being synced (much faster than fetching all tasks)
-	const taskIdsToCheck = tickTickTasks.map((t: any) => t.id);
+	const taskIdsToCheck = tickTickTasks.map((t) => t.id);
 	const existingTaskIds = await TaskTickTick.distinct('id', {
 		userId,
 		id: { $in: taskIdsToCheck }
@@ -34,9 +37,9 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 	const existingTaskIdsSet = new Set(existingTaskIds);
 
 	// Step 1: Build tasksById map for quick parent lookups
-	const tasksById: Record<string, any> = {};
-	tickTickTasks.forEach((task: any) => {
-		tasksById[task.id] = task;
+	const tasksById: Record<string, TickTickTaskRaw> = {};
+	tickTickTasks.forEach((task) => {
+		tasksById[task.id as string] = task as TickTickTaskRaw;
 	});
 
 	// Step 2: Build ancestor data with caching
@@ -74,7 +77,7 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 
 	for (const task of tickTickTasks) {
 		// Check if task needs updating based on modifiedTime
-		const taskModifiedTime = task.modifiedTime ? new Date(task.modifiedTime) : null;
+		const taskModifiedTime = task.modifiedTime ? new Date(task.modifiedTime as string) : null;
 
 		// Update task if:
 		// 1. Task doesn't exist in DB yet, OR
@@ -82,24 +85,24 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 		// 3. Task was modified after last sync, OR
 		// 4. Task was modified within the last week
 		const shouldUpdateTask =
-			!existingTaskIdsSet.has(task.id) ||
+			!existingTaskIdsSet.has(task.id as string) ||
 			!taskModifiedTime ||
 			taskModifiedTime >= lastSyncTime ||
 			taskModifiedTime >= oneWeekAgo;
 
 		if (shouldUpdateTask) {
 			// Build ancestor data for full task
-			const ancestorIds = buildAncestorChain(task.id, task.parentId);
+			const ancestorIds = buildAncestorChain(task.id as string, task.parentId as string | undefined);
 			const ancestorSet: Record<string, boolean> = {};
 			ancestorIds.forEach((id: string) => {
 				ancestorSet[id] = true;
 			});
 
 			// Track this task for focus record updates
-			modifiedTasksMap[task.id] = {
-				projectId: task.projectId,
+			modifiedTasksMap[task.id as string] = {
+				projectId: task.projectId as string,
 				ancestorIds: ancestorIds,
-				title: task.title
+				title: task.title as string
 			};
 
 			// Normalize the FULL task
@@ -131,10 +134,11 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 
 			// Process items array (if it exists and has items)
 			// Items are always updated if their parent task is updated
-			if (task.items && task.items.length > 0) {
-				for (const item of task.items) {
+			const items = task.items as TickTickTaskRaw[] | undefined;
+			if (items && items.length > 0) {
+				for (const item of items) {
 					// Build ancestor data for item (parent is the full task)
-					const itemAncestorIds = buildAncestorChain(item.id, task.id);
+					const itemAncestorIds = buildAncestorChain(item.id as string, task.id as string);
 					const itemAncestorSet: Record<string, boolean> = {};
 					itemAncestorIds.forEach((id: string) => {
 						itemAncestorSet[id] = true;
@@ -142,7 +146,7 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 
 					// Normalize item task
 					// Remove _id to prevent duplicate key errors on upsert
-					const { _id: itemMongoId, ...itemWithoutMongoDbId } = item;
+					const { _id: _itemMongoId, ...itemWithoutMongoDbId } = item;
 					const normalizedItemTask = {
 						...itemWithoutMongoDbId,
 						userId,
@@ -187,15 +191,18 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 			'tasks.taskId': { $in: modifiedTaskIds }
 		})
 		.select('id tasks')
-		.lean() as any[];
+		.lean() as Array<{
+			id: string;
+			tasks?: Array<{ taskId: string; projectId?: string; ancestorIds?: string[]; title?: string }>;
+		}>;
 
 		const focusRecordBulkOps = [];
 
 		for (const focusRecord of focusRecordsToUpdate) {
-			const updateFields: Record<string, any> = {};
+			const updateFields: Record<string, unknown> = {};
 
 			// Check each task in the focus record and batch updates
-			focusRecord.tasks?.forEach((task: any, index: number) => {
+			focusRecord.tasks?.forEach((task, index: number) => {
 				if (!modifiedTasksMap[task.taskId]) return;
 
 				const modifiedTask = modifiedTasksMap[task.taskId];
@@ -256,9 +263,9 @@ export async function syncTodoistTasks(userId: Types.ObjectId) {
 	const allTasks = await getAllTodoistTasks();
 
 	// Step 1: Build tasksById map for quick parent lookups
-	const tasksById: Record<string, any> = {};
-	allTasks.forEach((task: any) => {
-		const taskId = task.v2_id || task.id
+	const tasksById: Record<string, Record<string, unknown>> = {};
+	allTasks.forEach((task) => {
+		const taskId = (task.v2_id as string | undefined) || (task.id as string);
 		tasksById[taskId] = task;
 	});
 
@@ -282,7 +289,7 @@ export async function syncTodoistTasks(userId: Types.ObjectId) {
 
 		while (currentParentId && tasksById[currentParentId]) {
 			chain.push(currentParentId);
-			currentParentId = tasksById[currentParentId].v2_parent_id || tasksById[currentParentId].parent_id;
+			currentParentId = (tasksById[currentParentId].v2_parent_id as string | undefined) || (tasksById[currentParentId].parent_id as string | undefined);
 		}
 
 		// Cache the chain for this parent (excluding the task itself)
@@ -295,8 +302,8 @@ export async function syncTodoistTasks(userId: Types.ObjectId) {
 
 	for (const task of allTasks) {
 		// Build ancestor data
-		const taskId = task.v2_id || task.id
-		const parentId = task.v2_parent_id || task.parent_id;
+		const taskId = (task.v2_id as string | undefined) || (task.id as string);
+		const parentId = (task.v2_parent_id as string | undefined) || (task.parent_id as string | undefined);
 		const ancestorIds = buildAncestorChain(taskId, parentId);
 		const ancestorSet: Record<string, boolean> = {};
 		ancestorIds.forEach((id: string) => {
@@ -305,16 +312,16 @@ export async function syncTodoistTasks(userId: Types.ObjectId) {
 
 		// Normalize the Todoist task to match our schema
 		// Remove _id to prevent duplicate key errors on upsert
-		const { _id, ...taskWithoutMongoDbId } = task;
+		const { _id, ...taskWithoutMongoDbId } = task as Record<string, unknown> & { _id?: unknown };
 		const normalizedTask = {
 			...taskWithoutMongoDbId,
 			userId,
 			id: taskId,
-			title: task.content || task.title || '',
-			description: task.description || '',
-			projectId: task.v2_project_id || task.project_id,
+			title: (task.content as string | undefined) || (task.title as string | undefined) || '',
+			description: (task.description as string | undefined) || '',
+			projectId: (task.v2_project_id as string | undefined) || (task.project_id as string | undefined),
 			parentId: parentId,
-			completedTime: task.completed_at ? new Date(task.completed_at) : null,
+			completedTime: task.completed_at ? new Date(task.completed_at as string) : null,
 			ancestorIds,
 			ancestorSet,
 		};

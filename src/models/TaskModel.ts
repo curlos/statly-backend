@@ -1,5 +1,65 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 import { applyUserIdEnforcement } from '../utils/schema.utils';
+
+// TypeScript Interfaces
+export interface ITaskBase extends Document {
+	id: string;
+	userId: Types.ObjectId;
+	source: 'TaskTickTick' | 'TaskTodoist';
+	title: string;
+	description?: string;
+	projectId?: string;
+	parentId?: string;
+	completedTime?: Date;
+	sortOrder?: number;
+	timeZone?: string;
+	ancestorIds?: string[];
+	ancestorSet?: Record<string, boolean>;
+}
+
+export interface ITaskTickTick extends ITaskBase {
+	source: 'TaskTickTick';
+	taskType: 'full' | 'item';
+	content?: string;
+	desc?: string;
+	completedUserId?: number;
+	modifiedTime?: Date;
+	createdTime?: Date;
+	creator?: number;
+	startDate?: Date;
+	status?: number;
+}
+
+export interface ITaskTodoist extends ITaskBase {
+	source: 'TaskTodoist';
+	added_at?: Date;
+	added_by_uid?: string;
+	assigned_by_uid?: string;
+	checked?: boolean;
+	child_order?: number;
+	collapsed?: boolean;
+	day_order?: number;
+	deadline?: Date;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	due?: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	duration?: any;
+	is_deleted?: boolean;
+	labels?: string[];
+	note_count?: number;
+	priority?: number;
+	responsible_uid?: string;
+	section_id?: string;
+	sync_id?: string;
+	updated_at?: Date;
+	user_id?: string;
+	v2_id?: string;
+	v2_parent_id?: string;
+	v2_project_id?: string;
+	v2_section_id?: string;
+}
+
+export type ITask = ITaskTickTick | ITaskTodoist;
 
 // Base schema with NORMALIZED shared fields for ALL tasks (TickTick and Todoist)
 const BaseTaskSchema = new Schema({

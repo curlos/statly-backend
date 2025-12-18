@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { Types, PipelineStage } from 'mongoose';
 import { FocusRecord } from '../models/FocusRecord';
 import { Task } from '../models/TaskModel';
 import {
@@ -20,6 +20,7 @@ import {
 import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { MedalsQueryParams } from '../utils/queryParams.utils';
+import { Medal, MedalResults, FocusMedal, TaskMedal } from '../types/medals';
 
 // ============================================================================
 // Date Formatting Helpers
@@ -74,11 +75,11 @@ function getMedalsByInterval(interval: string, type: 'focus' | 'tasks') {
 
 function calculateMedalsFromPeriodTotals(
 	periodTotals: { [key: string]: number },
-	medals: any[],
+	medals: Medal[],
 	interval: string,
 	type: 'focus' | 'tasks'
 ) {
-	const medalResults: any = {};
+	const medalResults: MedalResults = {};
 
 	// Initialize all medals with empty arrays
 	medals.forEach(medal => {
@@ -100,7 +101,9 @@ function calculateMedalsFromPeriodTotals(
 		}
 
 		medals.forEach(medal => {
-			const threshold = type === 'focus' ? medal.requiredDuration : medal.requiredCompletedTasks;
+			const threshold = type === 'focus'
+				? (medal as FocusMedal).requiredDuration
+				: (medal as TaskMedal).requiredCompletedTasks;
 			const adjustedTotal = type === 'focus' ? total + GRACE_PERIOD_SECONDS : total;
 
 			if (adjustedTotal >= threshold) {
@@ -110,7 +113,7 @@ function calculateMedalsFromPeriodTotals(
 	});
 
 	// Sort intervalsEarned arrays from newest to oldest
-	Object.values(medalResults).forEach((medalData: any) => {
+	Object.values(medalResults).forEach((medalData) => {
 		medalData.intervalsEarned.sort((a: string, b: string) => {
 			const dateA = new Date(a);
 			const dateB = new Date(b);
@@ -137,7 +140,7 @@ function calculateMedalsFromPeriodTotals(
  * - Pass through unchanged
  */
 function splitMidnightCrossingRecordsForMedals(
-	pipeline: any[],
+	pipeline: PipelineStage[],
 	interval: string,
 	timezone: string
 ) {
@@ -397,7 +400,7 @@ export async function getCompletedTasksMedals(params: MedalsQueryParams, userId:
 	);
 
 	// Build aggregation pipeline
-	const pipeline: any[] = [];
+	const pipeline: PipelineStage[] = [];
 
 	if (searchFilter) {
 		pipeline.push({ $match: searchFilter });

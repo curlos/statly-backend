@@ -1,5 +1,32 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 import { applyUserIdEnforcement } from '../utils/schema.utils';
+
+// TypeScript Interface
+export interface IProjectGroup extends Document {
+	id: string;
+	userId: Types.ObjectId;
+	source: string;
+	name: string;
+	etag?: string;
+	showAll?: boolean;
+	sortOrder?: number;
+	viewMode?: string;
+	deleted?: number;
+	sortType?: string;
+	sortOption?: {
+		groupBy?: string;
+		orderBy?: string;
+	};
+	teamId?: string;
+	timeline?: {
+		range?: string;
+		sortType?: string;
+		sortOption?: {
+			groupBy?: string;
+			orderBy?: string;
+		};
+	};
+}
 
 // TickTick Project Group Schema
 const ProjectGroupTickTickSchema = new Schema({

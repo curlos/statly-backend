@@ -1,8 +1,13 @@
 import JsonData from '../models/JsonData';
 
-export const updateLocalData = async (dataSets: any) => {
+interface JsonDataSet {
+	name: string;
+	data: Record<string, unknown> | Array<Record<string, unknown>>;
+}
+
+export const updateLocalData = async (dataSets: JsonDataSet[]) => {
 	// Create an array of promises using map
-	const updatePromises = dataSets.map((dataset: any) => updateLocalJsonData(dataset));
+	const updatePromises = dataSets.map((dataset) => updateLocalJsonData(dataset));
 
 	// Wait for all promises to resolve using Promise.all
 	try {
@@ -14,7 +19,7 @@ export const updateLocalData = async (dataSets: any) => {
 };
 
 // Function to update or create a new document
-export const updateLocalJsonData = async (dataset: { name: any; data: any }) => {
+export const updateLocalJsonData = async (dataset: JsonDataSet) => {
 	try {
 		const result = await JsonData.findOneAndUpdate(
 			{ name: dataset.name },
@@ -30,7 +35,7 @@ export const updateLocalJsonData = async (dataset: { name: any; data: any }) => 
 };
 
 // Function to retrieve data by name from MongoDB
-export const getJsonData = async (name: any) => {
+export const getJsonData = async (name: string) => {
 	try {
 		const result = await JsonData.findOne({ name: name });
 		if (!result) {

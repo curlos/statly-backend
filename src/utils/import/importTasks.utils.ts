@@ -1,11 +1,12 @@
-import { Types } from 'mongoose';
+import { Types, Model } from 'mongoose';
 import { TaskTickTick, TaskTodoist } from "../../models/TaskModel";
 import type { ImportCategoryResult } from "./importBackup.utils";
+import { ImportableTaskDocument } from '../../types/import';
 
 /**
  * Validates a task document against required fields
  */
-export function validateTask(doc: any, requiredFields: string[], validSourcesSet: Set<string>): { valid: boolean; error?: string } {
+export function validateTask(doc: ImportableTaskDocument, requiredFields: string[], validSourcesSet: Set<string>): { valid: boolean; error?: string } {
 	for (const field of requiredFields) {
 		if (!(field in doc)) {
 			return { valid: false, error: `Missing required field: ${field}` };
@@ -27,7 +28,7 @@ export function validateTask(doc: any, requiredFields: string[], validSourcesSet
 /**
  * Imports tasks with validation
  */
-export async function importTasks(tasks: any[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
+export async function importTasks(tasks: ImportableTaskDocument[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
 	const errors: string[] = [];
 
 	// Declare validation constants once for all tasks
@@ -35,7 +36,7 @@ export async function importTasks(tasks: any[], userId: Types.ObjectId): Promise
 	const validSourcesSet = new Set(['TaskTickTick', 'TaskTodoist']);
 
 	// Group tasks by source to use the correct discriminator model
-	const tasksBySource: Record<string, any[]> = {
+	const tasksBySource: Record<string, ImportableTaskDocument[]> = {
 		TaskTickTick: [],
 		TaskTodoist: [],
 	};
@@ -60,7 +61,8 @@ export async function importTasks(tasks: any[], userId: Types.ObjectId): Promise
 	}
 
 	// Map source names to their corresponding discriminator models
-	const modelMap: Record<string, any> = {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const modelMap: Record<string, Model<any>> = {
 		TaskTickTick,
 		TaskTodoist,
 	};

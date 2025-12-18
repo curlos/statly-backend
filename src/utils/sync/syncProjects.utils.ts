@@ -166,7 +166,8 @@ export async function syncSessionProjects(userId: Types.ObjectId) {
 	const categoriesMap = new Map();
 
 	for (const record of rawSessionRecords) {
-		const category = record['category'];
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const category = record['category'] as any;
 
 		if (category) {
 			const categoryId = category['id'] || 'general-session';

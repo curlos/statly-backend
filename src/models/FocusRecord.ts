@@ -1,5 +1,66 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 import { applyUserIdEnforcement } from '../utils/schema.utils';
+
+// TypeScript Interfaces
+export interface IFocusRecordTask {
+	taskId: string;
+	title: string;
+	startTime: Date;
+	endTime: Date;
+	duration: number;
+	projectId: string;
+	projectName: string;
+	ancestorIds?: string[]; // Only used by TickTick, but optional for all
+}
+
+export interface IFocusRecordBase extends Document {
+	id: string;
+	userId: Types.ObjectId;
+	source: string;
+	startTime: Date;
+	endTime: Date;
+	duration: number;
+	crossesMidnight?: boolean;
+	emotions?: Array<{
+		emotion: 'joy' | 'sadness' | 'anger' | 'fear' | 'surprise' | 'disgust' | 'neutral';
+		score: number;
+	}>;
+	tasks?: IFocusRecordTask[];
+}
+
+export interface IFocusRecordTickTick extends IFocusRecordBase {
+	source: 'FocusRecordTickTick';
+	note?: string;
+	pauseDuration?: number;
+}
+
+export interface IFocusRecordBeFocused extends IFocusRecordBase {
+	source: 'FocusRecordBeFocused';
+}
+
+export interface IFocusRecordForest extends IFocusRecordBase {
+	source: 'FocusRecordForest';
+	note?: string;
+	treeType?: string;
+	isSuccess?: boolean;
+}
+
+export interface IFocusRecordTide extends IFocusRecordBase {
+	source: 'FocusRecordTide';
+}
+
+export interface IFocusRecordSession extends IFocusRecordBase {
+	source: 'FocusRecordSession';
+	note?: string;
+	pauseDuration?: number;
+}
+
+export type IFocusRecord =
+	| IFocusRecordTickTick
+	| IFocusRecordBeFocused
+	| IFocusRecordForest
+	| IFocusRecordTide
+	| IFocusRecordSession;
 
 // Base embedded schema for tasks within a focus record (common fields for all apps)
 const BaseFocusRecordTaskSchema = new Schema({

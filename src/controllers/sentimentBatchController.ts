@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { CustomRequest } from '../interfaces/CustomRequest';
 import FocusRecord from '../models/FocusRecord';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import mongoose, { Types } from 'mongoose';
 
 interface EmotionResult {
@@ -22,6 +22,11 @@ interface AnalysisResult {
 
 interface HuggingFaceResponse {
 	results: AnalysisResult[];
+}
+
+interface FocusRecordLean {
+	_id: Types.ObjectId;
+	note?: string;
 }
 
 const HUGGINGFACE_SPACE_URL = process.env.HUGGINGFACE_SPACE_URL;
@@ -55,9 +60,9 @@ export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types
 	}
 
 	// Prepare records for analysis
-	const recordsData: RecordToAnalyze[] = records.map(record => ({
+	const recordsData: RecordToAnalyze[] = (records as FocusRecordLean[]).map(record => ({
 		id: record._id.toString(),
-		note: (record as any).note || ''
+		note: record.note || ''
 	}));
 
 	// Call HuggingFace API
@@ -107,7 +112,7 @@ export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types
 				filter: { _id: new mongoose.Types.ObjectId(analysisResult.id) },
 				update: {
 					$set: {
-						'emotions': analysisResult.emotions as any
+						'emotions': analysisResult.emotions
 					}
 				}
 			}
@@ -118,7 +123,9 @@ export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types
 
 	if (bulkOperations.length > 0) {
 		try {
-			const bulkResult = await FocusRecord.bulkWrite(bulkOperations);
+			// Cast to unknown to bypass Mongoose's overly strict DocumentArray typing
+			// At runtime, Mongoose accepts plain arrays and converts them properly
+			const bulkResult = await FocusRecord.bulkWrite(bulkOperations as unknown as Parameters<typeof FocusRecord.bulkWrite>[0]);
 			analyzedCount = bulkResult.modifiedCount;
 		} catch (error) {
 			console.error('Failed to bulk update records:', error);
@@ -194,24 +201,28 @@ export async function analyzeNoteEmotionsHandler(req: CustomRequest, res: Respon
 		const result = await analyzeNoteEmotionsCore(recordIds, userId);
 
 		res.status(200).json(result);
-	} catch (error: any) {
+	} catch (error) {
 		console.error('Error analyzing note emotions:', error);
 
-		// Provide detailed error information
-		if (error.response) {
-			return res.status(500).json({
-				message: `HuggingFace API error: ${error.response.status}`,
-				analyzed: 0,
-				failed: req.body.recordIds?.length || 0
-			});
-		} else if (error.request) {
-			return res.status(500).json({
-				message: 'HuggingFace API: No response received (timeout or connection error)',
-				analyzed: 0,
-				failed: req.body.recordIds?.length || 0
-			});
+		// Handle axios errors specifically
+		if (axios.isAxiosError(error)) {
+			const axiosError = error as AxiosError;
+			if (axiosError.response) {
+				return res.status(500).json({
+					message: `HuggingFace API error: ${axiosError.response.status}`,
+					analyzed: 0,
+					failed: req.body.recordIds?.length || 0
+				});
+			} else if (axiosError.request) {
+				return res.status(500).json({
+					message: 'HuggingFace API: No response received (timeout or connection error)',
+					analyzed: 0,
+					failed: req.body.recordIds?.length || 0
+				});
+			}
 		}
 
+		// Handle general errors
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred during sentiment analysis',
 			analyzed: 0,

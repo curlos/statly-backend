@@ -4,20 +4,20 @@ import UserSettings from "../models/UserSettingsModel";
 import { crossesMidnightInTimezone } from "./timezone.utils";
 import { decrypt } from "./encryption.utils";
 
-export const sortArrayByProperty = (array: any[], property: string, type = 'descending') => {
+export const sortArrayByProperty = <T extends Record<string, unknown>>(array: T[], property: string, type = 'descending') => {
 	// Create a deep copy of the array to avoid modifying the original
-	const arrayCopy = array.map((item: any) => ({ ...item }));
+	const arrayCopy = array.map((item) => ({ ...item }));
 
 	if (type === 'descending') {
 		return arrayCopy.sort(
-			(a: { [x: string]: any }, b: { [x: string]: any }) =>
-				new Date(b[property]).getTime() - new Date(a[property]).getTime()
+			(a: Record<string, unknown>, b: Record<string, unknown>) =>
+				new Date(b[property] as string).getTime() - new Date(a[property] as string).getTime()
 		);
 	}
 
 	return arrayCopy.sort(
-		(a: { [x: string]: any }, b: { [x: string]: any }) =>
-			new Date(a[property]).getTime() - new Date(b[property]).getTime()
+		(a: Record<string, unknown>, b: Record<string, unknown>) =>
+			new Date(a[property] as string).getTime() - new Date(b[property] as string).getTime()
 	);
 };
 
@@ -41,7 +41,7 @@ export const getDayAfterToday = () => {
 /**
  * @description Chunks the passed in array into N arrays. This is very useful for splitting up the large local data I have stored into smaller arrays. This is necessary because TypeScript can't infer types on large data sets with thousands lines of code (the tasks array has 125,000 lines of code by itself).
  */
-const chunkIntoN = (arr: any, n: any) => {
+const _chunkIntoN = <T>(arr: T[], n: number) => {
 	const size = Math.ceil(arr.length / n);
 	return Array.from({ length: n }, (v, i) => arr.slice(i * size, i * size + size));
 };
@@ -62,14 +62,14 @@ export const getTodayTimeBounds = () => {
  * @param {string} keyProperty - The property of the objects to use as keys in the resulting object.
  * @returns {Object} An object with keys derived from each object's specified property and values as the objects themselves.
  */
-export function arrayToObjectByKey(array: any[], keyProperty: string) {
+export function arrayToObjectByKey<T extends Record<string, unknown>>(array: T[], keyProperty: string): Record<string, T> {
 	return array.reduce((acc, obj) => {
 		// Use the value of the specified property as the key
-		const key = keyProperty ? obj[keyProperty] : obj;
+		const key = (keyProperty ? obj[keyProperty] : obj) as string;
 		// Assign the entire object as the value for this key
 		acc[key] = obj;
 		return acc;
-	}, {});
+	}, {} as Record<string, T>);
 }
 
 /**
@@ -77,10 +77,10 @@ export function arrayToObjectByKey(array: any[], keyProperty: string) {
  * @param {String} input
  * @returns {Array<Object>}
  */
-export const parseTideFocusRecordsString = (input: String) => {
+export const parseTideFocusRecordsString = (input: string) => {
 	const lines = input.split('\n');
-	const records: any = [];
-	let current: any = {};
+	const records: Record<string, unknown>[] = [];
+	let current: Record<string, unknown> = {};
 
 	lines.forEach((line) => {
 		if (line.trim()) {
@@ -104,12 +104,12 @@ export const parseTideFocusRecordsString = (input: String) => {
 };
 
 // For the "BeFocused" app focus records and their "Start date" property which is not JS friendly with the "  at " portion of it.
-export const getBeFocusedFocusRecordsWithValidDate = (array: any) => {
-	return array.map((item: any) => {
+export const getBeFocusedFocusRecordsWithValidDate = <T extends Record<string, unknown>>(array: T[]) => {
+	return array.map((item) => {
 		// Check if 'Start date' exists in the object
 		if (item['Start date']) {
 			// Replace double spaces with a single space
-			let cleanedDate = item['Start date'].replace(/\s{2,}/g, ' ');
+			let cleanedDate = (item['Start date'] as string).replace(/\s{2,}/g, ' ');
 
 			// Convert the cleaned date string into a more standard date string
 			// Assuming 'Oct 15 2021 at 4:11:32 PM' is the format after cleaning
@@ -119,7 +119,8 @@ export const getBeFocusedFocusRecordsWithValidDate = (array: any) => {
 			const dateObject = new Date(cleanedDate);
 
 			// Convert the Date object to an ISO string or any preferred format
-			item['Start date'] = dateObject.toISOString();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(item as any)['Start date'] = dateObject.toISOString();
 		}
 		return item;
 	});
@@ -165,13 +166,16 @@ export async function getTickTickCookie(userId: Types.ObjectId): Promise<string>
 export async function handleTickTickApiCall<T>(apiCall: () => Promise<T>): Promise<T> {
 	try {
 		return await apiCall();
-	} catch (error: any) {
+	} catch (error) {
 		// Check if this is an axios error with a response from TickTick
-		if (error?.response?.data?.errorMessage) {
-			// Create error with TickTick's message and preserve status code
-			const tickTickError: any = new Error(error.response.data.errorMessage);
-			tickTickError.statusCode = error.response.status;
-			throw tickTickError;
+		if (error && typeof error === 'object' && 'response' in error) {
+			const err = error as { response?: { status?: number; data?: { errorMessage?: string } } };
+			if (err.response?.data?.errorMessage) {
+				// Create error with TickTick's message and preserve status code
+				const tickTickError = new Error(err.response.data.errorMessage) as Error & { statusCode?: number };
+				tickTickError.statusCode = err.response.status;
+				throw tickTickError;
+			}
 		}
 		// Fallback to original error
 		throw error;

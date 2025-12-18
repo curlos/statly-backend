@@ -25,7 +25,8 @@ export const applyUserIdEnforcement = (schema: Schema): void => {
 	];
 
 	queryTypesRequiringUserId.forEach((queryType) => {
-		schema.pre(queryType as any, function (this: any, next) {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		schema.pre(queryType as any, function (this: any, next: (err?: Error) => void) {
 			const query = this.getFilter();
 
 			// Check if userId exists in the query

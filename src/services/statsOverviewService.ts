@@ -5,6 +5,8 @@ import FocusRecordTickTick from '../models/FocusRecord';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { buildFocusMatchAndFilterConditions, buildFocusSearchFilter } from '../utils/focusFilterBuilders.utils';
 import { BaseQueryParams } from '../utils/queryParams.utils';
+import { PipelineStage } from 'mongoose';
+import { MongooseFilter } from '../types/aggregation';
 
 // ============================================================================
 // Overview Stats Service
@@ -90,7 +92,7 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 	const todayCompletedTasksQuery = searchFilter ? { $and: [searchFilter, todayCompletedTasksFilter] } : todayCompletedTasksFilter;
 
 	// Build facet stages based on skipTodayStats
-	const facetStages: any = {
+	const facetStages: Record<string, PipelineStage[]> = {
 		allTasks: [
 			{ $match: allTasksQuery },
 			{ $count: 'count' }
@@ -109,13 +111,16 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 	}
 
 	// Run all task counts in parallel using $facet
+	// TypeScript expects FacetPipelineStage[] but mongoose doesn't export this type.
+	// Our stages are valid for $facet, so we cast to any to bypass the type check.
 	const [result] = await Task.aggregate([
 		{
-			$facet: facetStages
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			$facet: facetStages as any
 		}
 	]);
 
-	const stats: any = {
+	const stats: Record<string, number> = {
 		totalTasksCount: result?.allTasks[0]?.count || 0,
 		totalCompletedTasksCount: result?.completedTasks[0]?.count || 0
 	};
@@ -171,7 +176,7 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 	const totalFocusQuery = searchFilter ? { $and: [searchFilter, totalFocusMatch] } : totalFocusMatch;
 
 	// Build facet stages based on skipTodayStats
-	const facetStages: any = {
+	const facetStages: Record<string, PipelineStage[]> = {
 		totalStats: [
 			{ $match: totalFocusQuery },
 			{
@@ -214,13 +219,16 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 	}
 
 	// Run focus queries in parallel using $facet
+	// TypeScript expects FacetPipelineStage[] but mongoose doesn't export this type.
+	// Our stages are valid for $facet, so we cast to any to bypass the type check.
 	const [result] = await FocusRecordTickTick.aggregate([
 		{
-			$facet: facetStages
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			$facet: facetStages as any
 		}
 	]);
 
-	const stats: any = {
+	const stats: Record<string, number> = {
 		totalFocusRecordCount: result?.totalStats[0]?.count || 0,
 		totalFocusDuration: result?.totalStats[0]?.duration || 0
 	};
@@ -237,7 +245,7 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
  * Get project count
  */
 async function getProjectStats(userId: Types.ObjectId, params: OverviewStatsQueryParams) {
-	const projectFilter: any = { userId };
+	const projectFilter: MongooseFilter = { userId };
 
 	if (params.projectIds.length > 0) {
 		projectFilter.id = { $in: params.projectIds };
@@ -326,8 +334,8 @@ async function getActiveDays(userId: Types.ObjectId, timezone: string = 'UTC') {
 
 	// Combine both date sets and count unique dates
 	const uniqueDates = new Set([
-		...completedTaskDates.map((d: any) => d._id),
-		...focusRecordDates.map((d: any) => d._id)
+		...completedTaskDates.map((d) => d._id),
+		...focusRecordDates.map((d) => d._id)
 	]);
 
 	return uniqueDates.size;
@@ -352,7 +360,7 @@ export async function getOverviewStats(params: OverviewStatsQueryParams, userId:
 	const includeFirstData = params.includeFirstData || false;
 
 	// Build promises array for parallel execution
-	const promises: Promise<any>[] = [
+	const promises: Promise<unknown>[] = [
 		getTaskStats(userId, params, todayDateString, skipTodayStats),
 		getFocusStats(userId, params, todayDateString, skipTodayStats),
 		getProjectStats(userId, params),
@@ -366,14 +374,18 @@ export async function getOverviewStats(params: OverviewStatsQueryParams, userId:
 	// Run all stats queries in parallel
 	const results = await Promise.all(promises);
 
-	const [taskStats, focusStats, projectStats, activeDays, firstData] = results;
+	const taskStats = results[0] as Record<string, number>;
+	const focusStats = results[1] as Record<string, number>;
+	const projectStats = results[2] as { totalProjectsCount: number };
+	const activeDays = results[3] as number;
+	const firstData = results[4] as { firstCompletedTaskDate: string | null; firstFocusRecordDate: string | null } | undefined;
 
-	const overviewStats: OverviewStats = {
+	const overviewStats = {
 		...taskStats,
 		...focusStats,
 		...projectStats,
 		activeDays
-	};
+	} as OverviewStats;
 
 	if (includeFirstData && firstData) {
 		overviewStats.firstCompletedTaskDate = firstData.firstCompletedTaskDate;

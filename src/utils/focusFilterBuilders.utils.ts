@@ -1,6 +1,7 @@
 import { parseDateInTimezone } from './timezone.utils';
 import { addMidnightRecordDurationAdjustment } from './focus.utils';
-import { Types } from 'mongoose';
+import { Types, PipelineStage } from 'mongoose';
+import { MongooseFilter } from '../types/aggregation';
 
 // ============================================================================
 // Focus Records - App Source Mapping
@@ -56,9 +57,9 @@ export function buildFocusMatchAndFilterConditions(
 		throw new Error('buildFocusMatchAndFilterConditions requires userId parameter');
 	}
 
-	const focusRecordMatchConditions: any = {};
-	const taskFilterConditions: any[] = [];
-	const andedOrConditions: any[] = []; // Collect all $or conditions here to be AND-ed together
+	const focusRecordMatchConditions: MongooseFilter = {};
+	const taskFilterConditions: MongooseFilter[] = [];
+	const andedOrConditions: MongooseFilter[] = []; // Collect all $or conditions here to be AND-ed together
 
 	// Add userId filter - critical for data isolation
 	focusRecordMatchConditions.userId = userId;
@@ -229,8 +230,8 @@ export function buildFocusMatchAndFilterConditions(
 // Focus Records - Base Pipeline
 // ============================================================================
 
-export function buildFocusBasePipeline(searchFilter: any, focusRecordMatchConditions: any) {
-	const pipeline: any[] = [];
+export function buildFocusBasePipeline(searchFilter: MongooseFilter | null, focusRecordMatchConditions: MongooseFilter) {
+	const pipeline: PipelineStage[] = [];
 
 	if (searchFilter) {
 		pipeline.push({ $match: searchFilter });
@@ -252,8 +253,8 @@ export function buildFocusBasePipeline(searchFilter: any, focusRecordMatchCondit
  * This is shared logic for both challenges and medals services.
  */
 export function addFocusTaskDurationCalculation(
-	pipeline: any[],
-	taskFilterConditions: any[]
+	pipeline: PipelineStage[],
+	taskFilterConditions: MongooseFilter[]
 ) {
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
 
@@ -311,8 +312,8 @@ export function addFocusTaskDurationCalculation(
  * @param preserveOriginalDuration - If true, stores original duration before filtering
  */
 export function addTaskFilteringAndDurationRecalculation(
-	pipeline: any[],
-	taskFilterConditions: any[],
+	pipeline: PipelineStage[],
+	taskFilterConditions: MongooseFilter[],
 	preserveOriginalDuration: boolean = false
 ) {
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
@@ -369,9 +370,9 @@ export function addTaskFilteringAndDurationRecalculation(
  * Extracted from focusRecordsService lines 97-182.
  */
 export function buildFocusTotalsCalculationPipeline(
-	basePipeline: any[],
-	taskFilterConditions: any[]
-): any[] {
+	basePipeline: PipelineStage[],
+	taskFilterConditions: MongooseFilter[]
+): PipelineStage[] {
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
 	const pipeline = [...basePipeline];
 
@@ -454,20 +455,22 @@ export function buildFocusTotalsCalculationPipeline(
  * Extracted from focusRecordsService lines 186-198.
  */
 export function extractFocusTotalsFromResult(
-	result: any[],
+	result: Record<string, unknown>[],
 	hasTaskOrProjectFilters: boolean
 ): { total: number; totalDuration: number; onlyTasksTotalDuration: number } {
 	if (hasTaskOrProjectFilters) {
 		return {
-			total: result[0]?.total || 0,
-			totalDuration: result[0]?.totalDuration || 0,
-			onlyTasksTotalDuration: result[0]?.onlyTasksTotalDuration || 0
+			total: (result[0]?.total as number) || 0,
+			totalDuration: (result[0]?.totalDuration as number) || 0,
+			onlyTasksTotalDuration: (result[0]?.onlyTasksTotalDuration as number) || 0
 		};
 	} else {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const firstResult = result[0] as any;
 		return {
-			total: result[0]?.count[0]?.total || 0,
-			totalDuration: result[0]?.baseDuration[0]?.total || 0,
-			onlyTasksTotalDuration: result[0]?.tasksDuration[0]?.total || 0
+			total: firstResult?.count[0]?.total || 0,
+			totalDuration: firstResult?.baseDuration[0]?.total || 0,
+			onlyTasksTotalDuration: firstResult?.tasksDuration[0]?.total || 0
 		};
 	}
 }
@@ -500,10 +503,10 @@ export interface BuildFocusFilterPipelineParams {
  * @returns An object containing the pipeline and additional filter data
  */
 export function buildFocusFilterPipeline(params: BuildFocusFilterPipelineParams): {
-	pipeline: any[];
+	pipeline: PipelineStage[];
 	effectiveStartDate?: string;
 	effectiveEndDate?: string;
-	taskFilterConditions: any[];
+	taskFilterConditions: MongooseFilter[];
 } {
 	// Build filters (reuse existing filter logic)
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);

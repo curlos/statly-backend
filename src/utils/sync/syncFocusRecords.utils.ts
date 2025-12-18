@@ -7,8 +7,22 @@ import { crossesMidnightInTimezone } from "../timezone.utils";
 import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { analyzeNoteEmotionsCore } from "../../controllers/sentimentBatchController";
 import UserSettings from "../../models/UserSettingsModel";
+import { TickTickFocusRecordRaw, BeFocusedRecordRaw, ForestRecordRaw, TideRecordRaw, SessionRecordRaw } from "../../types/externalApis";
 
-function createDeterministicId(source: string, ...fields: any[]): string {
+// Helper types for sync operations
+type TickTickTask = NonNullable<TickTickFocusRecordRaw['tasks']>[number];
+
+interface TaskData {
+	projectId?: string;
+	ancestorIds: string[];
+}
+
+interface ExistingRecordData {
+	note: string;
+	emotions: unknown;
+}
+
+function createDeterministicId(source: string, ...fields: unknown[]): string {
 	const data = fields.join('|');
 	const hash = createHash('sha256').update(data).digest('hex').substring(0, 12);
 	return `${source}-${hash}`;
@@ -62,7 +76,7 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 	const shouldAnalyzeEmotions = userSettings?.pages?.focusRecords?.analyzeNoteEmotionsWhileSyncingFocusRecords || false;
 
 	// Only fetch existing records if we need to analyze emotions
-	let existingRecordsMap = new Map<string, { note: string; emotions: any }>();
+	let existingRecordsMap = new Map<string, ExistingRecordData>();
 	if (shouldAnalyzeEmotions) {
 		const recordIds = focusRecords
 			.filter(r => new Date(r.endTime) >= threeDaysBeforeLastSync)
@@ -74,7 +88,8 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 		}).select('id note emotions').lean();
 
 		existingRecordsMap = new Map(
-			existingRecords.map((r: any) => [r.id, { note: r.note || '', emotions: r.emotions }])
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(existingRecords as any[]).map((r: any) => [r.id, { note: r.note || '', emotions: r.emotions }])
 		);
 	}
 
@@ -83,6 +98,7 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 	for (const record of focusRecords) {
 		const recordEndTime = new Date(record.endTime);
 		if (recordEndTime >= threeDaysBeforeLastSync && record.tasks) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			record.tasks.forEach((task: any) => {
 				if (task.taskId) {
 					allTaskIds.add(task.taskId);
@@ -92,14 +108,15 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 	}
 
 	// Fetch full task documents to get projectId and ancestorIds
-	const tasksById: Record<string, any> = {};
+	const tasksById: Record<string, TaskData> = {};
 	if (allTaskIds.size > 0) {
 		const fullTasks = await TaskTickTick.find({
 			userId,
 			id: { $in: Array.from(allTaskIds) }
 		}).select('id projectId ancestorIds').lean();
 
-		fullTasks.forEach((task: any) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(fullTasks as any[]).forEach((task: any) => {
 			tasksById[task.id] = {
 				projectId: task.projectId,
 				ancestorIds: task.ancestorIds || []
@@ -118,7 +135,7 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 		// Only sync if endTime is within 3 days of last sync or after.
 		if (recordEndTime >= threeDaysBeforeLastSync) {
 			// Calculate duration and denormalize projectId/ancestorIds for each task
-			const tasksWithDuration = (record.tasks || []).map((task: any) => {
+			const tasksWithDuration = (record.tasks || []).map((task: TickTickTask) => {
 				const startTime = new Date(task.startTime);
 				const endTime = new Date(task.endTime);
 				const duration = (endTime.getTime() - startTime.getTime()) / 1000; // Duration in seconds
@@ -163,7 +180,8 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 					recordsNeedingEmotionAnalysis.push(record.id);
 				} else {
 					// Existing record - check if note changed or if it has no emotions
-					const hasEmotions = existingRecord.emotions && existingRecord.emotions.length > 0;
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const hasEmotions = existingRecord.emotions && (existingRecord.emotions as any).length > 0;
 					const noteChanged = existingRecord.note !== normalizedRecord.note;
 
 					if (!hasEmotions || noteChanged) {
@@ -207,7 +225,8 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 				id: { $in: recordsNeedingEmotionAnalysis }
 			}).select('_id').lean();
 
-			const mongoIds = recordsToAnalyze.map((r: any) => r._id.toString());
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const mongoIds = (recordsToAnalyze as any[]).map((r: any) => r._id.toString());
 
 			if (mongoIds.length > 0) {
 				emotionAnalysisResult = await analyzeNoteEmotionsCore(mongoIds, userId);
@@ -245,7 +264,7 @@ export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone
 	const midnightCache = new Map<string, boolean>();
 
 	// Normalize each record to match TickTick format
-	const normalizedRecords = rawBeFocusedRecords.map((record: any) => {
+	const normalizedRecords = rawBeFocusedRecords.map((record: BeFocusedRecordRaw) => {
 		const startDate = new Date(record['Start date']);
 		const durationInMinutes = Number(record['Duration']);
 		const durationInSeconds = durationInMinutes * 60; // Convert minutes to seconds
@@ -285,7 +304,7 @@ export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone
 	});
 
 	// Bulk upsert to database
-	const bulkOps = normalizedRecords.map((record: any) => ({
+	const bulkOps = normalizedRecords.map((record) => ({
 		updateOne: {
 			filter: { id: record.id, userId },
 			update: { $set: record },
@@ -319,9 +338,9 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 	const midnightCache = new Map<string, boolean>();
 
 	// Normalize each record to match TickTick format
-	const normalizedRecords = rawForestRecords.map((record: any) => {
-		const startDate = new Date(record['Start Time']);
-		const endDate = new Date(record['End Time']);
+	const normalizedRecords = rawForestRecords.map((record: ForestRecordRaw) => {
+		const startDate = new Date(record['Start Time'] as string);
+		const endDate = new Date(record['End Time'] as string);
 		const durationInSeconds = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
 		const tag = record['Tag'] || '';
 		const note = record['Note'] || '';
@@ -365,7 +384,7 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 	});
 
 	// Bulk upsert to database
-	const bulkOps = normalizedRecords.map((record: any) => ({
+	const bulkOps = normalizedRecords.map((record) => ({
 		updateOne: {
 			filter: { id: record.id, userId },
 			update: { $set: record },
@@ -415,9 +434,9 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 	};
 
 	// Normalize each record to match TickTick format
-	const normalizedRecords = rawTideRecords.map((record: any) => {
+	const normalizedRecords = rawTideRecords.map((record: TideRecordRaw) => {
 		const startDate = new Date(record['startTime']);
-		const durationInSeconds = parseDuration(record['duration']);
+		const durationInSeconds = parseDuration((record['duration'] as unknown) as string) || 0;
 		const endDate = new Date(startDate.getTime() + durationInSeconds * 1000);
 		const name = record['name'] || 'Untitled';
 
@@ -455,7 +474,7 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 	});
 
 	// Bulk upsert to database
-	const bulkOps = normalizedRecords.map((record: any) => ({
+	const bulkOps = normalizedRecords.map((record) => ({
 		updateOne: {
 			filter: { id: record.id, userId },
 			update: { $set: record },
@@ -489,15 +508,17 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 	const midnightCache = new Map<string, boolean>();
 
 	// Normalize each record to match TickTick format
-	const normalizedRecords = rawSessionRecords.map((record: any) => {
-		const startDate = new Date(record['start_date']);
-		const endDate = new Date(record['end_date']);
-		const totalDurationInSeconds = record['duration_second'];
-		const pauseDurationInSeconds = record['pause_second'] || 0;
+	const normalizedRecords = rawSessionRecords.map((record: SessionRecordRaw) => {
+		const startDate = new Date(record['start_date'] as string);
+		const endDate = new Date(record['end_date'] as string);
+		const totalDurationInSeconds = record['duration_second'] as number;
+		const pauseDurationInSeconds = (record['pause_second'] as number) || 0;
 		const actualDurationInSeconds = totalDurationInSeconds - pauseDurationInSeconds;
 
-		const categoryTitle = record['category']?.['title'] || 'General';
-		const categoryId = record['category']?.['id'] || 'general-session';
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const categoryTitle = (record['category'] as any)?.['title'] || 'General';
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const categoryId = (record['category'] as any)?.['id'] || 'general-session';
 		const title = record['title'] || categoryTitle;
 		const note = record['notes'] || '';
 
@@ -506,12 +527,14 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 		const projectName = categoryTitle;
 
 		// Parse meta array to get pause periods
-		const metaPauses = (record['meta'] || [])
-			.filter((m: any) => m.type === 'PAUSE')
-			.map((m: any) => ({
-				start: new Date(m['start_date']),
-				end: new Date(m['end_date'])
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const metaPauses = ((record['meta'] as any) || [])
+			.filter((m: Record<string, unknown>) => m.type === 'PAUSE')
+			.map((m: Record<string, unknown>) => ({
+				start: new Date(m['start_date'] as string),
+				end: new Date(m['end_date'] as string)
 			}))
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			.sort((a: any, b: any) => a.start.getTime() - b.start.getTime());
 
 		// Build tasks array by splitting based on pauses
@@ -574,7 +597,7 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 	});
 
 	// Bulk upsert to database
-	const bulkOps = normalizedRecords.map((record: any) => ({
+	const bulkOps = normalizedRecords.map((record) => ({
 		updateOne: {
 			filter: { id: record.id, userId },
 			update: { $set: record },

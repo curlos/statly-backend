@@ -7,6 +7,12 @@ import { importFocusRecords } from '../utils/import/importFocusRecords.utils';
 import { importProjectGroups } from '../utils/import/importProjectGroups.utils';
 import { importProjects } from '../utils/import/importProjects.utils';
 import { importTasks } from '../utils/import/importTasks.utils';
+import { IFocusRecord } from '../models/FocusRecord';
+import { ITask } from '../models/TaskModel';
+import { IProject } from '../models/ProjectModel';
+import { IProjectGroup } from '../models/ProjectGroupModel';
+
+type ImportableDocument = IFocusRecord | ITask | IProject | IProjectGroup;
 
 const router = express.Router();
 
@@ -32,7 +38,7 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 		}
 
 		// Parse JSON from all file buffers and combine documents
-		let documents: any[] = [];
+		const documents: ImportableDocument[] = [];
 		const parseErrors: string[] = [];
 
 		for (const file of req.files) {
@@ -64,32 +70,32 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 		}
 
 		// Categorize documents by type
-		const focusRecords: any[] = [];
-		const tasks: any[] = [];
-		const projects: any[] = [];
-		const projectGroups: any[] = [];
+		const focusRecords: IFocusRecord[] = [];
+		const tasks: ITask[] = [];
+		const projects: IProject[] = [];
+		const projectGroups: IProjectGroup[] = [];
 
 		documents.forEach((doc, index) => {
 			try {
 				// Detect type using O(1) lookup
 				const type = detectDocumentType(doc);
 
-				// Categorize by type
+				// Categorize by type with type narrowing
 				switch (type) {
 					case 'focusRecord':
-						focusRecords.push(doc);
+						focusRecords.push(doc as IFocusRecord);
 						break;
 					case 'task':
-						tasks.push(doc);
+						tasks.push(doc as ITask);
 						break;
 					case 'project':
-						projects.push(doc);
+						projects.push(doc as IProject);
 						break;
 					case 'projectGroup':
-						projectGroups.push(doc);
+						projectGroups.push(doc as IProjectGroup);
 						break;
 					default:
-						parseErrors.push(`Document at index ${index}: Unknown source type: ${doc.source || 'missing'}`);
+						parseErrors.push(`Document at index ${index}: Unknown source type: ${(doc as { source?: string }).source || 'missing'}`);
 				}
 			} catch (error) {
 				parseErrors.push(`Document at index ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`);

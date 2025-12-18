@@ -1,15 +1,59 @@
-import { Types } from 'mongoose';
+import { Types, PipelineStage } from 'mongoose';
 import { Task } from '../models/TaskModel';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { buildAncestorData } from '../utils/task.utils';
 import { DaysWithCompletedTasksQueryParams, ExportDaysWithCompletedTasksQueryParams } from '../utils/queryParams.utils';
 import Project from '../models/ProjectModel';
+import { TaskAncestorInfo } from '../types/aggregation';
+import { ITask } from '../models/TaskModel';
+
+// Service-specific types
+interface DayAggregationResult {
+	dateStr: string;
+	completedTasksForDay: ITask[];
+	firstCompletedTime?: Date;
+	taskCount?: number;
+}
+
+interface NestedTaskNode {
+	directCompletedSubtasks?: ITask[];
+	parentDirectChildrenCompletedTasks?: Record<string, NestedTaskNode>;
+}
+
+interface ParentTaskData {
+	id: string;
+	name: string;
+	projectId?: string | null;
+	ancestorIds?: string[];
+	completedSubtasks: ITask[];
+}
+
+interface DayWithTasks {
+	dateStr: string;
+	parentTasks: ParentTaskData[];
+	taskCount: number;
+}
+
+interface GroupedTaskInfo {
+	id: string;
+	name: string;
+	projectId?: string | null;
+	isGrouped: boolean;
+	instanceCount: number;
+	totalCompletedTasks: number;
+}
+
+interface GroupedDayData {
+	days: DayWithTasks[];
+	totalCompletedTasks: number;
+	groupName: string;
+}
 
 // ============================================================================
 // Sort Criteria Builder
 // ============================================================================
 
-function buildSortStage(sortBy: string) {
+function buildSortStage(sortBy: string): PipelineStage {
 	switch (sortBy) {
 		case 'Oldest':
 			return { $sort: { firstCompletedTime: 1 } };
@@ -49,7 +93,7 @@ async function executeCompletedTasksAggregation(
 	);
 
 	// Build base filtering pipeline (shared by all queries)
-	const baseFilterPipeline: any[] = [];
+	const baseFilterPipeline: PipelineStage[] = [];
 
 	// Step 1: Apply search filter if it exists
 	if (searchFilter) {
@@ -60,7 +104,7 @@ async function executeCompletedTasksAggregation(
 	baseFilterPipeline.push({ $match: matchFilter });
 
 	// Build shared data pipeline (used for both paginated and export queries)
-	const dataPipeline: any[] = [
+	const dataPipeline: PipelineStage[] = [
 		// Step 3: Sort by completedTime ascending (oldest first within each day)
 		{ $sort: { completedTime: 1 } },
 
@@ -85,7 +129,7 @@ async function executeCompletedTasksAggregation(
 	];
 
 	// Build aggregation pipeline
-	const aggregationPipeline: any[] = [...baseFilterPipeline];
+	const aggregationPipeline: PipelineStage[] = [...baseFilterPipeline];
 
 	// If pagination is provided, use $facet to run counts + paginated data in single query
 	if (pagination) {
@@ -103,16 +147,21 @@ async function executeCompletedTasksAggregation(
 							_id: 0
 						}
 					}
-				],
+				// TypeScript expects FacetPipelineStage[] but mongoose doesn't export this type.
+				// Our stages are valid for $facet, so we cast to any to bypass the type check.
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				] as any,
 				// Facet 2: Total tasks count
 				totalTasksCount: [
 					{ $count: "total" }
-				],
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				] as any,
 				// Facet 3: Total days count
 				totalDaysCount: [
 					...dataPipeline,
 					{ $count: "total" }
-				]
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				] as any
 			}
 		});
 	} else {
@@ -133,7 +182,7 @@ async function executeCompletedTasksAggregation(
 	const aggregationResult = await Task.aggregate(aggregationPipeline);
 
 	// Extract results based on query type
-	let result: any[];
+	let result: DayAggregationResult[];
 	let totalTasks = 0
 	let totalDays = 0
 
@@ -148,7 +197,7 @@ async function executeCompletedTasksAggregation(
 	}
 
 	// Extract all tasks from all days
-	const allTasks = result.flatMap((day: any) => day.completedTasksForDay);
+	const allTasks = result.flatMap((day) => day.completedTasksForDay);
 
 	return { result, allTasks, totalTasks, totalDays };
 }
@@ -162,9 +211,9 @@ async function executeCompletedTasksAggregation(
  * This builds the FULL tree from root ancestors down to completed tasks
  */
 function buildNestedStructureForDay(
-	completedTasksForDay: any[],
-	ancestorTasksById: Record<string, any>
-): Record<string, any> {
+	completedTasksForDay: ITask[],
+	ancestorTasksById: Record<string, TaskAncestorInfo>
+): Record<string, NestedTaskNode> {
 	// Find the TRUE root tasks (tasks with no parent at all)
 	// We need to trace back through ALL ancestors, not just completed ones
 	const trueRootTaskIds = new Set<string>();
@@ -184,7 +233,7 @@ function buildNestedStructureForDay(
 
 	// Build nested structure for each true root task
 	// This will recursively build the tree, including non-completed ancestor nodes
-	const nestedStructure: Record<string, any> = {};
+	const nestedStructure: Record<string, NestedTaskNode> = {};
 	trueRootTaskIds.forEach(rootTaskId => {
 		nestedStructure[rootTaskId] = buildNestedTaskNodeWithAncestors(
 			rootTaskId,
@@ -202,9 +251,9 @@ function buildNestedStructureForDay(
  */
 function buildNestedTaskNodeWithAncestors(
 	taskId: string,
-	completedTasksForDay: any[],
-	ancestorTasksById: Record<string, any>
-): any {
+	completedTasksForDay: ITask[],
+	ancestorTasksById: Record<string, TaskAncestorInfo>
+): NestedTaskNode {
 	// For tasks with no parent that were completed, they should appear as their own child
 	const taskInfo = ancestorTasksById[taskId];
 	const hasNoParent = !taskInfo?.parentId;
@@ -264,7 +313,7 @@ function buildNestedTaskNodeWithAncestors(
 	}
 
 	// Build nested structure for non-completed children (intermediate nodes)
-	let parentDirectChildrenCompletedTasks: Record<string, any> | undefined = undefined;
+	let parentDirectChildrenCompletedTasks: Record<string, NestedTaskNode> | undefined = undefined;
 
 	if (childTaskIdsToRecurse.size > 0) {
 		parentDirectChildrenCompletedTasks = {};
@@ -316,13 +365,13 @@ function buildNestedTaskNodeWithAncestors(
  * Handles all three groupBy modes: 'none', 'project', 'task'
  */
 function exportDaysWithNestedStructure(
-	result: any[],
-	ancestorTasksById: Record<string, any>,
+	result: DayAggregationResult[],
+	ancestorTasksById: Record<string, TaskAncestorInfo>,
 	params: ExportDaysWithCompletedTasksQueryParams
 ) {
 	// If no grouping, return nested structure for each day
 	if (params.groupBy === 'none') {
-		const nestedDays: Record<string, any> = {};
+		const nestedDays: Record<string, Record<string, unknown>> = {};
 
 		for (const day of result) {
 			const { dateStr, completedTasksForDay } = day;
@@ -337,16 +386,16 @@ function exportDaysWithNestedStructure(
 	}
 
 	// For project or task grouping
-	const grouped: Record<string, Record<string, Record<string, any>>> = {};
+	const grouped: Record<string, Record<string, Record<string, unknown>>> = {};
 
 	for (const day of result) {
 		const { dateStr, completedTasksForDay } = day;
 
 		if (params.groupBy === 'project') {
 			// Group by project
-			const tasksByProject: Record<string, any[]> = {};
+			const tasksByProject: Record<string, ITask[]> = {};
 
-			completedTasksForDay.forEach((task: any) => {
+			completedTasksForDay.forEach((task) => {
 				const projectId = task.projectId || 'no-project-id';
 				if (!tasksByProject[projectId]) {
 					tasksByProject[projectId] = [];
@@ -366,9 +415,9 @@ function exportDaysWithNestedStructure(
 			});
 		} else {
 			// Group by task (including ancestors if taskIdIncludeSubtasks is true)
-			const tasksByGroupId: Record<string, any[]> = {};
+			const tasksByGroupId: Record<string, ITask[]> = {};
 
-			completedTasksForDay.forEach((task: any) => {
+			completedTasksForDay.forEach((task) => {
 				const groupIds = new Set<string>();
 
 				// Add the task itself
@@ -432,7 +481,7 @@ function exportDaysWithNestedStructure(
 	// with the same name and create grouped task IDs like "grouped-Check Streaks"
 	if (params.groupBy === 'task') {
 		// Collect all root task IDs across all days in all groups
-		const allRootTasksByGroup: Record<string, { taskId: string, dateStr: string, dayData: any }[]> = {};
+		const allRootTasksByGroup: Record<string, { taskId: string, dateStr: string, dayData: Record<string, unknown> }[]> = {};
 
 		Object.entries(grouped).forEach(([groupId, daysData]) => {
 			if (!allRootTasksByGroup[groupId]) {
@@ -440,7 +489,7 @@ function exportDaysWithNestedStructure(
 			}
 
 			Object.entries(daysData).forEach(([dateStr, dayData]) => {
-				const { taskCount, ...rootTasks } = dayData;
+				const { taskCount: _taskCount, ...rootTasks } = dayData;
 				Object.keys(rootTasks).forEach(taskId => {
 					allRootTasksByGroup[groupId].push({ taskId, dateStr, dayData });
 				});
@@ -473,7 +522,7 @@ function exportDaysWithNestedStructure(
 					// Check if these are all standalone tasks (only nest under themselves)
 					const allStandalone = instances.every(({ taskId, dateStr }) => {
 						const dayData = grouped[groupId][dateStr];
-						const taskNode = dayData[taskId];
+						const taskNode = dayData[taskId] as NestedTaskNode;
 
 						// A standalone task nests under itself: has one child which is itself
 						const childIds = taskNode.parentDirectChildrenCompletedTasks
@@ -495,28 +544,29 @@ function exportDaysWithNestedStructure(
 		// Apply grouping by merging standalone tasks across days
 		if (Object.keys(groupedTaskMapping).length > 0) {
 			Object.entries(grouped).forEach(([groupId, daysData]) => {
-				const newDaysData: Record<string, any> = {};
+				const newDaysData: Record<string, Record<string, unknown>> = {};
 
 				// For each day, merge tasks that should be grouped
 				Object.entries(daysData).forEach(([dateStr, dayData]) => {
 					const { taskCount, ...rootTasks } = dayData;
-					const newRootTasks: Record<string, any> = {};
+					const newRootTasks: Record<string, unknown> = {};
 
 					Object.entries(rootTasks).forEach(([taskId, taskNode]) => {
+						const typedTaskNode = taskNode as NestedTaskNode;
 						const mappedId = groupedTaskMapping[taskId];
 
 						if (mappedId) {
 							// This task should be grouped - add to grouped ID
 							if (!newRootTasks[mappedId]) {
 								// First instance - create the grouped node
-								newRootTasks[mappedId] = taskNode;
+								newRootTasks[mappedId] = typedTaskNode;
 							} else {
 								// Merge with existing grouped node
-								const existingNode = newRootTasks[mappedId];
+								const existingNode = newRootTasks[mappedId] as NestedTaskNode;
 								const existingSubtasks = existingNode.parentDirectChildrenCompletedTasks?.[taskId]?.directCompletedSubtasks || [];
-								const newSubtasks = taskNode.parentDirectChildrenCompletedTasks?.[taskId]?.directCompletedSubtasks || [];
+								const newSubtasks = typedTaskNode.parentDirectChildrenCompletedTasks?.[taskId]?.directCompletedSubtasks || [];
 
-								if (existingNode.parentDirectChildrenCompletedTasks && taskNode.parentDirectChildrenCompletedTasks) {
+								if (existingNode.parentDirectChildrenCompletedTasks && typedTaskNode.parentDirectChildrenCompletedTasks) {
 									// Merge subtasks
 									existingNode.parentDirectChildrenCompletedTasks[taskId] = {
 										directCompletedSubtasks: [...existingSubtasks, ...newSubtasks]
@@ -525,7 +575,7 @@ function exportDaysWithNestedStructure(
 							}
 						} else {
 							// Not grouped - keep as is
-							newRootTasks[taskId] = taskNode;
+							newRootTasks[taskId] = typedTaskNode;
 						}
 					});
 
@@ -555,7 +605,7 @@ export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQu
 	});
 
 	// Build ancestor data for all tasks
-	const { ancestorTasksById } = await buildAncestorData(allTasks, userId);
+	const { ancestorTasksById } = await buildAncestorData(allTasks as unknown as ITask[], userId);
 
 	const totalPages = Math.ceil(totalDays / params.maxDaysPerPage);
 
@@ -580,8 +630,8 @@ export async function getDaysWithCompletedTasks(params: DaysWithCompletedTasksQu
 export async function exportDaysWithCompletedTasks(params: ExportDaysWithCompletedTasksQueryParams, userId: Types.ObjectId) {
 	// Fetch all projects and create lookup by ID for current project names
 	const projects = await Project.find({ userId }).lean();
-	const projectsById: Record<string, any> = {};
-	projects.forEach((project: any) => {
+	const projectsById: Record<string, Record<string, unknown>> = {};
+	projects.forEach((project) => {
 		projectsById[project.id] = project;
 	});
 
@@ -589,7 +639,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 	const { result, allTasks } = await executeCompletedTasksAggregation(params, userId);
 
 	// Build ancestor data for all tasks
-	const { ancestorTasksById } = await buildAncestorData(allTasks, userId);
+	const { ancestorTasksById } = await buildAncestorData(allTasks as unknown as ITask[], userId);
 
 	// If nested export mode, use nested structure
 	if (params.exportMode === 'nested') {
@@ -605,13 +655,13 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 
 	// Otherwise, continue with flat export logic
 	// Group tasks by parent/child relationship for each day
-	const daysWithGroupedTasks: any[] = [];
+	const daysWithGroupedTasks: DayWithTasks[] = [];
 
 	for (const day of result) {
 		const { dateStr, completedTasksForDay } = day;
 
 		// Group subtasks by parent task
-		const groupedSubtasksByParentTask: Record<string, any[]> = {};
+		const groupedSubtasksByParentTask: Record<string, ITask[]> = {};
 
 		for (const task of completedTasksForDay) {
 			// Use parentId if it exists, otherwise treat task as its own parent
@@ -625,7 +675,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 		}
 
 		// Build parent task data with enriched titles
-		const parentTasks: any[] = [];
+		const parentTasks: ParentTaskData[] = [];
 
 		for (const parentTaskId of Object.keys(groupedSubtasksByParentTask)) {
 			const completedSubtasks = groupedSubtasksByParentTask[parentTaskId];
@@ -661,7 +711,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 			const projectId = parentTask.projectId;
 			if (projectId) {
 				const currentProject = projectsById[projectId];
-				const projectName = currentProject?.name || projectId;
+				const projectName = (currentProject?.name as string | undefined) || projectId;
 				fullTaskTitle += ` - (${projectName})`;
 			}
 
@@ -678,7 +728,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 		}
 
 		// Calculate total completed tasks for this day
-		const taskCount = parentTasks.reduce((sum: number, pt: any) => sum + pt.completedSubtasks.length, 0);
+		const taskCount = parentTasks.reduce((sum: number, pt: ParentTaskData) => sum + pt.completedSubtasks.length, 0);
 
 		daysWithGroupedTasks.push({
 			dateStr,
@@ -700,18 +750,18 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 	// ============================================================================
 	// Identify standalone tasks that appear multiple times across days with the same name
 	// and create grouped task IDs like "grouped-Check Streaks"
-	const groupedTasksInfo: Record<string, any> = {};
+	const groupedTasksInfo: Record<string, GroupedTaskInfo> = {};
 	const taskIdToGroupedId: Record<string, string> = {}; // Maps original task ID to grouped ID
 
 	if (params.groupBy === 'task') {
 		// Collect all parent tasks across all days
-		const allParentTasks: any[] = [];
+		const allParentTasks: ParentTaskData[] = [];
 		for (const day of daysWithGroupedTasks) {
 			allParentTasks.push(...day.parentTasks);
 		}
 
 		// Separate standalone tasks from those with children
-		const standaloneTasksByName: Record<string, any[]> = {};
+		const standaloneTasksByName: Record<string, ParentTaskData[]> = {};
 
 		for (const parentTaskData of allParentTasks) {
 			const { completedSubtasks, id: taskId } = parentTaskData;
@@ -754,7 +804,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 	}
 
 	// Group by project or task
-	const grouped: { [key: string]: { days: any[], totalCompletedTasks: number, groupName: string } } = {};
+	const grouped: Record<string, GroupedDayData> = {};
 
 	for (const day of daysWithGroupedTasks) {
 		const { dateStr, parentTasks } = day;
@@ -794,7 +844,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 							groupName = 'No Project ID';
 						} else {
 							const project = projectsById[groupId];
-							groupName = project?.name || groupId;
+							groupName = (project?.name as string | undefined) || groupId;
 						}
 					} else {
 						// Check if this is a grouped task ID
@@ -814,7 +864,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 				}
 
 				// Find or create day within this group
-				let groupDay = grouped[groupId].days.find((d: any) => d.dateStr === dateStr);
+				let groupDay: DayWithTasks | undefined = grouped[groupId].days.find((d) => d.dateStr === dateStr);
 				if (!groupDay) {
 					groupDay = { dateStr, parentTasks: [], taskCount: 0 };
 					grouped[groupId].days.push(groupDay);
@@ -845,7 +895,7 @@ export async function exportDaysWithCompletedTasks(params: ExportDaysWithComplet
 
 	// Sort days within each group by sortBy parameter
 	for (const groupId of Object.keys(grouped)) {
-		grouped[groupId].days.sort((a: any, b: any) => {
+		grouped[groupId].days.sort((a: DayWithTasks, b: DayWithTasks) => {
 			const dateA = new Date(a.dateStr);
 			const dateB = new Date(b.dateStr);
 

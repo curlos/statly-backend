@@ -8,6 +8,50 @@ import {
 	buildFocusBasePipeline,
 	addTaskFilteringAndDurationRecalculation,
 } from '../utils/focusFilterBuilders.utils';
+import { PipelineStage } from 'mongoose';
+import { MongooseFilter } from '../types/aggregation';
+
+// Service-specific types
+interface EmotionCountItem {
+	emotion: string;
+	count: number;
+}
+
+interface EmotionObject {
+	emotion: string;
+	score?: number;
+	[key: string]: unknown;
+}
+
+// Service-specific task interface that accommodates aggregation pipeline transformations.
+// Based on IFocusRecordTask from the model, but with optional fields to handle various data sources.
+interface FocusRecordTask {
+	taskId: string;
+	title: string;
+	projectId?: string | null;
+	projectName?: string;
+	ancestorIds?: string[];
+	duration: number;
+	[key: string]: unknown;
+}
+
+interface FocusRecordWithTasks {
+	id: string;
+	startTime: Date;
+	endTime: Date;
+	duration: number;
+	note?: string;
+	tasks?: FocusRecordTask[];
+	emotions?: EmotionObject[];
+	[key: string]: unknown;
+}
+
+interface GroupedFocusRecordData {
+	records: FocusRecordWithTasks[];
+	totalDuration: number;
+	groupName: string;
+	emotionCounts: Record<string, number>;
+}
 
 // ============================================================================
 // Sort Criteria Builder
@@ -36,9 +80,9 @@ function buildSortCriteria(sortBy: string): { [key: string]: 1 | -1 } {
 // ============================================================================
 
 async function executeQuery(
-	searchFilter: any,
-	focusRecordMatchConditions: any,
-	taskFilterConditions: any[],
+	searchFilter: MongooseFilter | null,
+	focusRecordMatchConditions: MongooseFilter,
+	taskFilterConditions: MongooseFilter[],
 	sortCriteria: { [key: string]: 1 | -1 },
 	skip: number,
 	limit: number,
@@ -60,7 +104,7 @@ async function executeQuery(
 	addTaskFilteringAndDurationRecalculation(basePipeline, taskFilterConditions, true);
 
 	// Build the totals pipeline based on whether we have task/project filters
-	let totalsPipeline: any[];
+	let totalsPipeline: PipelineStage[];
 	if (hasTaskOrProjectFilters) {
 		// Filtered case: use originalDuration and recalculated duration
 		totalsPipeline = [
@@ -100,7 +144,7 @@ async function executeQuery(
 	}
 
 	// Build paginated records pipeline
-	const paginatedRecordsPipeline: any[] = [];
+	const paginatedRecordsPipeline: PipelineStage[] = [];
 
 	// Only add firstEmotionScore field if sorting by emotional intensity
 	const isSortingByEmotions = sortCriteria.firstEmotionScore !== undefined;
@@ -140,7 +184,7 @@ async function executeQuery(
 	);
 
 	// Build $facet stages object conditionally
-	const facetStages: any = {
+	const facetStages: Record<string, PipelineStage[]> = {
 		// Get paginated focus records
 		paginatedFocusRecords: paginatedRecordsPipeline,
 
@@ -182,8 +226,11 @@ async function executeQuery(
 	}
 
 	// Use $facet to run all aggregations in parallel within a single query
+	// TypeScript expects FacetPipelineStage[] but mongoose doesn't export this type.
+	// Our stages are valid for $facet, so we cast to any to bypass the type check.
 	basePipeline.push({
-		$facet: facetStages
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		$facet: facetStages as any
 	});
 
 	// Execute the combined query (1 database call instead of 4)
@@ -203,7 +250,7 @@ async function executeQuery(
 	let emotionCounts: Record<string, number> = {};
 	if (needEmotionCalculations) {
 		const emotionCountResult = facetResult.emotionCounts || [];
-		emotionCounts = emotionCountResult.reduce((acc: Record<string, number>, item: any) => {
+		emotionCounts = emotionCountResult.reduce((acc: Record<string, number>, item: EmotionCountItem) => {
 			acc[item.emotion] = item.count;
 			return acc;
 		}, {} as Record<string, number>);
@@ -350,8 +397,8 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 
 	// Fetch all projects and create lookup by ID for current project names
 	const projects = await Project.find({ userId }).lean();
-	const projectsById: Record<string, any> = {};
-	projects.forEach((project: any) => {
+	const projectsById: Record<string, Record<string, unknown>> = {};
+	projects.forEach((project) => {
 		projectsById[project.id] = project;
 	});
 
@@ -385,7 +432,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 	}
 
 	// Execute query without pagination (get all records)
-	const { focusRecords, total, totalDuration, onlyTasksTotalDuration, emotionCounts } = await executeQuery(
+	const { focusRecords, total, totalDuration: _totalDuration, onlyTasksTotalDuration, emotionCounts } = await executeQuery(
 		searchFilter,
 		focusRecordMatchConditions,
 		taskFilterConditions,
@@ -401,12 +448,13 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 
 	// Build a lookup for tasks not in ancestorTasksById (deleted tasks)
 	// Store the last occurrence of each task from focus records
-	const focusRecordTasksById: Record<string, any> = {};
+	const focusRecordTasksById: Record<string, Record<string, unknown>> = {};
 
 	// Enrich task titles with breadcrumbs (ancestor path) and update with current task data
-	focusRecordsWithCompletedTasks.forEach((focusRecord: any) => {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	(focusRecordsWithCompletedTasks as any[]).forEach((focusRecord: FocusRecordWithTasks) => {
 		if (focusRecord.tasks && focusRecord.tasks.length > 0) {
-			focusRecord.tasks.forEach((task: any) => {
+			focusRecord.tasks.forEach((task: FocusRecordTask) => {
 				// Get current task data from database (ancestorTasksById has fresh data)
 				const currentTask = ancestorTasksById[task.taskId];
 
@@ -475,16 +523,18 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 	}
 
 	// Group records by project, task, or emotion
-	const grouped: { [key: string]: { records: any[], totalDuration: number, groupName: string, emotionCounts: Record<string, number> } } = {};
+	const grouped: Record<string, GroupedFocusRecordData> = {};
 
-	for (const focusRecord of focusRecordsWithCompletedTasks) {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	for (const focusRecord of focusRecordsWithCompletedTasks as any[]) {
 		const uniqueIds = new Set<string>();
 
 		// Collect unique project, task, or emotion IDs
 		if (params.groupBy === 'project') {
 			// Group by project
 			if (focusRecord.tasks && focusRecord.tasks.length > 0) {
-				focusRecord.tasks.forEach((task: any) => {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				(focusRecord.tasks as any[]).forEach((task: FocusRecordTask) => {
 					if (task.projectId) {
 						uniqueIds.add(task.projectId);
 					} else {
@@ -495,7 +545,8 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 		} else if (params.groupBy === 'emotion') {
 			// Group by emotion - add all emotions this record has
 			if (focusRecord.emotions && focusRecord.emotions.length > 0) {
-				focusRecord.emotions.forEach((emotionObj: any) => {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				(focusRecord.emotions as any[]).forEach((emotionObj: EmotionObject) => {
 					uniqueIds.add(emotionObj.emotion);
 				});
 			} else {
@@ -504,7 +555,8 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 		} else {
 			// Group by task
 			if (focusRecord.tasks && focusRecord.tasks.length > 0) {
-				focusRecord.tasks.forEach((task: any) => {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				(focusRecord.tasks as any[]).forEach((task: FocusRecordTask) => {
 					uniqueIds.add(task.taskId);
 
 					// Include ancestor task IDs if setting enabled
@@ -528,7 +580,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 					} else {
 						// Try source mapping first, then project name from database, then fall back to ID
 						const project = projectsById[id];
-						groupName = sourceToAppName[id] || project?.name || id;
+						groupName = sourceToAppName[id] || (project?.name as string) || id;
 					}
 				} else if (params.groupBy === 'emotion') {
 					// For emotions, use uppercase emotion name
@@ -541,7 +593,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 					} else {
 						// Fallback to focus record stored data for deleted tasks
 						const focusRecordTask = focusRecordTasksById[id];
-						groupName = focusRecordTask?.title || (id === 'no-task-id' ? 'No Task Id' : id);
+						groupName = (focusRecordTask?.title as string) || (id === 'no-task-id' ? 'No Task Id' : id);
 					}
 				}
 
@@ -560,24 +612,31 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 			if (params.groupBy === 'emotion') {
 				// For emotion grouping, include the entire focus record (no task filtering)
 				// Use task-level duration sum to match stats page behavior
-				filteredTasks = focusRecord.tasks || [];
-				duration = filteredTasks.reduce((sum: number, task: any) => sum + (task.duration || 0), 0);
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				filteredTasks = (focusRecord.tasks || []) as any[];
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				duration = (filteredTasks as any[]).reduce((sum: number, task: FocusRecordTask) => sum + (task.duration || 0), 0);
 			} else if (params.groupBy === 'project') {
 				// For project grouping, only include tasks in this project
-				filteredTasks = focusRecord.tasks?.filter((task: any) => (task.projectId || 'no-project-id') === id) || [];
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				filteredTasks = (focusRecord.tasks?.filter((task: any) => (task.projectId || 'no-project-id') === id) || []) as any[];
 				// Calculate duration for this specific group
-				duration = filteredTasks.reduce((sum: number, task: any) => sum + task.duration, 0);
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				duration = (filteredTasks as any[]).reduce((sum: number, task: FocusRecordTask) => sum + task.duration, 0);
 			} else {
 				// For task grouping, only include tasks matching this task ID
-				filteredTasks = focusRecord.tasks?.filter((task: any) => {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				filteredTasks = (focusRecord.tasks?.filter((task: any) => {
 					if (task.taskId === id) return true;
 					if (params.taskIdIncludeFocusRecordsFromSubtasks && task.ancestorIds?.includes(id)) {
 						return true;
 					}
 					return false;
-				}) || [];
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				}) || []) as any[];
 				// Calculate duration for this specific group
-				duration = filteredTasks.reduce((sum: number, task: any) => sum + task.duration, 0);
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				duration = (filteredTasks as any[]).reduce((sum: number, task: FocusRecordTask) => sum + task.duration, 0);
 			}
 
 			// Skip this focus record if no tasks match after filtering (not applicable for emotion grouping)
@@ -589,14 +648,15 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 			const filteredFocusRecord = {
 				...focusRecord,
 				tasks: filteredTasks
-			};
+			} as FocusRecordWithTasks;
 
 			grouped[id].records.push(filteredFocusRecord);
 			grouped[id].totalDuration += duration;
 
 			// Update emotion counts for this group
 			if (focusRecord.emotions && focusRecord.emotions.length > 0) {
-				focusRecord.emotions.forEach((emotionObj: any) => {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				(focusRecord.emotions as any[]).forEach((emotionObj: EmotionObject) => {
 					const emotion = emotionObj.emotion;
 					grouped[id].emotionCounts[emotion] = (grouped[id].emotionCounts[emotion] || 0) + 1;
 				});

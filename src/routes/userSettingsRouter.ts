@@ -11,12 +11,9 @@ const router = express.Router();
 
 // Get user settings for logged in user
 router.get('/', verifyToken, async (req: CustomRequest, res) => {
-	const user = req.user; // This is set by the verifyToken middleware
-	// @ts-ignore
-	const { userId } = user;
+	const userId = req.user!.userId;
 
 	try {
-		// @ts-ignore
 		const userSettings = await UserSettings.findOne({ userId });
 
 		if (!userSettings) {
@@ -24,7 +21,7 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 		}
 
 		// Convert to plain object and remove sensitive cookie value
-		const userSettingsObj: any = userSettings.toObject();
+		const userSettingsObj = userSettings.toObject() as Record<string, unknown>;
 
 		// Replace cookie with status indicator
 		const hasCookie = !!userSettingsObj.tickTickCookie;
@@ -38,9 +35,7 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 });
 
 router.put('/edit', verifyToken, async (req: CustomRequest, res) => {
-	const user = req.user; // This is set by the verifyToken middleware
-	// @ts-ignore
-	const { userId } = user;
+	const userId = req.user!.userId;
 
 	const { userId: bodyUserId, tickTickCookie } = req.body;
 
@@ -70,7 +65,7 @@ router.put('/edit', verifyToken, async (req: CustomRequest, res) => {
 		}
 
 		// Convert to plain object and remove sensitive cookie value
-		const userSettingsObj: any = updatedUserSettings.toObject();
+		const userSettingsObj = updatedUserSettings.toObject() as Record<string, unknown>;
 
 		// Replace cookie with status indicator
 		const hasCookie = !!userSettingsObj.tickTickCookie;
@@ -85,9 +80,7 @@ router.put('/edit', verifyToken, async (req: CustomRequest, res) => {
 
 // Get document counts for logged in user
 router.get('/document-counts', verifyToken, async (req: CustomRequest, res) => {
-	const user = req.user;
-	// @ts-ignore
-	const { userId } = user;
+	const userId = req.user!.userId;
 
 	try {
 		const [focusRecordsCount, tasksCount, projectsCount, projectGroupsCount] = await Promise.all([

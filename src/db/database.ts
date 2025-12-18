@@ -10,13 +10,22 @@ if (!ATLAS_URI) {
 	process.exit(1);
 }
 
-let cached = (global as any).mongoose;
+interface MongooseCache {
+	conn: typeof mongoose | null;
+	promise: Promise<typeof mongoose> | null;
+}
+
+let cached = (global as Record<string, unknown>).mongoose as MongooseCache | undefined;
 
 if (!cached) {
-  cached = (global as any).mongoose = { conn: null, promise: null };
+  cached = (global as Record<string, unknown>).mongoose = { conn: null, promise: null } as MongooseCache;
 }
 
 export const connectDB = async () => {
+  if (!cached) {
+    throw new Error('Database cache not initialized');
+  }
+
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {

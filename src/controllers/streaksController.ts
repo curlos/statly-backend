@@ -16,9 +16,10 @@ export async function getTodayFocus(req: CustomRequest, res: Response) {
 		const params = parseBaseQueryParams(req);
 		const result = await getTodayFocusDataForAllRings(params, userId);
 		res.json(result);
-	} catch (error: any) {
+	} catch (error) {
 		console.error('Error in getTodayFocus:', error);
-		res.status(500).json({ error: error.message });
+		const message = error instanceof Error ? error.message : 'An error occurred';
+		res.status(500).json({ error: message });
 	}
 }
 
@@ -32,8 +33,9 @@ export async function getStreakHistory(req: CustomRequest, res: Response) {
 		const params = parseBaseQueryParams(req);
 		const result = await getStreakHistoryForAllRings(params, userId);
 		res.json(result);
-	} catch (error: any) {
+	} catch (error) {
 		console.error('Error in getStreakHistory:', error);
-		res.status(500).json({ error: error.message });
+		const message = error instanceof Error ? error.message : 'An error occurred';
+		res.status(500).json({ error: message });
 	}
 }

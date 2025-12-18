@@ -1,5 +1,47 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 import { applyUserIdEnforcement } from '../utils/schema.utils';
+
+// TypeScript Interfaces
+export interface IProjectBase extends Document {
+	id: string;
+	userId: Types.ObjectId;
+	source: 'ProjectTickTick' | 'ProjectTodoist' | 'ProjectSession';
+	name: string;
+	color?: string;
+	sortOrder?: number;
+	viewMode?: string;
+	closed?: boolean;
+	groupId?: string;
+	parentId?: string;
+	sortType?: string;
+	sortOption?: {
+		groupBy?: string;
+		orderBy?: string;
+	};
+	teamId?: string;
+	timeline?: {
+		range?: string;
+		sortType?: string;
+		sortOption?: {
+			groupBy?: string;
+			orderBy?: string;
+		};
+	};
+}
+
+export interface IProjectTickTick extends IProjectBase {
+	source: 'ProjectTickTick';
+}
+
+export interface IProjectTodoist extends IProjectBase {
+	source: 'ProjectTodoist';
+}
+
+export interface IProjectSession extends IProjectBase {
+	source: 'ProjectSession';
+}
+
+export type IProject = IProjectTickTick | IProjectTodoist | IProjectSession;
 
 // Base schema with NORMALIZED shared fields for ALL projects (TickTick, Todoist, and Session)
 const BaseProjectSchema = new Schema({

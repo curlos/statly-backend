@@ -1,11 +1,12 @@
-import { Types } from 'mongoose';
+import { Types, Model } from 'mongoose';
 import { FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from "../../models/FocusRecord";
 import { isValidDate, ImportCategoryResult } from "./importBackup.utils";
+import { ImportableFocusRecordDocument } from '../../types/import';
 
 /**
  * Validates a focus record document against required fields
  */
-export function validateFocusRecord(doc: any, requiredFields: string[], validSourcesSet: Set<string>): { valid: boolean; error?: string } {
+export function validateFocusRecord(doc: ImportableFocusRecordDocument, requiredFields: string[], validSourcesSet: Set<string>): { valid: boolean; error?: string } {
     for (const field of requiredFields) {
         if (!(field in doc)) {
             return { valid: false, error: `Missing required field: ${field}` };
@@ -37,7 +38,7 @@ export function validateFocusRecord(doc: any, requiredFields: string[], validSou
 /**
  * Imports focus records with validation
  */
-export async function importFocusRecords(records: any[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
+export async function importFocusRecords(records: ImportableFocusRecordDocument[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
     const errors: string[] = [];
 
     // Declare validation constants once for all records
@@ -51,7 +52,7 @@ export async function importFocusRecords(records: any[], userId: Types.ObjectId)
     ]);
 
     // Group records by source to use the correct discriminator model
-    const recordsBySource: Record<string, any[]> = {
+    const recordsBySource: Record<string, ImportableFocusRecordDocument[]> = {
         FocusRecordTickTick: [],
         FocusRecordBeFocused: [],
         FocusRecordForest: [],
@@ -79,7 +80,8 @@ export async function importFocusRecords(records: any[], userId: Types.ObjectId)
     }
 
     // Map source names to their corresponding discriminator models
-    const modelMap: Record<string, any> = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const modelMap: Record<string, Model<any>> = {
         FocusRecordTickTick,
         FocusRecordBeFocused,
         FocusRecordForest,

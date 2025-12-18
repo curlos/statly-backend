@@ -162,6 +162,8 @@ export async function parseExportFocusRecordsQueryParams(req: Request) {
 
 	// Get user settings for export preferences
 	const UserSettings = (await import('../models/UserSettingsModel')).default;
+	// User property is added by authentication middleware, not in the base Request type
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const userId = (req as any).user?.userId;
 
 	let onlyExportTasksWithNoParent = true; // Default value

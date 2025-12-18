@@ -1,9 +1,42 @@
-import { Types } from 'mongoose';
+import { Types, PipelineStage } from 'mongoose';
 import UserSettings from '../models/UserSettingsModel';
 import { buildFocusFilterPipeline } from '../utils/focusFilterBuilders.utils';
 import FocusRecord from '../models/FocusRecord';
 import { BaseQueryParams } from '../utils/queryParams.utils';
 import { fromZonedTime } from 'date-fns-tz';
+
+// Service-specific types
+interface InactivePeriod {
+	startDate: string;
+	endDate: string | null;
+}
+
+interface UserSettingsRing {
+	id: string;
+	name: string;
+	isActive: boolean;
+	goalSeconds?: number;
+	selectedDaysOfWeek?: Record<string, boolean>;
+	restDays?: Record<string, boolean>;
+	customDailyFocusGoal?: Record<string, number>;
+	inactivePeriods?: InactivePeriod[];
+	projects?: Record<string, boolean>;
+	[key: string]: unknown;
+}
+
+interface UserSettingsData {
+	pages?: {
+		focusHoursGoal?: {
+			rings?: UserSettingsRing[];
+		};
+	};
+	[key: string]: unknown;
+}
+
+interface DailyDurationResult {
+	_id: string;
+	duration: number;
+}
 
 // ============================================================================
 // Streaks Service
@@ -21,20 +54,20 @@ export type StreaksQueryParams = BaseQueryParams;
 /**
  * Get all active rings from user settings
  */
-function getActiveRings(userSettings: any): any[] {
+function getActiveRings(userSettings: UserSettingsData): UserSettingsRing[] {
 	const rings = userSettings?.pages?.focusHoursGoal?.rings;
 
 	if (!rings || !Array.isArray(rings)) {
 		return [];
 	}
 
-	return rings.filter((ring: any) => ring.isActive === true);
+	return rings.filter((ring: UserSettingsRing) => ring.isActive === true);
 }
 
 /**
  * Check if a date falls within any inactive period
  */
-function isDateInInactivePeriod(dateString: string, inactivePeriods: any[]): boolean {
+function isDateInInactivePeriod(dateString: string, inactivePeriods: InactivePeriod[]): boolean {
 	if (!inactivePeriods || inactivePeriods.length === 0) {
 		return false;
 	}
@@ -63,7 +96,7 @@ function isDateInInactivePeriod(dateString: string, inactivePeriods: any[]): boo
  * Extract project IDs from ring settings where the value is true
  * Returns array of project IDs
  */
-function getProjectIdsFromRing(ring: any): string[] {
+function getProjectIdsFromRing(ring: UserSettingsRing): string[] {
 	const projects = ring?.projects;
 
 	if (!projects || typeof projects !== 'object') {
@@ -204,7 +237,7 @@ function calculateStreaks(
 	let currentStreak = { days: 0, from: null as string | null, to: null as string | null };
 	let longestStreak = { days: 0, from: null as string | null, to: null as string | null };
 	let tempStreak = { days: 0, from: null as string | null, to: null as string | null };
-	let allStreaks: Array<{ days: number; from: string | null; to: string | null }> = [];
+	const allStreaks: Array<{ days: number; from: string | null; to: string | null }> = [];
 	let lastDate: string | null = null;
 
 	for (const { date, duration } of dailyTotals) {
@@ -301,7 +334,7 @@ function calculateStreaks(
  * Efficient: Single MongoDB aggregation groups all historical data
  */
 async function getDailyFocusDurations(
-	basePipeline: any[],
+	basePipeline: PipelineStage[],
 	timezone: string
 ) {
 	const pipeline = [...basePipeline];
@@ -328,7 +361,7 @@ async function getDailyFocusDurations(
 	const facetResult = result[0];
 	const results = facetResult.byDay || [];
 
-	return results.map((r: any) => ({
+	return results.map((r: DailyDurationResult) => ({
 		date: r._id,
 		duration: r.duration
 	}));
@@ -338,7 +371,7 @@ async function getDailyFocusDurations(
  * Get today's focus duration only (fast, single-day query)
  */
 async function getTodayFocusDuration(
-	basePipeline: any[],
+	basePipeline: PipelineStage[],
 	timezone: string
 ): Promise<number> {
 	const todayDateKey = getTodayDateKey(timezone);
@@ -385,7 +418,7 @@ async function getTodayFocusDuration(
 export async function getTodayFocusDataForRing(
 	params: StreaksQueryParams,
 	userId: Types.ObjectId,
-	ring: any
+	ring: UserSettingsRing
 ) {
 	// Get project IDs from ring settings
 	const projectIdsFromRing = getProjectIdsFromRing(ring);
@@ -419,7 +452,7 @@ export async function getTodayFocusDataForRing(
 export async function getStreakHistoryForRing(
 	params: StreaksQueryParams,
 	userId: Types.ObjectId,
-	ring: any
+	ring: UserSettingsRing
 ) {
 	// Extract ring-specific settings
 	const goalSeconds = ring.goalSeconds || 3600; // Default: 1 hour
@@ -478,7 +511,7 @@ export async function getTodayFocusDataForAllRings(
 	userId: Types.ObjectId
 ) {
 	const userSettings = await UserSettings.findOne({ userId });
-	const activeRings = getActiveRings(userSettings);
+	const activeRings = getActiveRings((userSettings || {}) as UserSettingsData);
 
 	if (activeRings.length === 0) {
 		return { rings: [] };
@@ -505,7 +538,7 @@ export async function getStreakHistoryForAllRings(
 	userId: Types.ObjectId
 ) {
 	const userSettings = await UserSettings.findOne({ userId });
-	const activeRings = getActiveRings(userSettings);
+	const activeRings = getActiveRings((userSettings || {}) as UserSettingsData);
 
 	if (activeRings.length === 0) {
 		return { rings: [] };

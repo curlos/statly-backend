@@ -302,7 +302,7 @@ router.put('/update-profile', verifyToken, upload.single('profilePic'), async (r
 
 		// Upload profile picture to Cloudinary if provided
 		if (file) {
-			const uploadResult: any = await new Promise((resolve, reject) => {
+			const uploadResult: unknown = await new Promise((resolve, reject) => {
 				const stream = cloudinary.uploader.upload_stream(
 					{
 						resource_type: 'image',
@@ -323,7 +323,7 @@ router.put('/update-profile', verifyToken, upload.single('profilePic'), async (r
 				stream.end(file.buffer);
 			});
 
-			user.profilePic = uploadResult.secure_url;
+			user.profilePic = (uploadResult as { secure_url: string }).secure_url;
 			hasChanges = true;
 		}
 

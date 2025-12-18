@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { getDayAfterToday, handleTickTickApiCall } from './helpers.utils';
+import { ITask } from '../models/TaskModel';
 
-export async function fetchActiveAndCompletedTasksFromTickTick(projectIds: string[], cookie: string) {
+export async function fetchActiveAndCompletedTasksFromTickTick(projectIds: string[], cookie: string): Promise<ITask[]> {
 	const dayAfterTodayStr = getDayAfterToday();
 
 	// Build all API call promises (2 per project: active + completed)
@@ -38,8 +39,8 @@ export async function fetchActiveAndCompletedTasksFromTickTick(projectIds: strin
 export async function fetchAllTickTickTasks(cookie: string, options?: {
 	archivedProjectIds?: string[];
 	getTasksFromNonArchivedProjects?: boolean;
-}) {
-	let regularTasks: any[] = [];
+}): Promise<ITask[]> {
+	let regularTasks: ITask[] = [];
 
 	// Only fetch regular tasks if getTasksFromNonArchivedProjects is true (default)
 	const shouldGetRegularTasks = options?.getTasksFromNonArchivedProjects ?? true;
@@ -96,7 +97,7 @@ export async function fetchAllTickTickTasks(cookie: string, options?: {
 	}
 
 	// If archived project IDs provided, fetch their tasks
-	let archivedTasks: any[] = [];
+	let archivedTasks: ITask[] = [];
 	if (options?.archivedProjectIds && options.archivedProjectIds.length > 0) {
 		archivedTasks = await fetchActiveAndCompletedTasksFromTickTick(options.archivedProjectIds, cookie);
 	}

@@ -1,12 +1,12 @@
 import { Response } from 'express';
 import { CustomRequest } from '../interfaces/CustomRequest';
-import ApiCallStatus from '../models/ApiCallStatusModel';
+import ApiCallStatus, { IApiCallStatus } from '../models/ApiCallStatusModel';
 import { Types } from 'mongoose';
 
-interface SyncLockOptions<T = any> {
+interface SyncLockOptions<T = unknown> {
     endpoint: string;
-    syncFunction: (userId: Types.ObjectId, ...args: any[]) => Promise<T>;
-    extractParams?: (req: CustomRequest) => any[] | Promise<any[]>;
+    syncFunction: (userId: Types.ObjectId, ...args: unknown[]) => Promise<T>;
+    extractParams?: (req: CustomRequest) => unknown[] | Promise<unknown[]>;
     errorMessage?: string;
     staleLockTimeoutMs?: number;
 }
@@ -15,7 +15,7 @@ interface SyncLockOptions<T = any> {
  * Higher-order function that wraps sync endpoints with ApiCallStatus locking mechanism
  * to prevent concurrent sync operations for the same user/endpoint
  */
-export function withSyncLock<T = any>(options: SyncLockOptions<T>) {
+export function withSyncLock<T = unknown>(options: SyncLockOptions<T>) {
     return async (req: CustomRequest, res: Response) => {
         const userId = req.user!.userId;
         const {
@@ -26,7 +26,7 @@ export function withSyncLock<T = any>(options: SyncLockOptions<T>) {
             staleLockTimeoutMs = 10 * 60 * 1000 // 10 minutes
         } = options;
 
-        let apiCallStatus: any = null;
+        let apiCallStatus: IApiCallStatus | null = null;
 
         try {
             // Check for existing sync in progress
@@ -68,7 +68,7 @@ export function withSyncLock<T = any>(options: SyncLockOptions<T>) {
             await apiCallStatus.save();
 
             res.status(200).json(result);
-        } catch (error: any) {
+        } catch (error) {
             // Release lock on error
             try {
                 const apiCallStatus = await ApiCallStatus.findOne({
@@ -83,7 +83,9 @@ export function withSyncLock<T = any>(options: SyncLockOptions<T>) {
                 console.error('Failed to release lock:', lockError);
             }
 
-            const statusCode = error?.statusCode || 500;
+            const statusCode = (error && typeof error === 'object' && 'statusCode' in error)
+                ? (error.statusCode as number)
+                : 500;
             res.status(statusCode).json({
                 message: error instanceof Error ? error.message : errorMessage,
             });

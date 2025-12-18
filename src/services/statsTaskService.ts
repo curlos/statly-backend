@@ -3,6 +3,55 @@ import Task from '../models/TaskModel';
 import { buildAncestorData } from '../utils/task.utils';
 import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
+import { PipelineStage } from 'mongoose';
+import { TaskAncestorInfo } from '../types/aggregation';
+
+// Service-specific types
+interface TaskResult {
+	id: string;
+	title: string;
+	parentId?: string | null;
+	projectId?: string | null;
+	ancestorIds: string[];
+	[key: string]: unknown;
+}
+
+interface DateGroupResult {
+	_id: string;
+	count: number;
+	[key: string]: unknown;
+}
+
+interface ProjectGroupResult {
+	_id: {
+		projectId?: string;
+		source?: string;
+	};
+	count: number;
+}
+
+interface StatsResponse {
+	summary: {
+		totalCount: number;
+		dateRange: { start: string | null; end: string | null };
+	};
+	byTask?: Array<{
+		id: string;
+		name: string;
+		projectId?: string | null;
+		count: number;
+		percentage: number;
+		type: string;
+	}>;
+	byProject?: Array<{
+		id: string;
+		count: number;
+		percentage: number;
+		type: string;
+	}>;
+	ancestorTasksById?: Record<string, TaskAncestorInfo>;
+	[key: string]: unknown;
+}
 
 // ============================================================================
 // Stats Aggregation Service for Completed Tasks
@@ -41,7 +90,7 @@ export async function getCompletedTasksStats(params: CompletedTasksStatsQueryPar
 	);
 
 	// Build base pipeline with filters
-	const basePipeline: any[] = [];
+	const basePipeline: PipelineStage[] = [];
 
 	// Step 1: Apply search filter if it exists
 	if (searchFilter) {
@@ -84,14 +133,15 @@ export async function getCompletedTasksStats(params: CompletedTasksStatsQueryPar
  * Shared helper to process task results and fetch ancestor information.
  * This processes task documents that were already fetched (e.g., from a $facet).
  */
-async function processTaskResults(taskResults: any[], totalCount: number, userId: Types.ObjectId) {
-	let ancestorTasksById: Record<string, any> = {};
+async function processTaskResults(taskResults: TaskResult[], totalCount: number, userId: Types.ObjectId) {
+	let ancestorTasksById: Record<string, TaskAncestorInfo> = {};
 
 	if (taskResults.length > 0) {
-		const ancestorData = await buildAncestorData(taskResults, userId);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const ancestorData = await buildAncestorData(taskResults as any, userId);
 		ancestorTasksById = ancestorData.ancestorTasksById;
 
-		taskResults.forEach((task: any) => {
+		taskResults.forEach((task: TaskResult) => {
 			ancestorTasksById[task.id] = {
 				id: task.id,
 				title: task.title,
@@ -107,7 +157,7 @@ async function processTaskResults(taskResults: any[], totalCount: number, userId
 	const formattedPercentage = Number(percentage.toFixed(2));
 
 	// Map results to formatted task data
-	const byTask = taskResults.map((r: any) => {
+	const byTask = taskResults.map((r: TaskResult) => {
 		return {
 			id: r.id,
 			name: r.title || 'Unknown Task',
@@ -125,7 +175,7 @@ async function processTaskResults(taskResults: any[], totalCount: number, userId
 // Grouping Functions
 // ============================================================================
 
-async function groupByDay(pipeline: any[], startDate?: string, endDate?: string, timezone: string = 'UTC') {
+async function groupByDay(pipeline: PipelineStage[], startDate?: string, endDate?: string, timezone: string = 'UTC') {
 	// Use $facet to calculate totals and group by date in a single query
 	const aggPipeline = [...pipeline];
 	aggPipeline.push({
@@ -156,14 +206,14 @@ async function groupByDay(pipeline: any[], startDate?: string, endDate?: string,
 			totalCount,
 			dateRange: { start: startDate || null, end: endDate || null }
 		},
-		byDay: facetResult.byDay.map((r: any) => ({
+		byDay: facetResult.byDay.map((r: DateGroupResult) => ({
 			date: r._id,
 			count: r.count
 		}))
 	};
 }
 
-async function groupByWeek(pipeline: any[], startDate?: string, endDate?: string, timezone: string = 'UTC') {
+async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDate?: string, timezone: string = 'UTC') {
 	// Use $facet to calculate totals and group by week in a single query
 	const aggPipeline = [...pipeline];
 
@@ -213,14 +263,14 @@ async function groupByWeek(pipeline: any[], startDate?: string, endDate?: string
 			totalCount,
 			dateRange: { start: startDate || null, end: endDate || null }
 		},
-		byWeek: facetResult.byWeek.map((r: any) => ({
+		byWeek: facetResult.byWeek.map((r: DateGroupResult) => ({
 			date: r._id, // Format: "January 1, 2025" (Monday of the week)
 			count: r.count
 		}))
 	};
 }
 
-async function groupByMonth(pipeline: any[], startDate?: string, endDate?: string, timezone: string = 'UTC') {
+async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDate?: string, timezone: string = 'UTC') {
 	// Use $facet to calculate totals and group by month in a single query
 	const aggPipeline = [...pipeline];
 
@@ -264,14 +314,14 @@ async function groupByMonth(pipeline: any[], startDate?: string, endDate?: strin
 			totalCount,
 			dateRange: { start: startDate || null, end: endDate || null }
 		},
-		byMonth: facetResult.byMonth.map((r: any) => ({
+		byMonth: facetResult.byMonth.map((r: DateGroupResult) => ({
 			date: r._id, // Format: "January 2025"
 			count: r.count
 		}))
 	};
 }
 
-async function groupByYear(pipeline: any[], startDate?: string, endDate?: string, timezone: string = 'UTC') {
+async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDate?: string, timezone: string = 'UTC') {
 	// Use $facet to calculate totals and group by year in a single query
 	const aggPipeline = [...pipeline];
 
@@ -317,18 +367,18 @@ async function groupByYear(pipeline: any[], startDate?: string, endDate?: string
 			totalCount,
 			dateRange: { start: startDate || null, end: endDate || null }
 		},
-		byYear: facetResult.byYear.map((r: any) => ({
+		byYear: facetResult.byYear.map((r: DateGroupResult) => ({
 			date: r._id, // Format: "2025"
 			count: r.count
 		}))
 	};
 }
 
-async function groupByProject(pipeline: any[], nested: boolean = false, userId: Types.ObjectId) {
+async function groupByProject(pipeline: PipelineStage[], nested: boolean = false, userId: Types.ObjectId) {
 	// Use $facet to calculate totals and group by project in a single query
 	const aggPipeline = [...pipeline];
 
-	const facetStages: any = {
+	const facetStages: Record<string, PipelineStage[]> = {
 		totals: [
 			{ $group: { _id: null, totalCount: { $sum: 1 } } }
 		],
@@ -351,18 +401,19 @@ async function groupByProject(pipeline: any[], nested: boolean = false, userId: 
 		facetStages.tasks = [];
 	}
 
-	aggPipeline.push({ $facet: facetStages });
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	aggPipeline.push({ $facet: facetStages as any });
 
 	const result = await Task.aggregate(aggPipeline);
 	const facetResult = result[0];
 	const totalCount = facetResult.totals[0]?.totalCount || 0;
 
-	const response: any = {
+	const response: StatsResponse = {
 		summary: {
 			totalCount,
 			dateRange: { start: null, end: null }
 		},
-		byProject: facetResult.byProject.map((r: any) => {
+		byProject: facetResult.byProject.map((r: ProjectGroupResult) => {
 			const percentage = totalCount > 0 ? (r.count / totalCount) * 100 : 0;
 			const projectId = r._id.projectId || r._id.source;
 
@@ -385,7 +436,7 @@ async function groupByProject(pipeline: any[], nested: boolean = false, userId: 
 	return response;
 }
 
-async function groupByTask(pipeline: any[], nested: boolean = false, userId: Types.ObjectId) {
+async function groupByTask(pipeline: PipelineStage[], _nested: boolean = false, userId: Types.ObjectId) {
 	// Use $facet to calculate totals and fetch all tasks in a single query
 	const aggPipeline = [...pipeline];
 
@@ -405,7 +456,7 @@ async function groupByTask(pipeline: any[], nested: boolean = false, userId: Typ
 	// Process the task results that were fetched in the same query
 	const { byTask, ancestorTasksById } = await processTaskResults(facetResult.tasks, totalCount, userId);
 
-	const response: any = {
+	const response: StatsResponse = {
 		summary: {
 			totalCount,
 			dateRange: { start: null, end: null }

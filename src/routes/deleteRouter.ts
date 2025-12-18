@@ -10,9 +10,7 @@ const router = express.Router();
 
 // Delete single focus record by ID for logged in user
 router.delete('/focus-record/:id', verifyToken, async (req: CustomRequest, res) => {
-	const user = req.user;
-	// @ts-ignore
-	const { userId } = user;
+	const userId = req.user!.userId;
 	const { id } = req.params;
 
 	try {
@@ -34,9 +32,7 @@ router.delete('/focus-record/:id', verifyToken, async (req: CustomRequest, res) 
 
 // Delete focus records for logged in user
 router.delete('/focus-records', verifyToken, async (req: CustomRequest, res) => {
-	const user = req.user;
-	// @ts-ignore
-	const { userId } = user;
+	const userId = req.user!.userId;
 
 	try {
 		// Delete all focus records AND their sync metadata
@@ -61,9 +57,7 @@ router.delete('/focus-records', verifyToken, async (req: CustomRequest, res) => 
 
 // Delete tasks for logged in user
 router.delete('/tasks', verifyToken, async (req: CustomRequest, res) => {
-	const user = req.user;
-	// @ts-ignore
-	const { userId } = user;
+	const userId = req.user!.userId;
 
 	try {
 		// Delete all tasks AND their sync metadata
@@ -88,9 +82,7 @@ router.delete('/tasks', verifyToken, async (req: CustomRequest, res) => {
 
 // Delete projects for logged in user
 router.delete('/projects', verifyToken, async (req: CustomRequest, res) => {
-	const user = req.user;
-	// @ts-ignore
-	const { userId } = user;
+	const userId = req.user!.userId;
 
 	try {
 		// Delete all projects AND their sync metadata
@@ -115,9 +107,7 @@ router.delete('/projects', verifyToken, async (req: CustomRequest, res) => {
 
 // Delete project groups for logged in user
 router.delete('/project-groups', verifyToken, async (req: CustomRequest, res) => {
-	const user = req.user;
-	// @ts-ignore
-	const { userId } = user;
+	const userId = req.user!.userId;
 
 	try {
 		// Delete all project groups AND their sync metadata
@@ -140,9 +130,7 @@ router.delete('/project-groups', verifyToken, async (req: CustomRequest, res) =>
 
 // Delete all documents for logged in user
 router.delete('/all', verifyToken, async (req: CustomRequest, res) => {
-	const user = req.user;
-	// @ts-ignore
-	const { userId } = user;
+	const userId = req.user!.userId;
 
 	try {
 		// Delete all documents AND all sync metadata for this user

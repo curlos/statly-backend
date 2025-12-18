@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { applyUserIdEnforcement } from '../utils/schema.utils';
 
-interface IApiCallStatus extends Document {
+export interface IApiCallStatus extends Document {
 	userId: mongoose.Types.ObjectId;
 	apiEndpoint: string;
 	isInProgress: boolean;

@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { applyUserIdEnforcement } from '../utils/schema.utils';
 
-interface IUserSettings extends Document {
+export interface IUserSettings extends Document {
 	theme?: {
 		color?: string;
 		fontFamily?: string;
@@ -42,7 +42,7 @@ interface IUserSettings extends Document {
 				color: string | null;
 				useThemeColor?: boolean;
 				isActive: boolean;
-				projects?: Record<string, any>;
+				projects?: Record<string, boolean>;
 				goalSeconds?: number;
 				showStreakCount?: boolean;
 				goalDays?: number;

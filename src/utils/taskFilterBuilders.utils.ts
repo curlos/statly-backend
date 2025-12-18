@@ -1,5 +1,6 @@
 import { parseDateInTimezone } from './timezone.utils';
 import { Types } from 'mongoose';
+import { MongooseFilter } from '../types/aggregation';
 
 // ============================================================================
 // Tasks - App Source Mapping
@@ -45,7 +46,7 @@ function buildDateRangeFilter(startDate?: string, endDate?: string, timezone?: s
 	}
 
 	const tz = timezone || 'UTC';
-	const dateFilter: any = {};
+	const dateFilter: MongooseFilter = {};
 
 	if (startDate) {
 		const startBoundary = parseDateInTimezone(startDate, tz);
@@ -83,7 +84,7 @@ export function buildTaskMatchConditions(
 		throw new Error('buildTaskMatchConditions requires userId parameter');
 	}
 
-	const matchFilter: any = {};
+	const matchFilter: MongooseFilter = {};
 
 	// Add userId filter - critical for data isolation
 	matchFilter.userId = userId;
@@ -97,7 +98,7 @@ export function buildTaskMatchConditions(
 		// 2. Second tier: Interval Dropdown dates (intervalStartDate, intervalEndDate) - narrower filter
 		// Both filters must be satisfied (AND logic)
 
-		const dateConditions: any[] = [];
+		const dateConditions: Array<Record<string, unknown>> = [];
 
 		// Add first tier date range filter (Filter Sidebar)
 		const firstTierFilter = buildDateRangeFilter(startDate, endDate, timezone);
@@ -115,8 +116,8 @@ export function buildTaskMatchConditions(
 		if (dateConditions.length === 1) {
 			// Only one tier provided, apply directly
 			matchFilter.completedTime = {
-				...matchFilter.completedTime,
-				...dateConditions[0].completedTime
+				...(matchFilter.completedTime as Record<string, unknown>),
+				...(dateConditions[0].completedTime as Record<string, unknown>)
 			};
 		} else if (dateConditions.length === 2) {
 			// Both tiers provided, use $and to ensure both are satisfied

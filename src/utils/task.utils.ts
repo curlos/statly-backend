@@ -1,9 +1,10 @@
 import { Types } from 'mongoose';
-import { Task } from '../models/TaskModel';
+import { Task, ITask } from '../models/TaskModel';
 import { getJsonData } from './mongoose.utils';
+import { TodoistSyncTasksById, TodoistApiV1Task, TodoistSyncTask } from '../types/todoist';
 
 // Helper function to build ancestor data for tasks (optimized with pre-computed ancestorIds)
-export async function buildAncestorData(tasks: any[], userId: Types.ObjectId) {
+export async function buildAncestorData(tasks: ITask[], userId: Types.ObjectId) {
 	// Step 1: Collect ALL unique ancestor IDs from tasks (using pre-computed ancestorIds)
 	const allAncestorIds = new Set<string>();
 
@@ -43,19 +44,19 @@ export async function buildAncestorData(tasks: any[], userId: Types.ObjectId) {
 }
 
 // Helper function to get tasks that only appear in API v1 (not in sync)
-const getTodoistTasksThatOnlyAppearInAPIV1 = (todoistAllSyncTasksById: any, allNewAPIV1Tasks: any[]) => {
-	const syncTasksByV2Id: Record<string, any> = {};
+export const getTodoistTasksThatOnlyAppearInAPIV1 = (todoistAllSyncTasksById: TodoistSyncTasksById, allNewAPIV1Tasks: TodoistApiV1Task[]) => {
+	const syncTasksByV2Id: Record<string, TodoistSyncTask> = {};
 
 	for (const key in todoistAllSyncTasksById) {
 		const entry = todoistAllSyncTasksById[key];
-		const v2Id = entry.item?.v2_id;
+		const v2Id = (entry.item as Record<string, unknown> | undefined)?.v2_id as string | undefined;
 
 		if (v2Id) {
 			syncTasksByV2Id[v2Id] = entry;
 		}
 	}
 
-	const apiV1TasksThatAreNotInSync = allNewAPIV1Tasks.filter((task: any) => {
+	const apiV1TasksThatAreNotInSync = allNewAPIV1Tasks.filter((task) => {
 		return !syncTasksByV2Id[task.id]
 	})
 
@@ -99,15 +100,14 @@ export async function getAllTodoistTasks(useNewSyncDataTodoistData: boolean = tr
 		...api_v1_todoist_all_work_active_tasks_by_id
 	}
 
-	const allSyncTasksWithOnlyItem = Object.values(todoistAllSyncTasksById).map((task: any) => task.item)
-	const allSyncTasksThatDoNotAppearInAPIV1 = allSyncTasksWithOnlyItem.filter((task) => {
-		const task_v2_id = task["v2_id"]
+	const allSyncTasksWithOnlyItem = (Object.values(todoistAllSyncTasksById) as TodoistSyncTask[]).map((syncTask) => syncTask.item as Record<string, unknown>)
+	const allSyncTasksThatDoNotAppearInAPIV1 = allSyncTasksWithOnlyItem.filter((task: Record<string, unknown>) => {
+		const task_v2_id = task["v2_id"] as string | undefined;
 
-		// @ts-ignore
-		return !todoistAllApiV1TasksById[task_v2_id]
+		return !task_v2_id || !todoistAllApiV1TasksById[task_v2_id];
 	});
-	const allNewAPIV1Tasks = Object.values(todoistAllApiV1TasksById)
-	const allTasks = [
+	const allNewAPIV1Tasks = Object.values(todoistAllApiV1TasksById) as Record<string, unknown>[];
+	const allTasks: Record<string, unknown>[] = [
 		...allSyncTasksThatDoNotAppearInAPIV1,
 		...allNewAPIV1Tasks
 	]

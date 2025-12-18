@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { Types, PipelineStage } from 'mongoose';
 import { FocusRecord } from '../models/FocusRecord';
 import { Task } from '../models/TaskModel';
 import {
@@ -31,9 +31,27 @@ function formatDateWithoutLeadingZero(dateStr: string): string {
 // Challenge Calculation Functions
 // ============================================================================
 
+interface FocusChallenge {
+	name: string;
+	requiredDuration: number;
+	completedDate: string | null;
+}
+
+interface TaskChallenge {
+	name: string;
+	requiredCompletedTasks: number;
+	completedDate: string | null;
+}
+
+type Challenge = FocusChallenge | TaskChallenge;
+
+type ChallengeWithThreshold = Challenge & {
+	threshold: number;
+};
+
 function calculateChallengesFromDailyTotals(
 	dailyTotals: Array<{ date: string; total: number }>,
-	challenges: any[],
+	challenges: Challenge[],
 	type: 'focus' | 'tasks'
 ) {
 	// Sort dailyTotals chronologically (oldest first)
@@ -42,10 +60,10 @@ function calculateChallengesFromDailyTotals(
 	});
 
 	// Clone and sort challenges by threshold (smallest first)
-	const sortedChallenges = challenges.map(challenge => ({
+	const sortedChallenges: ChallengeWithThreshold[] = challenges.map(challenge => ({
 		...challenge,
 		completedDate: null,
-		threshold: challenge.requiredDuration || challenge.requiredCompletedTasks
+		threshold: 'requiredDuration' in challenge ? challenge.requiredDuration : challenge.requiredCompletedTasks
 	})).sort((a, b) => a.threshold - b.threshold);
 
 	// Track which challenge we're currently trying to complete
@@ -180,7 +198,7 @@ export async function getCompletedTasksChallenges(params: ChallengesQueryParams,
 	);
 
 	// Build aggregation pipeline
-	const pipeline: any[] = [];
+	const pipeline: PipelineStage[] = [];
 
 	if (searchFilter) {
 		pipeline.push({ $match: searchFilter });

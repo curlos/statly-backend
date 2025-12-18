@@ -13,13 +13,10 @@ export interface ImportResult {
 	projectGroups: ImportCategoryResult;
 }
 
-interface ParsedDocument {
-	type: 'focusRecord' | 'task' | 'project' | 'projectGroup' | 'unknown';
-	data: any;
-}
+type DocumentType = 'focusRecord' | 'task' | 'project' | 'projectGroup' | 'unknown';
 
 // O(1) lookup map for document type detection - declared outside function for efficiency
-const SOURCE_TYPE_MAP: Record<string, ParsedDocument['type']> = {
+const SOURCE_TYPE_MAP: Record<string, DocumentType> = {
 	// Focus Record sources
 	FocusRecordTickTick: 'focusRecord',
 	FocusRecordBeFocused: 'focusRecord',
@@ -40,7 +37,7 @@ const SOURCE_TYPE_MAP: Record<string, ParsedDocument['type']> = {
 /**
  * Detects document type based on the source field - O(1) lookup
  */
-export function detectDocumentType(doc: any): ParsedDocument['type'] {
+export function detectDocumentType(doc: { source?: string }): DocumentType {
 	if (!doc || typeof doc !== 'object') {
 		return 'unknown';
 	}
@@ -53,8 +50,9 @@ export function detectDocumentType(doc: any): ParsedDocument['type'] {
 
 /**
  * Helper to check if a value is a valid date
+ * Accepts both Date objects and date strings
  */
-export function isValidDate(value: any): boolean {
+export function isValidDate(value: Date | string): boolean {
 	if (!value) return false;
 	const date = new Date(value);
 	return !isNaN(date.getTime());

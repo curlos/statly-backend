@@ -132,11 +132,12 @@ export async function revalidateCrossesMidnightHandler(req: CustomRequest, res: 
 		const result = await revalidateCrossesMidnightCore(timezone, userId);
 
 		res.status(200).json(result);
-	} catch (error: any) {
+	} catch (error) {
 		console.error('Error revalidating crossesMidnight:', error);
+		const message = error instanceof Error ? error.message : 'An error occurred during revalidation';
 
 		res.status(500).json({
-			message: error instanceof Error ? error.message : 'An error occurred during revalidation',
+			message,
 			updated: 0,
 			unchanged: 0,
 			failed: 0,

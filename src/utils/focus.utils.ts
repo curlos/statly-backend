@@ -5,6 +5,8 @@ import FocusRecordTickTick from '../models/FocusRecord';
 import Task from '../models/TaskModel';
 import { buildAncestorData } from './task.utils';
 import { getJsonData } from './mongoose.utils';
+import { PipelineStage } from 'mongoose';
+import { SessionRecordRaw, BeFocusedRecordRaw, ForestRecordRaw, TideRecordRaw } from '../types/externalApis';
 
 // new Date(2705792451783) = September 28, 2055. This is to make sure all my tasks are fetched properly. I doubt I'll have to worry about this expiring since I'll be long past TickTick and humans coding anything will be a thing of the past by then with GPT-20 out by then.
 const farAwayDateInMs = 2705792451783;
@@ -51,7 +53,7 @@ export const fetchTickTickFocusRecords = async (cookie: string, userId: Types.Ob
 	const localFocusDataById = arrayToObjectByKey(localFocusData, 'id');
 
 	// This is necessary and I can't just check to add focus records that are already in the DB like I did before because I often times edit my focus record after it's been created by updating the focus note. So, if I don't have this logic, then I won't have the latest focus note logic. I'm probably re-writing through around 20 focus records.
-	const localFocusDataWithLatestInfo = localFocusData.map((focusRecord: any) => {
+	const localFocusDataWithLatestInfo = localFocusData.map((focusRecord) => {
 		const focusRecordFromApi = tickTickOneApiFocusDataById[focusRecord.id];
 
 		if (focusRecordFromApi) {
@@ -73,13 +75,26 @@ export const fetchTickTickFocusRecords = async (cookie: string, userId: Types.Ob
 	return sortedAllFocusData;
 };
 
+// Helper types for focus records with tasks
+interface FocusRecordWithTasks {
+	startTime: string | Date;
+	endTime: string | Date;
+	tasks?: Array<{ taskId?: string; title?: string; completedTime?: string | Date }>;
+	[key: string]: unknown;
+}
+
+interface CompletedTask {
+	title: string;
+	completedTime: Date;
+}
+
 // Helper function to add ancestor tasks and completed tasks to focus records
-export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: Types.ObjectId) => {
+export const addAncestorAndCompletedTasks = async (focusRecords: FocusRecordWithTasks[], userId: Types.ObjectId) => {
 	// Extract all unique task IDs from focus records
 	const allTaskIds = new Set<string>();
-	focusRecords.forEach((record: any) => {
+	focusRecords.forEach((record) => {
 		if (record.tasks && Array.isArray(record.tasks)) {
-			record.tasks.forEach((task: any) => {
+			record.tasks.forEach((task) => {
 				if (task.taskId) {
 					allTaskIds.add(task.taskId);
 				}
@@ -93,10 +108,11 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: 
 		.lean();
 
 	// Build ancestor data
-	const { ancestorTasksById } = await buildAncestorData(tasksWithAncestors, userId);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const { ancestorTasksById } = await buildAncestorData(tasksWithAncestors as any, userId);
 
 	// Add the child tasks themselves to the map
-	tasksWithAncestors.forEach((task: any) => {
+	tasksWithAncestors.forEach((task) => {
 		ancestorTasksById[task.id] = {
 			id: task.id,
 			title: task.title,
@@ -116,7 +132,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: 
 	}
 
 	// Create time ranges with buffer for each focus record
-	const timeRanges = focusRecords.map((r: any) => ({
+	const timeRanges = focusRecords.map((r) => ({
 		start: new Date(r.startTime).getTime() - offsetMs,
 		end: new Date(r.endTime).getTime() + offsetMs
 	}));
@@ -150,7 +166,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: 
 	mergedRanges.push(currentRange);
 
 	// Query all merged ranges in a single query using $or for better performance
-	let allCompletedTasks: any[] = [];
+	let allCompletedTasks: CompletedTask[] = [];
 
 	if (mergedRanges.length === 0) {
 		// No ranges to query
@@ -169,7 +185,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: 
 		.sort({ completedTime: 1 })
 		.select('title completedTime -_id')
 		.lean();
-		allCompletedTasks = tasks;
+		allCompletedTasks = tasks as CompletedTask[];
 	} else {
 		// Multiple ranges - use $or to query all at once (single network roundtrip)
 		const orConditions = mergedRanges.map(range => ({
@@ -185,12 +201,12 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: 
 			.sort({ completedTime: 1 })
 			.select('title completedTime -_id')
 			.lean();
-		allCompletedTasks = tasks;
+		allCompletedTasks = tasks as CompletedTask[];
 	}
 
 	// Group completed tasks by date (YYYY-MM-DD) for faster lookups
-	const tasksByDate = new Map<string, any[]>();
-	allCompletedTasks.forEach((task: any) => {
+	const tasksByDate = new Map<string, CompletedTask[]>();
+	allCompletedTasks.forEach((task) => {
 		const taskDate = new Date(task.completedTime);
 		const dateKey = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
 
@@ -201,7 +217,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: 
 	});
 
 	// Map completed tasks to each focus record
-	const focusRecordsWithCompletedTasks = focusRecords.map((record: any) => {
+	const focusRecordsWithCompletedTasks = focusRecords.map((record) => {
 		const startTime = new Date(record.startTime);
 		const endTime = new Date(record.endTime);
 		const startTimeWithOffset = new Date(startTime.getTime() - offsetMs);
@@ -220,10 +236,10 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: 
 
 		// Collect tasks only from relevant dates and filter by time
 		// Note: Tasks are already sorted by completedTime from the DB query
-		const completedTasks: any[] = [];
+		const completedTasks: CompletedTask[] = [];
 		relevantDates.forEach(dateKey => {
 			const tasksForDate = tasksByDate.get(dateKey) || [];
-			tasksForDate.forEach((task: any) => {
+			tasksForDate.forEach((task) => {
 				const taskTime = new Date(task.completedTime).getTime();
 				if (taskTime >= startTimeWithOffset.getTime() && taskTime <= endTimeWithOffset.getTime()) {
 					completedTasks.push(task);
@@ -246,31 +262,31 @@ export const addAncestorAndCompletedTasks = async (focusRecords: any[], userId: 
 }
 
 // Helper function to fetch session app focus records with no breaks
-export const fetchSessionFocusRecordsWithNoBreaks = async () => {
-	const sessionAppFocusData = await getJsonData('session-app-data');
+export const fetchSessionFocusRecordsWithNoBreaks = async (): Promise<SessionRecordRaw[]> => {
+	const sessionAppFocusData = await getJsonData('session-app-data') as SessionRecordRaw[];
 
 	const focusRecordsWithNoBreaks = sessionAppFocusData.filter(
-		(focusRecord: any) => focusRecord['type'] === 'fullFocus'
+		(focusRecord) => focusRecord['type'] === 'fullFocus'
 	);
 
 	return focusRecordsWithNoBreaks;
 }
 
 // Helper function to fetch be-focused app focus records
-export const fetchBeFocusedAppFocusRecords = async () => {
-	const beFocusedAppFocusData = await getJsonData('be-focused-app-data');
+export const fetchBeFocusedAppFocusRecords = async (): Promise<BeFocusedRecordRaw[]> => {
+	const beFocusedAppFocusData = await getJsonData('be-focused-app-data') as BeFocusedRecordRaw[];
 	return beFocusedAppFocusData;
 }
 
 // Helper function to fetch forest app focus records with optional date filter
-export const fetchForestAppFocusRecords = async (beforeSessionApp?: boolean) => {
-	const forestAppFocusData = await getJsonData('forest-app-data');
+export const fetchForestAppFocusRecords = async (beforeSessionApp?: boolean): Promise<ForestRecordRaw[]> => {
+	const forestAppFocusData = await getJsonData('forest-app-data') as ForestRecordRaw[];
 
 	if (beforeSessionApp) {
 		const cutoffDate = new Date('April 14, 2021');
 
-		const filteredData = forestAppFocusData.filter((item: any) => {
-			const itemStartDate = new Date(item['Start Time']);
+		const filteredData = forestAppFocusData.filter((item) => {
+			const itemStartDate = new Date(item['Start Time'] as string);
 			// Return true if the item's start date is before the cutoff date
 			return itemStartDate < cutoffDate;
 		});
@@ -282,8 +298,8 @@ export const fetchForestAppFocusRecords = async (beforeSessionApp?: boolean) => 
 }
 
 // Helper function to fetch tide app focus records
-export const fetchTideAppFocusRecords = async () => {
-	const tideAppFocusData = await getJsonData('tide-ios-app-focus-records');
+export const fetchTideAppFocusRecords = async (): Promise<TideRecordRaw[]> => {
+	const tideAppFocusData = await getJsonData('tide-ios-app-focus-records') as TideRecordRaw[];
 	return tideAppFocusData;
 }
 
@@ -295,7 +311,7 @@ export const fetchTideAppFocusRecords = async () => {
  * Adds duration adjustment stages to a pipeline for records that cross midnight beyond date boundaries.
  * Only adjusts records where crossesMidnight === true.
  */
-export function addMidnightRecordDurationAdjustment(pipeline: any[], startDateBoundary: Date | null, endDateBoundary: Date | null) {
+export function addMidnightRecordDurationAdjustment(pipeline: PipelineStage[], startDateBoundary: Date | null, endDateBoundary: Date | null) {
 	// Only process records that cross midnight - everything inside uses conditional logic
 	// based on the crossesMidnight field
 	pipeline.push({

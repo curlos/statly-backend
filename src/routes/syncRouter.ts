@@ -1,8 +1,9 @@
 import express from 'express';
+import { Types } from 'mongoose';
 import { CustomRequest } from '../interfaces/CustomRequest';
 import { verifyToken } from '../middleware/verifyToken';
 import ApiCallStatus from '../models/ApiCallStatusModel';
-import { ProjectTickTick } from '../models/ProjectModel';
+import { ProjectTickTick, IProjectTickTick } from '../models/ProjectModel';
 import SyncMetadata from '../models/SyncMetadataModel';
 import { syncTickTickFocusRecords, syncBeFocusedFocusRecords, syncForestFocusRecords, syncTideFocusRecords, syncSessionFocusRecords } from '../utils/sync/syncFocusRecords.utils';
 import { syncTickTickProjects, syncTickTickProjectGroups, syncTodoistProjects, syncSessionProjects } from '../utils/sync/syncProjects.utils';
@@ -23,14 +24,16 @@ router.get('/metadata', verifyToken, async (req: CustomRequest, res) => {
         }
 
         // Transform array to object keyed by syncType
-        const syncMetadataByType = syncMetadata.reduce((acc: any, metadata: any) => {
+        const syncMetadataByType = syncMetadata.reduce((acc, metadata) => {
             acc[metadata.syncType] = metadata;
             return acc;
-        }, {});
+        }, {} as Record<string, typeof syncMetadata[0]>);
 
         res.status(200).json(syncMetadataByType);
-    } catch (error: any) {
-        const statusCode = error?.statusCode || 500;
+    } catch (error) {
+        const statusCode = (error && typeof error === 'object' && 'statusCode' in error)
+            ? (error.statusCode as number)
+            : 500;
         res.status(statusCode).json({
             message: error instanceof Error ? error.message : 'An error occurred fetching sync metadata.',
         });
@@ -39,7 +42,7 @@ router.get('/metadata', verifyToken, async (req: CustomRequest, res) => {
 
 router.post('/ticktick/tasks', verifyToken, withSyncLock({
     endpoint: '/sync/ticktick/tasks',
-    syncFunction: syncTickTickTasks,
+    syncFunction: syncTickTickTasks as (userId: Types.ObjectId, ...args: unknown[]) => Promise<unknown>,
     extractParams: async (req) => {
         const userId = req.user!.userId;
 
@@ -60,8 +63,8 @@ router.post('/ticktick/tasks', verifyToken, withSyncLock({
             const archivedProjects = await ProjectTickTick.find({
                 userId,
                 closed: true
-            }).lean();
-            archivedProjectIds = archivedProjects.map((p: any) => p.id);
+            }).lean() as IProjectTickTick[];
+            archivedProjectIds = archivedProjects.map((p) => p.id);
         }
 
         // Return options object for syncTickTickTasks
@@ -202,8 +205,8 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
             const archivedProjects = await ProjectTickTick.find({
                 userId,
                 closed: true
-            }).lean();
-            archivedProjectIds = archivedProjects.map((p: any) => p.id);
+            }).lean() as IProjectTickTick[];
+            archivedProjectIds = archivedProjects.map((p) => p.id);
         } else {
             syncPromises.push(syncTickTickProjects(userId));
         }
@@ -248,7 +251,7 @@ router.post('/ticktick/all', verifyToken, async (req: CustomRequest, res) => {
 
 router.post('/ticktick/focus-records', verifyToken, withSyncLock({
     endpoint: '/sync/ticktick/focus-records',
-    syncFunction: syncTickTickFocusRecords,
+    syncFunction: syncTickTickFocusRecords as (userId: Types.ObjectId, ...args: unknown[]) => Promise<unknown>,
     extractParams: (req) => {
         const timezone = req.body.timezone || 'UTC';
         return [timezone];
