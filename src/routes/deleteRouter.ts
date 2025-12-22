@@ -30,6 +30,33 @@ router.delete('/focus-record/:id', verifyToken, async (req: CustomRequest, res) 
 	}
 });
 
+// Delete multiple tasks by IDs for logged in user (bulk delete)
+router.post('/tasks/bulk-delete', verifyToken, async (req: CustomRequest, res) => {
+	const userId = req.user!.userId
+	const { taskIds } = req.body;
+
+	if (!Array.isArray(taskIds) || taskIds.length === 0) {
+		return res.status(400).json({ message: 'taskIds must be a non-empty array' });
+	}
+
+	try {
+		// Delete all tasks that belong to this user and match the provided IDs
+		const result = await Task.deleteMany({
+			id: { $in: taskIds },
+			userId
+		});
+
+		res.json({
+			deletedCount: result.deletedCount,
+			message: `${result.deletedCount} task(s) deleted successfully`
+		});
+	} catch (error) {
+		res.status(500).json({
+			message: error instanceof Error ? error.message : error
+		});
+	}
+});
+
 // Delete focus records for logged in user
 router.delete('/focus-records', verifyToken, async (req: CustomRequest, res) => {
 	const userId = req.user!.userId;
