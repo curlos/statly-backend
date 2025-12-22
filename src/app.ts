@@ -16,6 +16,8 @@ import syncRouter from './routes/syncRouter'
 import projectsRouter from './routes/projectsRouter'
 import statsRouter from './routes/statsRouter'
 import importRouter from './routes/importRouter'
+import customImagesRouter from './routes/customImagesRouter'
+import customImageFoldersRouter from './routes/customImageFoldersRouter'
 
 dotenv.config();
 
@@ -75,6 +77,8 @@ app.use('/users', usersRouter);
 app.use('/user-settings', settingsRouter);
 app.use('/delete', deleteRouter);
 app.use('/streaks', streaksRouter);
+app.use('/custom-images', customImagesRouter);
+app.use('/custom-image-folders', customImageFoldersRouter);
 
 app.get('/', (req, res) => {
 	res.send('Hello World!');
