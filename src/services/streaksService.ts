@@ -30,7 +30,6 @@ interface UserSettingsData {
 			rings?: UserSettingsRing[];
 		};
 	};
-	[key: string]: unknown;
 }
 
 interface DailyDurationResult {
@@ -553,5 +552,241 @@ export async function getStreakHistoryForAllRings(
 
 	return {
 		rings: ringDataArray
+	};
+}
+
+/**
+ * Calculate streaks for combined goal tracking (no offset applied)
+ * This is used for combined streaks where the offset was already applied per individual ring
+ */
+function calculateCombinedStreaks(
+	combinedGoalMetMap: Record<string, boolean>,
+	combinedFreebieMap: Record<string, boolean>,
+	timezone: string
+) {
+	const allDates = Object.keys(combinedGoalMetMap).sort();
+
+	if (allDates.length === 0) {
+		return {
+			currentStreak: { days: 0, from: null as string | null, to: null as string | null },
+			longestStreak: { days: 0, from: null as string | null, to: null as string | null },
+			allStreaks: []
+		};
+	}
+
+	const todayDateKey = getTodayDateKey(timezone);
+
+	let currentStreak = { days: 0, from: null as string | null, to: null as string | null };
+	let longestStreak = { days: 0, from: null as string | null, to: null as string | null };
+	let tempStreak = { days: 0, from: null as string | null, to: null as string | null };
+	const allStreaks: Array<{ days: number; from: string | null; to: string | null }> = [];
+	let lastDate: string | null = null;
+
+	for (const date of allDates) {
+		const goalMet = combinedGoalMetMap[date];
+		const isFreebieDay = combinedFreebieMap[date] || false;
+
+		// Check if this date is consecutive to the last date
+		const isConsecutive = lastDate === null || date === getNextDay(lastDate);
+
+		if (goalMet && isConsecutive) {
+			// Goal met and consecutive → continue streak
+			tempStreak.days += 1;
+			if (!tempStreak.from) tempStreak.from = date;
+			tempStreak.to = date;
+			lastDate = date;
+		} else if (isFreebieDay && isConsecutive) {
+			// Freebie day (all failures were freebie rings) → don't increment, don't break
+			lastDate = date;
+		} else if (!goalMet && date === todayDateKey) {
+			// Today doesn't break the streak (still have time to meet goal)
+			continue;
+		} else {
+			// Streak broken (goal not met OR gap in dates)
+			if (tempStreak.days > 0) {
+				allStreaks.push({ ...tempStreak });
+			}
+
+			if (tempStreak.days >= longestStreak.days) {
+				longestStreak = { ...tempStreak };
+			}
+
+			// Reset temp streak
+			tempStreak = { days: 0, from: null, to: null };
+
+			// If current day meets goal, start new streak
+			if (goalMet) {
+				tempStreak = { days: 1, from: date, to: date };
+			}
+
+			lastDate = date;
+		}
+	}
+
+	// Check if there's a gap between the last record and today
+	if (tempStreak.days > 0 && lastDate) {
+		const expectedNextDay = getNextDay(lastDate);
+
+		if (expectedNextDay !== todayDateKey && lastDate !== todayDateKey) {
+			// Gap exists - save completed streak
+			if (tempStreak.days > 0) {
+				allStreaks.push({ ...tempStreak });
+			}
+
+			if (tempStreak.days >= longestStreak.days) {
+				longestStreak = { ...tempStreak };
+			}
+			tempStreak = { days: 0, from: null, to: null };
+		}
+	}
+
+	// Final check: if tempStreak is still ongoing, it's the current streak
+	currentStreak = tempStreak;
+
+	// Update longest if current is longer
+	if (currentStreak.days >= longestStreak.days) {
+		longestStreak = { ...currentStreak };
+	}
+
+	// Add current streak to allStreaks if it exists
+	if (currentStreak.days > 0) {
+		allStreaks.push({ ...currentStreak });
+	}
+
+	return {
+		currentStreak,
+		longestStreak,
+		allStreaks
+	};
+}
+
+/**
+ * Get combined streak history for all active rings
+ * A day only counts if ALL active rings meet their individual goals
+ * Endpoint: GET /streaks/combined
+ */
+export async function getCombinedStreakHistoryForAllRings(
+	params: StreaksQueryParams,
+	userId: Types.ObjectId
+) {
+	const userSettings = await UserSettings.findOne({ userId });
+	const emptyValue = {
+			combinedStreaks: {
+				currentStreak: { days: 0, from: null, to: null },
+				longestStreak: { days: 0, from: null, to: null },
+				allStreaks: []
+			},
+			combinedGoalMetMap: {},
+			rings: []
+		}
+
+	if (!userSettings) {
+		return emptyValue;
+	}
+
+	const activeRings = getActiveRings(userSettings as UserSettingsData);
+
+	if (activeRings.length === 0) {
+		return emptyValue;
+	}
+
+	// Fetch streak history for all active rings in parallel
+	const ringDataPromises = activeRings.map(ring =>
+		getStreakHistoryForRing(params, userId, ring)
+	);
+
+	const ringDataArray = await Promise.all(ringDataPromises);
+
+	// Get all unique dates across all rings
+	const allDatesSet = new Set<string>();
+	for (const ringData of ringDataArray) {
+		Object.keys(ringData.dailyDurationsMap).forEach(date => allDatesSet.add(date));
+	}
+	const allDates = Array.from(allDatesSet).sort();
+
+	// Create combined goal met map - true only if ALL active rings met their goals
+	const combinedGoalMetMap: Record<string, boolean> = {};
+	// Track which dates are "freebie days" (all failures were from freebie rings)
+	const combinedFreebieMap: Record<string, boolean> = {};
+
+	for (const date of allDates) {
+		let allRingsMet = true; // Track if ALL rings met their goals
+		let hasNonFreebieFailure = false; // Track if any NON-freebie ring failed
+
+		for (let i = 0; i < activeRings.length; i++) {
+			const ring = activeRings[i];
+			const ringData = ringDataArray[i];
+			const duration = ringData.dailyDurationsMap[date] || 0;
+
+			// Get ring-specific settings
+			const goalSeconds = ring.goalSeconds || 3600;
+			const selectedDaysOfWeek = ring.selectedDaysOfWeek;
+			const restDays = ring.restDays || {};
+			const customDailyFocusGoal = ring.customDailyFocusGoal || {};
+			const inactivePeriods = ring.inactivePeriods || [];
+
+			// Check if this date is a freebie day, rest day, or inactive period for this ring
+			const dayOfWeek = getDayOfWeek(date, params.timezone);
+			const isFreebieDay = !(selectedDaysOfWeek?.[dayOfWeek] ?? true);
+			const isRestDay = restDays[date] ?? false;
+			const isInactivePeriodDay = isDateInInactivePeriod(date, inactivePeriods);
+			const isSpecialDay = isFreebieDay || isRestDay || isInactivePeriodDay;
+
+			// Use custom goal for this date if set, otherwise use default goal
+			const dailyGoalSeconds = customDailyFocusGoal[date] ?? goalSeconds;
+			const offsetGoal = dailyGoalSeconds - 300; // 5-minute offset
+			const goalMet = duration >= offsetGoal;
+
+			// Check if goal was met
+			if (!goalMet) {
+				allRingsMet = false; // At least one ring didn't meet goal
+
+				if (!isSpecialDay) {
+					// Non-freebie ring didn't meet goal → BREAK streak immediately
+					hasNonFreebieFailure = true;
+					break;
+				}
+				// else: Freebie day didn't meet goal → continue checking other rings
+			}
+		}
+
+		// Set combined goal met status:
+		combinedGoalMetMap[date] = allRingsMet;
+		// Mark as freebie day if at least one ring failed but all failures were freebie rings
+		combinedFreebieMap[date] = !allRingsMet && !hasNonFreebieFailure;
+	}
+
+	// Calculate combined streaks using the new function that doesn't apply offset
+	// (offset was already applied when checking each individual ring's goal)
+	const { currentStreak, longestStreak, allStreaks } = calculateCombinedStreaks(
+		combinedGoalMetMap,
+		combinedFreebieMap,
+		params.timezone
+	);
+
+	// Prepare ring data for response
+	const rings = ringDataArray.map((ringData, index) => {
+		const ring = activeRings[index];
+		return {
+			ringId: ring.id,
+			ringName: ring.name,
+			ringColor: ring.color,
+			useThemeColor: ring.useThemeColor,
+			goalSeconds: ring.goalSeconds || 3600,
+			dailyDurationsMap: ringData.dailyDurationsMap,
+			customDailyFocusGoal: ring.customDailyFocusGoal || {},
+			restDays: ring.restDays || {},
+			selectedDaysOfWeek: ring.selectedDaysOfWeek
+		};
+	});
+
+	return {
+		combinedStreaks: {
+			currentStreak,
+			longestStreak,
+			allStreaks
+		},
+		combinedGoalMetMap,
+		rings
 	};
 }

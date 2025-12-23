@@ -66,6 +66,11 @@ export interface IUserSettings extends Document {
 				updatedAt: string;
 			}>;
 			showMultiRingViewForOneActiveRing?: boolean;
+			combinedRingsSettings?: {
+				showStreakCount: boolean;
+				showGoalDays: boolean;
+				goalDays: number;
+			};
 		};
 		challenges?: {
 			selectedChallengeCardImage?: {
@@ -160,7 +165,12 @@ const UserSettingsSchema = new Schema(
 					],
 					default: []
 				},
-				showMultiRingViewForOneActiveRing: { type: Boolean, default: false }
+				showMultiRingViewForOneActiveRing: { type: Boolean, default: false },
+				combinedRingsSettings: {
+					showStreakCount: { type: Boolean, default: true },
+					showGoalDays: { type: Boolean, default: true },
+					goalDays: { type: Number, default: 7, min: 1, max: 36524 }
+				}
 			},
 			challenges: {
 				selectedChallengeCardImage: {
