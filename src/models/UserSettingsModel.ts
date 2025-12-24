@@ -26,6 +26,15 @@ export interface IUserSettings extends Document {
 			showFocusRecordEmotions?: boolean;
 			showEmotionCount?: boolean;
 			analyzeNoteEmotionsWhileSyncingFocusRecords?: boolean;
+			customDisplay?: {
+				useBackgroundImage?: boolean;
+				backgroundImage?: string;
+				backgroundImageOpacity?: number;
+				useBackgroundColor?: boolean;
+				backgroundColor?: string;
+				useTextColor?: boolean;
+				textColor?: string;
+			};
 		};
 		completedTasks?: {
 			taskIdIncludeCompletedTasksFromSubtasks?: boolean;
@@ -115,7 +124,17 @@ const UserSettingsSchema = new Schema(
 				showMedalGlow: { type: Boolean, default: false },
 				showFocusRecordEmotions: { type: Boolean, default: false },
 				showEmotionCount: { type: Boolean, default: false },
-				analyzeNoteEmotionsWhileSyncingFocusRecords: { type: Boolean, default: false }
+				analyzeNoteEmotionsWhileSyncingFocusRecords: { type: Boolean, default: false },
+				customDisplay: {
+					useBackgroundImage: { type: Boolean, default: false },
+					// TODO: Addd a default Cloudinary URL once I've set up the weapon camos.
+					backgroundImage: { type: String, default: "" },
+					backgroundImageOpacity: { type: Number, default: 1 },
+					useBackgroundColor: { type: Boolean, default: false },
+					backgroundColor: { type: String, default: "#3b82f6" },
+					useTextColor: { type: Boolean, default: false },
+					textColor: { type: String, default: "#ffffff" }
+				}
 			},
 			completedTasks: {
 				taskIdIncludeCompletedTasksFromSubtasks: { type: Boolean, default: true },
