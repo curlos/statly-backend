@@ -51,8 +51,7 @@ export function buildFocusMatchAndFilterConditions(
 	intervalEndDate?: string | null,
 	emotions?: string[],
 	timezone?: string,
-	showOnlyWithNotes?: boolean,
-	showOnlyWithoutNotes?: boolean
+	general?: string[]
 ) {
 	// Validate userId is provided - critical for data isolation
 	if (!userId) {
@@ -186,6 +185,10 @@ export function buildFocusMatchAndFilterConditions(
 			focusRecordMatchConditions["emotions.emotion"] = { $in: emotions };
 		}
 	}
+
+	// Extract note filter booleans from general array
+	const showOnlyWithNotes = general?.includes('with-notes') ?? false;
+	const showOnlyWithoutNotes = general?.includes('without-notes') ?? false;
 
 	// Add note filtering (mutually exclusive in UI, but defensive check here)
 	if (showOnlyWithNotes && !showOnlyWithoutNotes) {
@@ -517,6 +520,7 @@ export interface BuildFocusFilterPipelineParams {
 	intervalEndDate?: string | null;
 	emotions?: string[];
 	timezone: string;
+	general?: string[];
 }
 
 /**
@@ -546,7 +550,8 @@ export function buildFocusFilterPipeline(params: BuildFocusFilterPipelineParams)
 		params.intervalStartDate,
 		params.intervalEndDate,
 		params.emotions,
-		params.timezone
+		params.timezone,
+		params.general
 	);
 
 	// Calculate the date boundaries for duration adjustment

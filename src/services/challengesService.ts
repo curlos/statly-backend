@@ -132,7 +132,8 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams, use
 		null,
 		null,
 		params.emotions,
-		params.timezone
+		params.timezone,
+		params.general
 	);
 
 	// Calculate date boundaries for duration adjustment

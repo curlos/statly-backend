@@ -152,7 +152,8 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 		null,
 		null,
 		params.emotions,
-		params.timezone
+		params.timezone,
+		params.general
 	);
 
 	// Build all-time focus record filter
@@ -168,7 +169,8 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 		params.intervalStartDate,
 		params.intervalEndDate,
 		params.emotions,
-		params.timezone
+		params.timezone,
+		params.general
 	);
 
 	// Apply search filters

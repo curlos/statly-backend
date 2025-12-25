@@ -26,8 +26,6 @@ export interface IUserSettings extends Document {
 			showFocusRecordEmotions?: boolean;
 			showEmotionCount?: boolean;
 			showNoteStats?: boolean;
-			showOnlyWithNotes?: boolean;
-			showOnlyWithoutNotes?: boolean;
 			analyzeNoteEmotionsWhileSyncingFocusRecords?: boolean;
 			customDisplay?: {
 				useBackgroundImage?: boolean;
@@ -128,8 +126,6 @@ const UserSettingsSchema = new Schema(
 				showFocusRecordEmotions: { type: Boolean, default: false },
 				showEmotionCount: { type: Boolean, default: false },
 				showNoteStats: { type: Boolean, default: false },
-				showOnlyWithNotes: { type: Boolean, default: false },
-				showOnlyWithoutNotes: { type: Boolean, default: false },
 				analyzeNoteEmotionsWhileSyncingFocusRecords: { type: Boolean, default: false },
 				customDisplay: {
 					useBackgroundImage: { type: Boolean, default: false },

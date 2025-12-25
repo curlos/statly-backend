@@ -57,7 +57,7 @@ export interface FocusRecordsStatsQueryParams {
 	groupBy: string; // 'day' | 'project' | 'task' | 'hour' | 'timeline'
 	nested?: boolean; // If true, include ancestorTasksById for nested display
 	emotions?: string[]; // Emotions filter (anger, joy, sadness, etc.)
-
+	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes')
 }
 
 export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams, userId: Types.ObjectId) {

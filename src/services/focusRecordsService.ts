@@ -350,8 +350,7 @@ export interface FocusRecordsQueryParams {
 	timezone?: string;
 	showEmotionCount?: boolean; // User setting to show emotion counts
 	showNoteStats?: boolean; // User setting to show note statistics
-	showOnlyWithNotes?: boolean; // User setting to filter only records with notes
-	showOnlyWithoutNotes?: boolean; // User setting to filter only records without notes
+	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes')
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams, userId: Types.ObjectId) {
@@ -360,6 +359,7 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 	// Build filters
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 	const sortCriteria = buildSortCriteria(params.sortBy);
+
 	const { focusRecordMatchConditions, taskFilterConditions } = buildFocusMatchAndFilterConditions(
 		userId,
 		params.taskId,
@@ -373,8 +373,7 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 		params.intervalEndDate,
 		params.emotions,
 		params.timezone,
-		params.showOnlyWithNotes,
-		params.showOnlyWithoutNotes
+		params.general
 	);
 
 	// Calculate the date boundaries for duration adjustment
@@ -451,8 +450,7 @@ export interface ExportFocusRecordsQueryParams {
 	groupBy: 'none' | 'project' | 'task' | 'emotion';
 	onlyExportTasksWithNoParent: boolean;
 	timezone?: string;
-	showOnlyWithNotes?: boolean;
-	showOnlyWithoutNotes?: boolean;
+	general?: string[];
 }
 
 export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, userId: Types.ObjectId) {
@@ -487,8 +485,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 		params.intervalEndDate,
 		params.emotions,
 		params.timezone,
-		params.showOnlyWithNotes,
-		params.showOnlyWithoutNotes
+		params.general
 	);
 
 	// Calculate date boundaries for duration adjustment

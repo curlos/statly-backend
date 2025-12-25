@@ -20,6 +20,7 @@ export interface BaseQueryParams {
 	emotions: string[]; // Emotions filter (anger, joy, sadness, etc.)
 	timezone: string;
 	crossesMidnight?: boolean; // Filter for focus records that cross midnight
+	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes')
 }
 
 export interface MedalsQueryParams extends BaseQueryParams {
@@ -80,6 +81,9 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 	const crossesMidnightParam = req.query['crosses-midnight'] as string;
 	const crossesMidnight = crossesMidnightParam === 'true' ? true : crossesMidnightParam === 'false' ? false : undefined;
 
+	// Parse general query param
+	const general: string[] = req.query['general'] ? (req.query['general'] as string).split(',').filter(Boolean) : [];
+
 	return {
 		projectIds,
 		taskId: req.query['task-id'] as string,
@@ -94,6 +98,7 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 		emotions,
 		timezone: (req.query.timezone as string) || 'UTC',
 		crossesMidnight,
+		general,
 	};
 }
 
@@ -152,8 +157,7 @@ export function parseFocusRecordsQueryParams(req: Request) {
 		sortBy: (req.query['sort-by'] as string) || 'Newest',
 		showEmotionCount: req.query['show-emotion-count'] === 'true',
 		showNoteStats: req.query['show-note-stats'] === 'true',
-		showOnlyWithNotes: req.query['show-only-with-notes'] === 'true',
-		showOnlyWithoutNotes: req.query['show-only-without-notes'] === 'true',
+		general: (req.query.general as string)?.split(',').filter(Boolean) || [],
 	};
 }
 
@@ -182,8 +186,7 @@ export async function parseExportFocusRecordsQueryParams(req: Request) {
 		sortBy: (req.query['sort-by'] as string) || 'Newest',
 		groupBy: (req.query['group-by'] as 'none' | 'project' | 'task') || 'none',
 		onlyExportTasksWithNoParent,
-		showOnlyWithNotes: req.query['show-only-with-notes'] === 'true',
-		showOnlyWithoutNotes: req.query['show-only-without-notes'] === 'true',
+		general: (req.query.general as string)?.split(',').filter(Boolean) || [],
 	};
 }
 
