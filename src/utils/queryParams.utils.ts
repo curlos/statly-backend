@@ -151,6 +151,7 @@ export function parseFocusRecordsQueryParams(req: Request) {
 		limit: parseInt(req.query.limit as string) || 25,
 		sortBy: (req.query['sort-by'] as string) || 'Newest',
 		showEmotionCount: req.query['show-emotion-count'] === 'true',
+		showNoteStats: req.query['show-note-stats'] === 'true',
 	};
 }
 

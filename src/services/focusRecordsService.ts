@@ -17,6 +17,11 @@ interface EmotionCountItem {
 	count: number;
 }
 
+interface NoteStats {
+	totalCharacters: number;
+	totalWords: number;
+}
+
 interface EmotionObject {
 	emotion: string;
 	score?: number;
@@ -88,7 +93,8 @@ async function executeQuery(
 	limit: number,
 	startDateBoundary: Date | null = null,
 	endDateBoundary: Date | null = null,
-	needEmotionCalculations: boolean = true
+	needEmotionCalculations: boolean = true,
+	needNoteStats: boolean = false
 ) {
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
 
@@ -225,6 +231,44 @@ async function executeQuery(
 		];
 	}
 
+	// Only add note stats calculations if needed
+	if (needNoteStats) {
+		facetStages.noteStats = [
+			{
+				$match: {
+					$and: [
+						{ note: { $exists: true } },
+						{ note: { $ne: null } },
+						{ note: { $ne: '' } }
+					]
+				}
+			},
+			{
+				$project: {
+					noteCharCount: { $strLenCP: '$note' },
+					noteWordCount: {
+						$cond: {
+							if: { $eq: [{ $trim: { input: '$note' } }, ''] },
+							then: 0,
+							else: {
+								$size: {
+									$split: [{ $trim: { input: '$note' } }, ' ']
+								}
+							}
+						}
+					}
+				}
+			},
+			{
+				$group: {
+					_id: null,
+					totalCharacters: { $sum: '$noteCharCount' },
+					totalWords: { $sum: '$noteWordCount' }
+				}
+			}
+		];
+	}
+
 	// Use $facet to run all aggregations in parallel within a single query
 	// TypeScript expects FacetPipelineStage[] but mongoose doesn't export this type.
 	// Our stages are valid for $facet, so we cast to any to bypass the type check.
@@ -262,12 +306,25 @@ async function executeQuery(
 		}
 	}
 
+	// Extract note stats (only if they were calculated)
+	let noteStats: NoteStats = { totalCharacters: 0, totalWords: 0 };
+	if (needNoteStats) {
+		const noteStatsResult = facetResult.noteStats || [];
+		if (noteStatsResult.length > 0) {
+			noteStats = {
+				totalCharacters: noteStatsResult[0].totalCharacters || 0,
+				totalWords: noteStatsResult[0].totalWords || 0
+			};
+		}
+	}
+
 	return {
 		focusRecords,
 		total,
 		totalDuration,
 		onlyTasksTotalDuration,
-		emotionCounts
+		emotionCounts,
+		noteStats
 	};
 }
 
@@ -292,6 +349,7 @@ export interface FocusRecordsQueryParams {
 	crossesMidnight?: boolean;
 	timezone?: string;
 	showEmotionCount?: boolean; // User setting to show emotion counts
+	showNoteStats?: boolean; // User setting to show note statistics
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams, userId: Types.ObjectId) {
@@ -330,8 +388,11 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 	// Determine if we need emotion calculations based on user settings
 	const needEmotionCalculations = params.showEmotionCount === true;
 
+	// Determine if we need note stats based on user settings
+	const needNoteStats = params.showNoteStats === true;
+
 	// Execute unified query (conditionally adds stages based on filters)
-	const { focusRecords, total, totalDuration, onlyTasksTotalDuration, emotionCounts } = await executeQuery(
+	const { focusRecords, total, totalDuration, onlyTasksTotalDuration, emotionCounts, noteStats } = await executeQuery(
 		searchFilter,
 		focusRecordMatchConditions,
 		taskFilterConditions,
@@ -340,7 +401,8 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 		params.limit,
 		startDateBoundary,
 		endDateBoundary,
-		needEmotionCalculations
+		needEmotionCalculations,
+		needNoteStats
 	);
 
 	// Add ancestor tasks and completed tasks
@@ -361,6 +423,7 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 		totalDuration,
 		onlyTasksTotalDuration,
 		emotionCounts,
+		noteStats,
 	};
 }
 
@@ -432,7 +495,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 	}
 
 	// Execute query without pagination (get all records)
-	const { focusRecords, total, totalDuration: _totalDuration, onlyTasksTotalDuration, emotionCounts } = await executeQuery(
+	const { focusRecords, total, totalDuration: _totalDuration, onlyTasksTotalDuration, emotionCounts, noteStats } = await executeQuery(
 		searchFilter,
 		focusRecordMatchConditions,
 		taskFilterConditions,
@@ -440,7 +503,9 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 		0, // skip
 		Number.MAX_SAFE_INTEGER, // Get all records
 		startDateBoundary,
-		endDateBoundary
+		endDateBoundary,
+		true,
+		true
 	);
 
 	// Add ancestor tasks and completed tasks
@@ -519,6 +584,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 			totalRecords: total,
 			totalDuration: onlyTasksTotalDuration,
 			emotionCounts,
+			noteStats,
 		};
 	}
 
@@ -683,5 +749,6 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 		totalRecords: total,
 		totalDuration: onlyTasksTotalDuration,
 		emotionCounts,
+		noteStats,
 	};
 }

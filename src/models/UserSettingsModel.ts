@@ -25,6 +25,7 @@ export interface IUserSettings extends Document {
 			showMedalGlow?: boolean;
 			showFocusRecordEmotions?: boolean;
 			showEmotionCount?: boolean;
+			showNoteStats?: boolean;
 			analyzeNoteEmotionsWhileSyncingFocusRecords?: boolean;
 			customDisplay?: {
 				useBackgroundImage?: boolean;
@@ -124,11 +125,11 @@ const UserSettingsSchema = new Schema(
 				showMedalGlow: { type: Boolean, default: false },
 				showFocusRecordEmotions: { type: Boolean, default: false },
 				showEmotionCount: { type: Boolean, default: false },
+				showNoteStats: { type: Boolean, default: false },
 				analyzeNoteEmotionsWhileSyncingFocusRecords: { type: Boolean, default: false },
 				customDisplay: {
 					useBackgroundImage: { type: Boolean, default: false },
-					// TODO: Addd a default Cloudinary URL once I've set up the weapon camos.
-					backgroundImage: { type: String, default: "" },
+					backgroundImage: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1766609482/Statly/mw2019-weapon-camos/TIGER/Blue_Tiger_Camo_Icon_MW2019.webp" },
 					backgroundImageOpacity: { type: Number, default: 1 },
 					useBackgroundColor: { type: Boolean, default: false },
 					backgroundColor: { type: String, default: "#3b82f6" },
