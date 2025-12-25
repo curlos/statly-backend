@@ -152,6 +152,8 @@ export function parseFocusRecordsQueryParams(req: Request) {
 		sortBy: (req.query['sort-by'] as string) || 'Newest',
 		showEmotionCount: req.query['show-emotion-count'] === 'true',
 		showNoteStats: req.query['show-note-stats'] === 'true',
+		showOnlyWithNotes: req.query['show-only-with-notes'] === 'true',
+		showOnlyWithoutNotes: req.query['show-only-without-notes'] === 'true',
 	};
 }
 
@@ -180,6 +182,8 @@ export async function parseExportFocusRecordsQueryParams(req: Request) {
 		sortBy: (req.query['sort-by'] as string) || 'Newest',
 		groupBy: (req.query['group-by'] as 'none' | 'project' | 'task') || 'none',
 		onlyExportTasksWithNoParent,
+		showOnlyWithNotes: req.query['show-only-with-notes'] === 'true',
+		showOnlyWithoutNotes: req.query['show-only-without-notes'] === 'true',
 	};
 }
 

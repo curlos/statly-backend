@@ -350,6 +350,8 @@ export interface FocusRecordsQueryParams {
 	timezone?: string;
 	showEmotionCount?: boolean; // User setting to show emotion counts
 	showNoteStats?: boolean; // User setting to show note statistics
+	showOnlyWithNotes?: boolean; // User setting to filter only records with notes
+	showOnlyWithoutNotes?: boolean; // User setting to filter only records without notes
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams, userId: Types.ObjectId) {
@@ -370,7 +372,9 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 		params.intervalStartDate,
 		params.intervalEndDate,
 		params.emotions,
-		params.timezone
+		params.timezone,
+		params.showOnlyWithNotes,
+		params.showOnlyWithoutNotes
 	);
 
 	// Calculate the date boundaries for duration adjustment
@@ -447,6 +451,8 @@ export interface ExportFocusRecordsQueryParams {
 	groupBy: 'none' | 'project' | 'task' | 'emotion';
 	onlyExportTasksWithNoParent: boolean;
 	timezone?: string;
+	showOnlyWithNotes?: boolean;
+	showOnlyWithoutNotes?: boolean;
 }
 
 export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, userId: Types.ObjectId) {
@@ -480,7 +486,9 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 		params.intervalStartDate,
 		params.intervalEndDate,
 		params.emotions,
-		params.timezone
+		params.timezone,
+		params.showOnlyWithNotes,
+		params.showOnlyWithoutNotes
 	);
 
 	// Calculate date boundaries for duration adjustment

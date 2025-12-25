@@ -50,7 +50,9 @@ export function buildFocusMatchAndFilterConditions(
 	intervalStartDate?: string | null,
 	intervalEndDate?: string | null,
 	emotions?: string[],
-	timezone?: string
+	timezone?: string,
+	showOnlyWithNotes?: boolean,
+	showOnlyWithoutNotes?: boolean
 ) {
 	// Validate userId is provided - critical for data isolation
 	if (!userId) {
@@ -184,6 +186,28 @@ export function buildFocusMatchAndFilterConditions(
 			focusRecordMatchConditions["emotions.emotion"] = { $in: emotions };
 		}
 	}
+
+	// Add note filtering (mutually exclusive in UI, but defensive check here)
+	if (showOnlyWithNotes && !showOnlyWithoutNotes) {
+		// Only show records with notes (note exists, not null, and has length > 0)
+		andedOrConditions.push({
+			$and: [
+				{ note: { $exists: true } },
+				{ note: { $ne: null } },
+				{ note: { $ne: '' } }
+			]
+		});
+	} else if (showOnlyWithoutNotes && !showOnlyWithNotes) {
+		// Only show records without notes (note doesn't exist, is null, or is empty)
+		andedOrConditions.push({
+			$or: [
+				{ note: { $exists: false } },
+				{ note: null },
+				{ note: '' }
+			]
+		});
+	}
+	// If both are true (shouldn't happen with UI logic), ignore both filters
 
 	// Add crossesMidnight filter (only when explicitly true)
 	if (crossesMidnight === true) {
