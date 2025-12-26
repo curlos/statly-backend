@@ -19,6 +19,7 @@ export interface TickTickFocusRecordRaw {
 	endTime: string;
 	pauseDuration?: number;
 	note?: string;
+	trackingMode?: 'pomodoro' | 'stopwatch';
 	tasks?: Array<{
 		taskId: string;
 		title: string;

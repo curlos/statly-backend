@@ -212,6 +212,23 @@ export function buildFocusMatchAndFilterConditions(
 	}
 	// If both are true (shouldn't happen with UI logic), ignore both filters
 
+	// Extract tracking mode filter booleans from general array
+	const showOnlyPomodoro = general?.includes('pomodoro-mode') ?? false;
+	const showOnlyStopwatch = general?.includes('stopwatch-mode') ?? false;
+
+	// Add tracking mode filtering
+	if (showOnlyPomodoro && !showOnlyStopwatch) {
+		// Only show pomodoro records
+		focusRecordMatchConditions.trackingMode = 'pomodoro';
+	} else if (showOnlyStopwatch && !showOnlyPomodoro) {
+		// Only show stopwatch records
+		focusRecordMatchConditions.trackingMode = 'stopwatch';
+	} else if (showOnlyPomodoro && showOnlyStopwatch) {
+		// Both selected - show records with either tracking mode
+		focusRecordMatchConditions.trackingMode = { $in: ['pomodoro', 'stopwatch'] };
+	}
+	// If neither is selected, no filter is applied
+
 	// Add crossesMidnight filter (only when explicitly true)
 	if (crossesMidnight === true) {
 		focusRecordMatchConditions.crossesMidnight = true;

@@ -46,6 +46,7 @@ interface FocusRecordWithTasks {
 	endTime: Date;
 	duration: number;
 	note?: string;
+	trackingMode?: 'pomodoro' | 'stopwatch';
 	tasks?: FocusRecordTask[];
 	emotions?: EmotionObject[];
 	[key: string]: unknown;
@@ -179,6 +180,7 @@ async function executeQuery(
 				endTime: 1,
 				duration: 1,
 				note: 1,
+				trackingMode: 1,
 				crossesMidnight: 1,
 				completedTasks: 1,
 				emotions: 1,

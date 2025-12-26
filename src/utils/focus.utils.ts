@@ -48,7 +48,18 @@ export const fetchTickTickFocusRecords = async (cookie: string, userId: Types.Ob
 		})
 	]));
 
-	const tickTickOneApiFocusData = [...focusDataPomos.data, ...focusDataStopwatch.data];
+	// Add trackingMode to each record before combining
+	const pomodorosWithTrackingMode = focusDataPomos.data.map((record: Record<string, unknown>) => ({
+		...record,
+		trackingMode: 'pomodoro' as const
+	}));
+
+	const stopwatchesWithTrackingMode = focusDataStopwatch.data.map((record: Record<string, unknown>) => ({
+		...record,
+		trackingMode: 'stopwatch' as const
+	}));
+
+	const tickTickOneApiFocusData = [...pomodorosWithTrackingMode, ...stopwatchesWithTrackingMode];
 	const tickTickOneApiFocusDataById = arrayToObjectByKey(tickTickOneApiFocusData, 'id');
 	const localFocusDataById = arrayToObjectByKey(localFocusData, 'id');
 

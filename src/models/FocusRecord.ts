@@ -20,6 +20,7 @@ export interface IFocusRecordBase extends Document {
 	startTime: Date;
 	endTime: Date;
 	duration: number;
+	trackingMode?: 'pomodoro' | 'stopwatch';
 	crossesMidnight?: boolean;
 	emotions?: Array<{
 		emotion: 'joy' | 'sadness' | 'anger' | 'fear' | 'surprise' | 'disgust' | 'neutral';
@@ -141,6 +142,12 @@ const BaseFocusRecordSchema = new Schema({
 	duration: {
 		type: Number,
 		required: true,
+	},
+	trackingMode: {
+		type: String,
+		enum: ['pomodoro', 'stopwatch'],
+		default: 'pomodoro',
+		index: true, // Index for fast filtering
 	},
 	crossesMidnight: {
 		type: Boolean,
