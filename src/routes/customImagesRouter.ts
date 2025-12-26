@@ -49,47 +49,62 @@ router.post('/upload', verifyToken, upload.array('images', 10), async (req: Cust
 		const maxSortOrderDoc = await CustomImage.findOne({ userId, folder: normalizedFolder }).sort({ sortOrder: -1 }).select('sortOrder');
 		const startingSortOrder = maxSortOrderDoc ? maxSortOrderDoc.sortOrder + 1 : 0;
 
-		// Upload all files to Cloudinary and create DB records
-		const uploadPromises = files.map(async (file, index) => {
-			// Upload to Cloudinary
-			const uploadResult: unknown = await new Promise((resolve, reject) => {
-				const stream = cloudinary.uploader.upload_stream(
-					{
-						resource_type: 'image',
-						folder: `Statly/users/${userId}/custom-images`,
-						public_id: `${Date.now()}-custom-${index}`,
-						quality: 'auto:good',
-						fetch_format: 'auto',
-						width: 1000,
-						height: 1000,
-						crop: 'limit', // Don't upscale, maintain aspect ratio
-					},
-					(error, result) => {
-						if (error) reject(error);
-						else resolve(result);
-					}
-				);
-				stream.end(file.buffer);
-			});
+		// Upload all files to Cloudinary in parallel
+		const uploadResults = await Promise.allSettled(
+			files.map((file, index) => {
+				return new Promise<{ secure_url: string; public_id: string; index: number }>((resolve, reject) => {
+					const stream = cloudinary.uploader.upload_stream(
+						{
+							resource_type: 'image',
+							folder: `Statly/users/${userId}/custom-images`,
+							public_id: `${Date.now()}-custom-${index}`,
+							quality: 'auto:good',
+							fetch_format: 'auto',
+							width: 1000,
+							height: 1000,
+							crop: 'limit', // Don't upscale, maintain aspect ratio
+						},
+						(error, result) => {
+							if (error) reject(error);
+							else resolve({
+								secure_url: result!.secure_url,
+								public_id: result!.public_id,
+								index
+							});
+						}
+					);
+					stream.end(file.buffer);
+				});
+			})
+		);
 
-			const cloudinaryResult = uploadResult as { secure_url: string; public_id: string };
+		// Filter successful uploads and log failures
+		const successfulUploads = uploadResults
+			.map((result, i) => {
+				if (result.status === 'rejected') {
+					console.error(`Failed to upload image ${i}:`, result.reason);
+					return null;
+				}
+				return result.value;
+			})
+			.filter((upload): upload is NonNullable<typeof upload> => upload !== null);
 
-			// Create DB record
-			const customImage = new CustomImage({
-				userId,
-				imageUrl: cloudinaryResult.secure_url,
-				cloudinaryPublicId: cloudinaryResult.public_id,
-				folder: normalizedFolder,
-				sortOrder: startingSortOrder + index,
-			});
+		if (successfulUploads.length === 0) {
+			return res.status(500).json({ message: 'All uploads failed' });
+		}
 
-			await customImage.save();
-			return customImage;
-		});
+		// Batch insert all successful uploads to database
+		const imagesToInsert = successfulUploads.map((upload) => ({
+			userId,
+			imageUrl: upload.secure_url,
+			cloudinaryPublicId: upload.public_id,
+			folder: normalizedFolder,
+			sortOrder: startingSortOrder + upload.index,
+		}));
 
-		const uploadedImages = await Promise.all(uploadPromises);
+		const uploadedImages = await CustomImage.insertMany(imagesToInsert);
 
-		// Sort by sortOrder to maintain upload order (Promise.all returns in completion order)
+		// Sort by sortOrder to maintain upload order
 		uploadedImages.sort((a, b) => a.sortOrder - b.sortOrder);
 
 		res.status(201).json(uploadedImages);
@@ -298,6 +313,63 @@ router.put('/:id', verifyToken, upload.single('image'), async (req: CustomReques
 		res.status(500).json({
 			message: 'Server error',
 			error: error instanceof Error ? error.message : 'Failed to update image',
+		});
+	}
+});
+
+// DELETE /custom-images/bulk - Delete all images in a folder
+router.delete('/bulk', verifyToken, async (req: CustomRequest, res) => {
+	try {
+		const userId = req.user?.userId;
+		const { folder } = req.query;
+
+		if (!userId) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+
+		if (!folder || typeof folder !== 'string') {
+			return res.status(400).json({ message: 'Folder name required' });
+		}
+
+		const normalizedFolder = folder.toUpperCase().trim();
+
+		// Find all images in the folder for this user
+		const imagesToDelete = await CustomImage.find({ userId, folder: normalizedFolder });
+
+		if (imagesToDelete.length === 0) {
+			return res.json({
+				deletedCount: 0,
+				cloudinaryFailures: 0,
+				message: 'No images found in folder'
+			});
+		}
+
+		// Delete from Cloudinary and database in parallel
+		const [deleteResults, result] = await Promise.all([
+			Promise.allSettled(
+				imagesToDelete.map(image => cloudinary.uploader.destroy(image.cloudinaryPublicId))
+			),
+			CustomImage.deleteMany({ userId, folder: normalizedFolder })
+		]);
+
+		const cloudinaryFailures = deleteResults.filter(result => result.status === 'rejected').length;
+
+		// Log any failures for debugging
+		deleteResults.forEach((result, index) => {
+			if (result.status === 'rejected') {
+				console.error(`Failed to delete image from Cloudinary (${imagesToDelete[index].cloudinaryPublicId}):`, result.reason);
+			}
+		});
+
+		res.json({
+			deletedCount: result.deletedCount,
+			cloudinaryFailures,
+			message: `${result.deletedCount} image(s) deleted successfully${cloudinaryFailures > 0 ? ` (${cloudinaryFailures} Cloudinary deletion(s) failed)` : ''}`
+		});
+	} catch (error) {
+		res.status(500).json({
+			message: 'Server error',
+			error: error instanceof Error ? error.message : 'Failed to delete images',
 		});
 	}
 });
