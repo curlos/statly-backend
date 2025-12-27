@@ -7,6 +7,8 @@ import { buildFocusMatchAndFilterConditions, buildFocusSearchFilter } from '../u
 import { BaseQueryParams } from '../utils/queryParams.utils';
 import { PipelineStage } from 'mongoose';
 import { MongooseFilter } from '../types/aggregation';
+import { addMidnightRecordDurationAdjustment, addYearAgnosticMidnightAdjustment } from '../utils/focus.utils';
+import { calculateEffectiveDateBoundaries, parseDateInTimezone } from '../utils/timezone.utils';
 
 // ============================================================================
 // Overview Stats Service
@@ -135,7 +137,7 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 /**
  * Get focus record statistics using $facet to run today & all-time stats in parallel
  */
-async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean) {
+async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean, tz: string) {
 	// Build search filter
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 
@@ -153,8 +155,14 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 		null,
 		params.emotions,
 		params.timezone,
-		params.general
+		params.general,
+		false
 	);
+
+	// Calculate date boundaries for today's stats (for midnight crossing adjustment)
+	const todayStartBoundary = parseDateInTimezone(todayDateString, tz);
+	const todayEndBoundary = new Date(todayStartBoundary);
+	todayEndBoundary.setUTCDate(todayEndBoundary.getUTCDate() + 1);
 
 	// Build all-time focus record filter
 	const { focusRecordMatchConditions: totalFocusMatch } = buildFocusMatchAndFilterConditions(
@@ -170,54 +178,81 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 		params.intervalEndDate,
 		params.emotions,
 		params.timezone,
-		params.general
+		params.general,
+		params.yearAgnostic
 	);
+
+	// Calculate date boundaries for total stats (for midnight crossing adjustment)
+	const { startDateBoundary: totalStartBoundary, endDateBoundary: totalEndBoundary } =
+		calculateEffectiveDateBoundaries(params);
 
 	// Apply search filters
 	const todayFocusQuery = searchFilter ? { $and: [searchFilter, todayFocusMatch] } : todayFocusMatch;
 	const totalFocusQuery = searchFilter ? { $and: [searchFilter, totalFocusMatch] } : totalFocusMatch;
 
-	// Build facet stages based on skipTodayStats
-	const facetStages: Record<string, PipelineStage[]> = {
-		totalStats: [
-			{ $match: totalFocusQuery },
-			{
-				$group: {
-					_id: null,
-					count: { $sum: 1 },
-					duration: {
-						$sum: {
-							$reduce: {
-								input: "$tasks",
-								initialValue: 0,
-								in: { $add: ["$$value", "$$this.duration"] }
-							}
-						}
+	// Build pipeline for total stats with midnight crossing adjustment
+	const totalStatsPipeline: PipelineStage[] = [
+		{ $match: totalFocusQuery }
+	];
+
+	// Add midnight crossing duration adjustment if date boundaries exist
+	if (params.yearAgnostic && params.startDate && params.endDate) {
+		// Year-agnostic clipping: use month/day from sidebar dates, apply to each record's own year
+		addYearAgnosticMidnightAdjustment(totalStatsPipeline, params.startDate, params.endDate, tz);
+	} else if (!params.yearAgnostic && (totalStartBoundary || totalEndBoundary)) {
+		// Regular clipping: use specific date boundaries
+		addMidnightRecordDurationAdjustment(totalStatsPipeline, totalStartBoundary, totalEndBoundary);
+	}
+
+	// Add group stage to calculate count and duration
+	totalStatsPipeline.push({
+		$group: {
+			_id: null,
+			count: { $sum: 1 },
+			duration: {
+				$sum: {
+					$reduce: {
+						input: "$tasks",
+						initialValue: 0,
+						in: { $add: ["$$value", "$$this.duration"] }
 					}
 				}
 			}
-		]
+		}
+	});
+
+	// Build facet stages based on skipTodayStats
+	const facetStages: Record<string, PipelineStage[]> = {
+		totalStats: totalStatsPipeline
 	};
 
 	if (!skipTodayStats) {
-		facetStages.todayStats = [
-			{ $match: todayFocusQuery },
-			{
-				$group: {
-					_id: null,
-					count: { $sum: 1 },
-					duration: {
-						$sum: {
-							$reduce: {
-								input: "$tasks",
-								initialValue: 0,
-								in: { $add: ["$$value", "$$this.duration"] }
-							}
+		// Build pipeline for today's stats with midnight crossing adjustment
+		const todayStatsPipeline: PipelineStage[] = [
+			{ $match: todayFocusQuery }
+		];
+
+		// Always add midnight crossing adjustment for today
+		addMidnightRecordDurationAdjustment(todayStatsPipeline, todayStartBoundary, todayEndBoundary);
+
+		// Add group stage to calculate count and duration
+		todayStatsPipeline.push({
+			$group: {
+				_id: null,
+				count: { $sum: 1 },
+				duration: {
+					$sum: {
+						$reduce: {
+							input: "$tasks",
+							initialValue: 0,
+							in: { $add: ["$$value", "$$this.duration"] }
 						}
 					}
 				}
 			}
-		];
+		});
+
+		facetStages.todayStats = todayStatsPipeline;
 	}
 
 	// Run focus queries in parallel using $facet
@@ -364,7 +399,7 @@ export async function getOverviewStats(params: OverviewStatsQueryParams, userId:
 	// Build promises array for parallel execution
 	const promises: Promise<unknown>[] = [
 		getTaskStats(userId, params, todayDateString, skipTodayStats),
-		getFocusStats(userId, params, todayDateString, skipTodayStats),
+		getFocusStats(userId, params, todayDateString, skipTodayStats, tz),
 		getProjectStats(userId, params),
 		getActiveDays(userId, tz)
 	];

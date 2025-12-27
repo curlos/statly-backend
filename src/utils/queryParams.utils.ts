@@ -21,6 +21,7 @@ export interface BaseQueryParams {
 	timezone: string;
 	crossesMidnight?: boolean; // Filter for focus records that cross midnight
 	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes')
+	yearAgnostic?: boolean; // Year-agnostic date filtering (filter by month and day only)
 }
 
 export interface MedalsQueryParams extends BaseQueryParams {
@@ -84,6 +85,9 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 	// Parse general query param
 	const general: string[] = req.query['general'] ? (req.query['general'] as string).split(',').filter(Boolean) : [];
 
+	// Parse yearAgnostic query param
+	const yearAgnostic = req.query['year-agnostic'] === 'true';
+
 	return {
 		projectIds,
 		taskId: req.query['task-id'] as string,
@@ -99,6 +103,7 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 		timezone: (req.query.timezone as string) || 'UTC',
 		crossesMidnight,
 		general,
+		yearAgnostic,
 	};
 }
 

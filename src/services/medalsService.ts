@@ -345,7 +345,8 @@ export async function getFocusHoursMedals(params: MedalsQueryParams, userId: Typ
 		null,
 		params.emotions,
 		params.timezone,
-		params.general
+		params.general,
+		params.yearAgnostic
 	);
 
 	// Build aggregation pipeline

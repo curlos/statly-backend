@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import FocusRecord from '../models/FocusRecord';
 import Project from '../models/ProjectModel';
-import { addAncestorAndCompletedTasks, addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
+import { addAncestorAndCompletedTasks, addMidnightRecordDurationAdjustment, addYearAgnosticMidnightAdjustment } from '../utils/focus.utils';
 import {
 	buildFocusSearchFilter,
 	buildFocusMatchAndFilterConditions,
@@ -10,6 +10,7 @@ import {
 } from '../utils/focusFilterBuilders.utils';
 import { PipelineStage } from 'mongoose';
 import { MongooseFilter } from '../types/aggregation';
+import { calculateEffectiveDateBoundaries } from '../utils/timezone.utils';
 
 // Service-specific types
 interface EmotionCountItem {
@@ -95,7 +96,11 @@ async function executeQuery(
 	startDateBoundary: Date | null = null,
 	endDateBoundary: Date | null = null,
 	needEmotionCalculations: boolean = true,
-	needNoteStats: boolean = false
+	needNoteStats: boolean = false,
+	yearAgnostic: boolean = false,
+	startDate?: string,
+	endDate?: string,
+	timezone: string = 'UTC'
 ) {
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
 
@@ -103,7 +108,11 @@ async function executeQuery(
 	const basePipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
 
 	// Add stage to adjust durations for records that cross midnight beyond date boundaries
-	if (startDateBoundary || endDateBoundary) {
+	if (yearAgnostic && startDate && endDate) {
+		// Year-agnostic clipping: apply month/day from sidebar dates to each record's own year
+		addYearAgnosticMidnightAdjustment(basePipeline, startDate, endDate, timezone);
+	} else if (!yearAgnostic && (startDateBoundary || endDateBoundary)) {
+		// Regular clipping: use specific date boundaries
 		addMidnightRecordDurationAdjustment(basePipeline, startDateBoundary, endDateBoundary);
 	}
 
@@ -353,6 +362,7 @@ export interface FocusRecordsQueryParams {
 	showEmotionCount?: boolean; // User setting to show emotion counts
 	showNoteStats?: boolean; // User setting to show note statistics
 	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes')
+	yearAgnostic?: boolean; // Year-agnostic date filtering (filter by month and day only)
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams, userId: Types.ObjectId) {
@@ -375,20 +385,12 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 		params.intervalEndDate,
 		params.emotions,
 		params.timezone,
-		params.general
+		params.general,
+		params.yearAgnostic
 	);
 
 	// Calculate the date boundaries for duration adjustment
-	// Use interval dates if provided (second tier), otherwise use filter sidebar dates (first tier)
-	const effectiveStartDate = params.intervalStartDate || params.startDate;
-	const effectiveEndDate = params.intervalEndDate || params.endDate;
-
-	const startDateBoundary = effectiveStartDate ? new Date(effectiveStartDate) : null;
-	let endDateBoundary: Date | null = null;
-	if (effectiveEndDate) {
-		endDateBoundary = new Date(effectiveEndDate);
-		endDateBoundary.setDate(endDateBoundary.getDate() + 1);
-	}
+	const { startDateBoundary, endDateBoundary } = calculateEffectiveDateBoundaries(params);
 
 	// Determine if we need emotion calculations based on user settings
 	const needEmotionCalculations = params.showEmotionCount === true;
@@ -407,7 +409,11 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 		startDateBoundary,
 		endDateBoundary,
 		needEmotionCalculations,
-		needNoteStats
+		needNoteStats,
+		params.yearAgnostic || false,
+		params.startDate,
+		params.endDate,
+		params.timezone || 'UTC'
 	);
 
 	// Add ancestor tasks and completed tasks
@@ -453,6 +459,7 @@ export interface ExportFocusRecordsQueryParams {
 	onlyExportTasksWithNoParent: boolean;
 	timezone?: string;
 	general?: string[];
+	yearAgnostic?: boolean; // Year-agnostic date filtering (filter by month and day only)
 }
 
 export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, userId: Types.ObjectId) {
@@ -487,19 +494,12 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 		params.intervalEndDate,
 		params.emotions,
 		params.timezone,
-		params.general
+		params.general,
+		params.yearAgnostic
 	);
 
 	// Calculate date boundaries for duration adjustment
-	const effectiveStartDate = params.intervalStartDate || params.startDate;
-	const effectiveEndDate = params.intervalEndDate || params.endDate;
-
-	const startDateBoundary = effectiveStartDate ? new Date(effectiveStartDate) : null;
-	let endDateBoundary: Date | null = null;
-	if (effectiveEndDate) {
-		endDateBoundary = new Date(effectiveEndDate);
-		endDateBoundary.setDate(endDateBoundary.getDate() + 1);
-	}
+	const { startDateBoundary, endDateBoundary } = calculateEffectiveDateBoundaries(params);
 
 	// Execute query without pagination (get all records)
 	const { focusRecords, total, totalDuration: _totalDuration, onlyTasksTotalDuration, emotionCounts, noteStats } = await executeQuery(
@@ -512,7 +512,11 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 		startDateBoundary,
 		endDateBoundary,
 		true,
-		true
+		true,
+		params.yearAgnostic || false,
+		params.startDate,
+		params.endDate,
+		params.timezone || 'UTC'
 	);
 
 	// Add ancestor tasks and completed tasks

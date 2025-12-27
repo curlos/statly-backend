@@ -7,6 +7,7 @@ import { buildAncestorData } from './task.utils';
 import { getJsonData } from './mongoose.utils';
 import { PipelineStage } from 'mongoose';
 import { SessionRecordRaw, BeFocusedRecordRaw, ForestRecordRaw, TideRecordRaw } from '../types/externalApis';
+import { parseDateInTimezone } from './timezone.utils';
 
 // new Date(2705792451783) = September 28, 2055. This is to make sure all my tasks are fetched properly. I doubt I'll have to worry about this expiring since I'll be long past TickTick and humans coding anything will be a thing of the past by then with GPT-20 out by then.
 const farAwayDateInMs = 2705792451783;
@@ -406,6 +407,183 @@ export function addMidnightRecordDurationAdjustment(pipeline: PipelineStage[], s
 			// This is better than using effectiveStartTime/effectiveEndTime because:
 			// 1. Task durations already account for pauses (pauseDuration is for entire record, not clipped portion)
 			// 2. Tasks may not span the entire clipped time range
+			adjustedDuration: {
+				$cond: {
+					if: { $eq: ["$crossesMidnight", true] },
+					then: {
+						$reduce: {
+							input: "$adjustedTasks",
+							initialValue: 0,
+							in: { $add: ["$$value", "$$this.duration"] }
+						}
+					},
+					else: "$duration"
+				}
+			}
+		}
+	});
+
+	// Replace duration and tasks with adjusted versions
+	pipeline.push({
+		$addFields: {
+			duration: "$adjustedDuration",
+			tasks: "$adjustedTasks"
+		}
+	});
+}
+
+/**
+ * Year-agnostic midnight crossing adjustment
+ * Clips records based on month-day boundaries using each record's own year
+ *
+ * For example, with December filter (month=12, startDay=1, endDay=31):
+ * - Record from Dec 31, 2021 11pm → Jan 5, 2022 clips to Dec 31, 2021 end-of-day
+ * - Record from Dec 31, 2024 11pm → Jan 5, 2025 clips to Dec 31, 2024 end-of-day
+ *
+ * @param pipeline - The aggregation pipeline to modify
+ * @param startMonth - Start month (1-12)
+ * @param startDay - Start day of month (1-31)
+ * @param endMonth - End month (1-12)
+ * @param endDay - End day of month (1-31)
+ * @param timezone - IANA timezone string
+ */
+export function addYearAgnosticMidnightAdjustment(
+	pipeline: PipelineStage[],
+	startDate: string,
+	endDate: string,
+	timezone: string
+) {
+	// Parse dates to extract month/day components
+	const startParsed = parseDateInTimezone(startDate, timezone);
+	const endParsed = parseDateInTimezone(endDate, timezone);
+	const startMonth = startParsed.getUTCMonth() + 1; // getUTCMonth is 0-indexed
+	const startDay = startParsed.getUTCDate();
+	const endMonth = endParsed.getUTCMonth() + 1;
+	const endDay = endParsed.getUTCDate();
+
+	// Determine if the range crosses year boundary (e.g., Dec 25 → Jan 5)
+	const queryFilterCrossesYearBoundary = startMonth > endMonth || (startMonth === endMonth && startDay > endDay);
+
+	pipeline.push({
+		$addFields: {
+			adjustedTasks: {
+				$cond: {
+					if: { $eq: ["$crossesMidnight", true] },
+					then: {
+						$map: {
+							input: "$tasks",
+							as: "task",
+							in: {
+								$mergeObjects: [
+									"$$task",
+									{
+										duration: {
+											$let: {
+												vars: {
+													// Extract task's year, month, day from its start time
+													taskStartYear: { $year: { date: "$$task.startTime", timezone } },
+													taskStartMonth: { $month: { date: "$$task.startTime", timezone } },
+													taskStartDay: { $dayOfMonth: { date: "$$task.startTime", timezone } },
+													taskEndYear: { $year: { date: "$$task.endTime", timezone } },
+													taskEndMonth: { $month: { date: "$$task.endTime", timezone } },
+													taskEndDay: { $dayOfMonth: { date: "$$task.endTime", timezone } },
+												},
+												in: {
+													$let: {
+														vars: {
+															// Detect if task wraps around year boundary in year-agnostic terms
+															// This happens when task month > query month (e.g., Dec > Jan means task is from "previous year")
+															taskWrapsYearBoundary: { $gt: ["$$taskStartMonth", startMonth] }
+														},
+														in: {
+															$let: {
+																vars: {
+																	// Calculate clip boundaries
+																	// If task wraps year boundary, query occurs in next year
+																	clipStartYear: {
+																		$cond: {
+																			if: "$$taskWrapsYearBoundary",
+																			then: { $add: ["$$taskStartYear", 1] },  // Next year
+																			else: "$$taskStartYear"                   // Same year
+																		}
+																	},
+																	clipEndYear: {
+																		$cond: {
+																			if: {
+																				$or: ["$$taskWrapsYearBoundary", queryFilterCrossesYearBoundary]
+																			},
+																			then: { $add: ["$$taskStartYear", 1] },  // Next year if task wraps OR query crosses year
+																			else: "$$taskStartYear"                   // Same year
+																		}
+																	}
+																},
+																in: {
+																	$let: {
+																		vars: {
+																			// Construct actual Date boundaries
+																			clipStart: {
+																				$dateFromParts: {
+																					year: "$$clipStartYear",
+																					month: startMonth,
+																					day: startDay,
+																					timezone
+																				}
+																			},
+																			clipEnd: {
+																				$dateFromParts: {
+																					year: "$$clipEndYear",
+																					month: endMonth,
+																					day: endDay,
+																					hour: 23,
+																					minute: 59,
+																					second: 59,
+																					timezone
+																				}
+																			}
+																		},
+																in: {
+																	$let: {
+																		vars: {
+																			// Clip task times to boundaries
+																			effectiveStart: { $max: ["$$task.startTime", "$$clipStart"] },
+																			effectiveEnd: { $min: ["$$task.endTime", "$$clipEnd"] }
+																		},
+																		in: {
+																			// Only count duration if task overlaps with the month-day range
+																			$cond: {
+																				if: { $gte: ["$$effectiveEnd", "$$effectiveStart"] },
+																				then: {
+																					$divide: [
+																						{ $subtract: ["$$effectiveEnd", "$$effectiveStart"] },
+																						1000
+																					]
+																				},
+																				else: 0
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						]
+					}
+				}
+			},
+			else: "$tasks"
+				}
+			}
+		}
+	});
+
+	pipeline.push({
+		$addFields: {
 			adjustedDuration: {
 				$cond: {
 					if: { $eq: ["$crossesMidnight", true] },

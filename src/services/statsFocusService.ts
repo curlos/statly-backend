@@ -58,6 +58,7 @@ export interface FocusRecordsStatsQueryParams {
 	nested?: boolean; // If true, include ancestorTasksById for nested display
 	emotions?: string[]; // Emotions filter (anger, joy, sadness, etc.)
 	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes')
+	yearAgnostic?: boolean; // Year-agnostic date filtering (filter by month and day only)
 }
 
 export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams, userId: Types.ObjectId) {

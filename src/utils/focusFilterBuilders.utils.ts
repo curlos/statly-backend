@@ -1,5 +1,5 @@
-import { parseDateInTimezone } from './timezone.utils';
-import { addMidnightRecordDurationAdjustment } from './focus.utils';
+import { calculateEffectiveDateBoundaries, parseDateInTimezone } from './timezone.utils';
+import { addMidnightRecordDurationAdjustment, addYearAgnosticMidnightAdjustment } from './focus.utils';
 import { Types, PipelineStage } from 'mongoose';
 import { MongooseFilter } from '../types/aggregation';
 
@@ -35,6 +35,117 @@ export function buildFocusSearchFilter(searchQuery?: string) {
 }
 
 // ============================================================================
+// Focus Records - Month-Day Filter (Year-Agnostic)
+// ============================================================================
+
+/**
+ * Builds MongoDB filter conditions for month-day range filtering (year-agnostic).
+ * Handles both same-year ranges (e.g., Mar 15 - May 20) and cross-year ranges (e.g., Dec 25 - Jan 5).
+ *
+ * @param startDate - Start date string (e.g., "December 25, 2024")
+ * @param endDate - End date string (e.g., "January 5, 2025")
+ * @param timezone - IANA timezone string
+ * @param fieldPrefix - Field to filter on ('startTime' or 'endTime')
+ * @returns MongoDB filter condition using $expr
+ */
+function buildMonthDayFilter(
+	startDate: string | undefined,
+	endDate: string | undefined,
+	timezone: string,
+	fieldPrefix: 'startTime' | 'endTime'
+): MongooseFilter | null {
+	if (!startDate && !endDate) {
+		return null;
+	}
+
+	const tz = timezone || 'UTC';
+
+	// Parse dates to extract month and day
+	const parseMonthDay = (dateString: string) => {
+		const date = new Date(dateString + ' 00:00:00 UTC');
+		return {
+			month: date.getUTCMonth() + 1,  // 1 through 12
+			day: date.getUTCDate()           // 1 through 31
+		};
+	};
+
+	// Parse start and end dates once (only if present)
+	const start = startDate ? parseMonthDay(startDate) : null;
+	const end = endDate ? parseMonthDay(endDate) : null;
+
+	// Helper to build "on or after" month-day condition
+	const buildOnOrAfterCondition = (month: number, day: number) => {
+		return {
+			$or: [
+				{ $gt: [{ $month: { date: `$${fieldPrefix}`, timezone: tz } }, month] },
+				{
+					$and: [
+						{ $eq: [{ $month: { date: `$${fieldPrefix}`, timezone: tz } }, month] },
+						{ $gte: [{ $dayOfMonth: { date: `$${fieldPrefix}`, timezone: tz } }, day] }
+					]
+				}
+			]
+		};
+	};
+
+	// Helper to build "on or before" month-day condition
+	const buildOnOrBeforeCondition = (month: number, day: number) => {
+		return {
+			$or: [
+				{ $lt: [{ $month: { date: `$${fieldPrefix}`, timezone: tz } }, month] },
+				{
+					$and: [
+						{ $eq: [{ $month: { date: `$${fieldPrefix}`, timezone: tz } }, month] },
+						{ $lte: [{ $dayOfMonth: { date: `$${fieldPrefix}`, timezone: tz } }, day] }
+					]
+				}
+			]
+		};
+	};
+
+	if (start && end) {
+
+		// Check if range crosses year boundary (e.g., Dec 25 to Jan 5)
+		const crossesYear = start.month > end.month ||
+			(start.month === end.month && start.day > end.day);
+
+		if (crossesYear) {
+			// Range crosses year boundary: Dec 25-31 OR Jan 1-5
+			return {
+				$expr: {
+					$or: [
+						buildOnOrAfterCondition(start.month, start.day),
+						buildOnOrBeforeCondition(end.month, end.day)
+					]
+				}
+			};
+		} else {
+			// Normal range within calendar year: month-day >= start AND month-day <= end
+			return {
+				$expr: {
+					$and: [
+						buildOnOrAfterCondition(start.month, start.day),
+						buildOnOrBeforeCondition(end.month, end.day)
+					]
+				}
+			};
+		}
+	} else if (start) {
+		// Only start date specified: month-day >= start
+		return {
+			$expr: buildOnOrAfterCondition(start.month, start.day)
+		};
+	} else if (end) {
+		// Only end date specified: month-day <= end
+		return {
+			$expr: buildOnOrBeforeCondition(end.month, end.day)
+		};
+	}
+
+	return null;
+}
+
+// ============================================================================
 // Focus Records - Match and Filter Conditions
 // ============================================================================
 
@@ -51,7 +162,8 @@ export function buildFocusMatchAndFilterConditions(
 	intervalEndDate?: string | null,
 	emotions?: string[],
 	timezone?: string,
-	general?: string[]
+	general?: string[],
+	yearAgnostic?: boolean
 ) {
 	// Validate userId is provided - critical for data isolation
 	if (!userId) {
@@ -74,40 +186,57 @@ export function buildFocusMatchAndFilterConditions(
 	// This ensures records that cross midnight are included on both days
 	if (startDate || endDate) {
 		const tz = timezone || 'UTC';
-		const startBoundary = startDate ? parseDateInTimezone(startDate, tz) : null;
-		let endBoundary = null;
-		if (endDate) {
-			// Parse the end date, then add 1 day to the date string BEFORE parsing
-			// This ensures DST transitions are handled correctly
-			const endDateObj = new Date(endDate + ' 00:00:00 UTC');
-			endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
-			const nextDayFormatted = endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-			endBoundary = parseDateInTimezone(nextDayFormatted, tz);
-		}
 
-		// Build $or condition: record is included if it starts OR ends within the range
-		const dateConditions = [];
+		if (yearAgnostic) {
+			// Year-agnostic filtering: Match records where EITHER startTime OR endTime falls within month-day range
+			const startTimeFilter = buildMonthDayFilter(startDate, endDate, tz, 'startTime');
+			const endTimeFilter = buildMonthDayFilter(startDate, endDate, tz, 'endTime');
 
-		if (startBoundary && endBoundary) {
-			// Both start and end date specified
-			dateConditions.push({
-				startTime: { $gte: startBoundary, $lt: endBoundary }
-			});
-			dateConditions.push({
-				endTime: { $gt: startBoundary, $lte: endBoundary }
-			});
-		} else if (startBoundary) {
-			// Only start date specified
-			dateConditions.push({ startTime: { $gte: startBoundary } });
-			dateConditions.push({ endTime: { $gt: startBoundary } });
-		} else if (endBoundary) {
-			// Only end date specified
-			dateConditions.push({ startTime: { $lt: endBoundary } });
-			dateConditions.push({ endTime: { $lte: endBoundary } });
-		}
+			if (startTimeFilter && endTimeFilter) {
+				andedOrConditions.push({
+					$or: [
+						startTimeFilter,
+						endTimeFilter
+					]
+				});
+			}
+		} else {
+			// Regular year-specific filtering (existing logic)
+			const startBoundary = startDate ? parseDateInTimezone(startDate, tz) : null;
+			let endBoundary = null;
+			if (endDate) {
+				// Parse the end date, then add 1 day to the date string BEFORE parsing
+				// This ensures DST transitions are handled correctly
+				const endDateObj = new Date(endDate + ' 00:00:00 UTC');
+				endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
+				const nextDayFormatted = endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+				endBoundary = parseDateInTimezone(nextDayFormatted, tz);
+			}
 
-		if (dateConditions.length > 0) {
-			andedOrConditions.push({ $or: dateConditions });
+			// Build $or condition: record is included if it starts OR ends within the range
+			const dateConditions = [];
+
+			if (startBoundary && endBoundary) {
+				// Both start and end date specified
+				dateConditions.push({
+					startTime: { $gte: startBoundary, $lt: endBoundary }
+				});
+				dateConditions.push({
+					endTime: { $gt: startBoundary, $lte: endBoundary }
+				});
+			} else if (startBoundary) {
+				// Only start date specified
+				dateConditions.push({ startTime: { $gte: startBoundary } });
+				dateConditions.push({ endTime: { $gt: startBoundary } });
+			} else if (endBoundary) {
+				// Only end date specified
+				dateConditions.push({ startTime: { $lt: endBoundary } });
+				dateConditions.push({ endTime: { $lte: endBoundary } });
+			}
+
+			if (dateConditions.length > 0) {
+				andedOrConditions.push({ $or: dateConditions });
+			}
 		}
 	}
 
@@ -538,6 +667,7 @@ export interface BuildFocusFilterPipelineParams {
 	emotions?: string[];
 	timezone: string;
 	general?: string[];
+	yearAgnostic?: boolean;
 }
 
 /**
@@ -568,27 +698,26 @@ export function buildFocusFilterPipeline(params: BuildFocusFilterPipelineParams)
 		params.intervalEndDate,
 		params.emotions,
 		params.timezone,
-		params.general
+		params.general,
+		params.yearAgnostic
 	);
 
 	// Calculate the date boundaries for duration adjustment
 	// Use interval dates if provided (second tier), otherwise use filter sidebar dates (first tier)
 	const effectiveStartDate = params.intervalStartDate || params.startDate;
 	const effectiveEndDate = params.intervalEndDate || params.endDate;
-
 	const tz = params.timezone || 'UTC';
-	const startDateBoundary = effectiveStartDate ? parseDateInTimezone(effectiveStartDate, tz) : null;
-	let endDateBoundary: Date | null = null;
-	if (effectiveEndDate) {
-		endDateBoundary = parseDateInTimezone(effectiveEndDate, tz);
-		endDateBoundary.setUTCDate(endDateBoundary.getUTCDate() + 1);
-	}
+	const { startDateBoundary, endDateBoundary } = calculateEffectiveDateBoundaries(params);
 
 	// Build base pipeline with shared filters
 	const basePipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
 
 	// Add duration adjustment for midnight crossing
-	if (startDateBoundary || endDateBoundary) {
+	if (params.yearAgnostic && params.startDate && params.endDate) {
+		// Year-agnostic clipping: use month/day from sidebar dates, apply to each record's own year
+		addYearAgnosticMidnightAdjustment(basePipeline, params.startDate, params.endDate, tz);
+	} else if (!params.yearAgnostic && (startDateBoundary || endDateBoundary)) {
+		// Regular clipping: use specific date boundaries
 		addMidnightRecordDurationAdjustment(basePipeline, startDateBoundary, endDateBoundary);
 	}
 

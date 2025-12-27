@@ -56,3 +56,37 @@ export function crossesMidnightInTimezone(
 		return startDate.toDateString() !== endDate.toDateString();
 	}
 }
+
+/**
+ * Calculates effective date boundaries for filtering.
+ * Uses interval dates as second tier (higher priority), otherwise falls back to sidebar dates (first tier).
+ * Automatically adds 1 day to end boundary to make it inclusive.
+ *
+ * @param params - Object containing date parameters
+ * @param params.intervalStartDate - Optional interval start date (second tier)
+ * @param params.intervalEndDate - Optional interval end date (second tier)
+ * @param params.startDate - Optional sidebar start date (first tier)
+ * @param params.endDate - Optional sidebar end date (first tier)
+ * @param params.timezone - IANA timezone string
+ * @returns Object with startDateBoundary and endDateBoundary (both Date | null)
+ */
+export function calculateEffectiveDateBoundaries(params: {
+	intervalStartDate?: string | null;
+	intervalEndDate?: string | null;
+	startDate?: string | null;
+	endDate?: string | null;
+	timezone?: string | null;
+}): { startDateBoundary: Date | null; endDateBoundary: Date | null } {
+	const effectiveStartDate = params.intervalStartDate || params.startDate;
+	const effectiveEndDate = params.intervalEndDate || params.endDate;
+	const tz = params.timezone || 'UTC';
+
+	const startDateBoundary = effectiveStartDate ? parseDateInTimezone(effectiveStartDate, tz) : null;
+	let endDateBoundary: Date | null = null;
+	if (effectiveEndDate) {
+		endDateBoundary = parseDateInTimezone(effectiveEndDate, tz);
+		endDateBoundary.setUTCDate(endDateBoundary.getUTCDate() + 1);
+	}
+
+	return { startDateBoundary, endDateBoundary };
+}
