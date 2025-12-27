@@ -196,7 +196,8 @@ export async function getCompletedTasksChallenges(params: ChallengesQueryParams,
 		'completedTime',
 		undefined,
 		undefined,
-		params.timezone
+		params.timezone,
+		params.yearAgnostic
 	);
 
 	// Build aggregation pipeline

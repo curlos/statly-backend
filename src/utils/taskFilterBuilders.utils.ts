@@ -34,6 +34,109 @@ export function buildTaskSearchFilter(searchQuery?: string) {
 // ============================================================================
 
 /**
+ * Helper function to build month-day filter for year-agnostic filtering
+ * Filters tasks based on month and day only, ignoring the year
+ * @param startDate - Start date string (e.g., "January 15, 2024")
+ * @param endDate - End date string (e.g., "March 20, 2024")
+ * @param timezone - IANA timezone string
+ * @returns MongoDB $expr filter or null if no dates provided
+ */
+function buildMonthDayFilter(
+	startDate: string | undefined,
+	endDate: string | undefined,
+	timezone?: string
+): MongooseFilter | null {
+	if (!startDate && !endDate) {
+		return null;
+	}
+
+	const tz = timezone || 'UTC';
+
+	// Parse dates to extract month and day
+	const parseMonthDay = (dateString: string) => {
+		const date = new Date(dateString + ' 00:00:00 UTC');
+		return {
+			month: date.getUTCMonth() + 1,  // 1 through 12
+			day: date.getUTCDate()           // 1 through 31
+		};
+	};
+
+	// Parse start and end dates once (only if present)
+	const start = startDate ? parseMonthDay(startDate) : null;
+	const end = endDate ? parseMonthDay(endDate) : null;
+
+	// Helper to build "on or after" month-day condition
+	const buildOnOrAfterCondition = (month: number, day: number) => {
+		return {
+			$or: [
+				{ $gt: [{ $month: { date: '$completedTime', timezone: tz } }, month] },
+				{
+					$and: [
+						{ $eq: [{ $month: { date: '$completedTime', timezone: tz } }, month] },
+						{ $gte: [{ $dayOfMonth: { date: '$completedTime', timezone: tz } }, day] }
+					]
+				}
+			]
+		};
+	};
+
+	// Helper to build "on or before" month-day condition
+	const buildOnOrBeforeCondition = (month: number, day: number) => {
+		return {
+			$or: [
+				{ $lt: [{ $month: { date: '$completedTime', timezone: tz } }, month] },
+				{
+					$and: [
+						{ $eq: [{ $month: { date: '$completedTime', timezone: tz } }, month] },
+						{ $lte: [{ $dayOfMonth: { date: '$completedTime', timezone: tz } }, day] }
+					]
+				}
+			]
+		};
+	};
+
+	if (start && end) {
+		// Check if range crosses year boundary (e.g., Dec 25 to Jan 5)
+		const crossesYear = start.month > end.month ||
+			(start.month === end.month && start.day > end.day);
+
+		if (crossesYear) {
+			// Range crosses year boundary: Dec 25-31 OR Jan 1-5
+			return {
+				$expr: {
+					$or: [
+						buildOnOrAfterCondition(start.month, start.day),
+						buildOnOrBeforeCondition(end.month, end.day)
+					]
+				}
+			};
+		} else {
+			// Normal range within calendar year: month-day >= start AND month-day <= end
+			return {
+				$expr: {
+					$and: [
+						buildOnOrAfterCondition(start.month, start.day),
+						buildOnOrBeforeCondition(end.month, end.day)
+					]
+				}
+			};
+		}
+	} else if (start) {
+		// Only start date specified: month-day >= start
+		return {
+			$expr: buildOnOrAfterCondition(start.month, start.day)
+		};
+	} else if (end) {
+		// Only end date specified: month-day <= end
+		return {
+			$expr: buildOnOrBeforeCondition(end.month, end.day)
+		};
+	}
+
+	return null;
+}
+
+/**
  * Helper function to build date range filter conditions
  * @param startDate - Start date string (optional)
  * @param endDate - End date string (optional)
@@ -77,7 +180,8 @@ export function buildTaskMatchConditions(
 	timeField: 'completedTime' | 'createdTime' = 'completedTime',
 	intervalStartDate?: string,
 	intervalEndDate?: string,
-	timezone?: string
+	timezone?: string,
+	yearAgnostic?: boolean
 ) {
 	// Validate userId is provided - critical for data isolation
 	if (!userId) {
@@ -100,25 +204,42 @@ export function buildTaskMatchConditions(
 
 		const dateConditions: Array<Record<string, unknown>> = [];
 
-		// Add first tier date range filter (Filter Sidebar)
-		const firstTierFilter = buildDateRangeFilter(startDate, endDate, timezone);
-		if (firstTierFilter) {
-			dateConditions.push({ completedTime: firstTierFilter });
-		}
+		if (yearAgnostic) {
+			// Year-agnostic filtering: use month-day matching
+			const firstTierFilter = buildMonthDayFilter(startDate, endDate, timezone);
+			if (firstTierFilter) {
+				dateConditions.push(firstTierFilter);
+			}
 
-		// Add second tier date range filter (Interval Dropdown)
-		const secondTierFilter = buildDateRangeFilter(intervalStartDate, intervalEndDate, timezone);
-		if (secondTierFilter) {
-			dateConditions.push({ completedTime: secondTierFilter });
+			const secondTierFilter = buildMonthDayFilter(intervalStartDate, intervalEndDate, timezone);
+			if (secondTierFilter) {
+				dateConditions.push(secondTierFilter);
+			}
+		} else {
+			// Regular year-specific filtering
+			const firstTierFilter = buildDateRangeFilter(startDate, endDate, timezone);
+			if (firstTierFilter) {
+				dateConditions.push({ completedTime: firstTierFilter });
+			}
+
+			const secondTierFilter = buildDateRangeFilter(intervalStartDate, intervalEndDate, timezone);
+			if (secondTierFilter) {
+				dateConditions.push({ completedTime: secondTierFilter });
+			}
 		}
 
 		// Apply date filters
 		if (dateConditions.length === 1) {
-			// Only one tier provided, apply directly
-			matchFilter.completedTime = {
-				...(matchFilter.completedTime as Record<string, unknown>),
-				...(dateConditions[0].completedTime as Record<string, unknown>)
-			};
+			if (yearAgnostic) {
+				// $expr can't be merged with regular field filters, must use $and
+				matchFilter.$and = [dateConditions[0]];
+			} else {
+				// Regular filter can be merged into completedTime
+				matchFilter.completedTime = {
+					...(matchFilter.completedTime as Record<string, unknown>),
+					...(dateConditions[0].completedTime as Record<string, unknown>)
+				};
+			}
 		} else if (dateConditions.length === 2) {
 			// Both tiers provided, use $and to ensure both are satisfied
 			matchFilter.$and = dateConditions;

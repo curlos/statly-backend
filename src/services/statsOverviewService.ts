@@ -55,7 +55,8 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 		'createdTime',
 		undefined,
 		undefined,
-		params.timezone
+		params.timezone,
+		undefined // yearAgnostic not applicable for createdTime
 	);
 
 	// Build filter for completed tasks
@@ -70,7 +71,8 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 		'completedTime',
 		undefined,
 		undefined,
-		params.timezone
+		params.timezone,
+		params.yearAgnostic
 	);
 
 	// Build filter for today's completed tasks
@@ -85,7 +87,8 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 		'completedTime',
 		undefined,
 		undefined,
-		params.timezone
+		params.timezone,
+		false // yearAgnostic=false for today's stats (specific date)
 	);
 
 	// Apply search filters

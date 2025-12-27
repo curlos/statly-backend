@@ -89,7 +89,8 @@ async function executeCompletedTasksAggregation(
 		'completedTime',
 		params.intervalStartDate,
 		params.intervalEndDate,
-		params.timezone
+		params.timezone,
+		params.yearAgnostic
 	);
 
 	// Build base filtering pipeline (shared by all queries)

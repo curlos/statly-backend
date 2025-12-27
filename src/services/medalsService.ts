@@ -398,7 +398,8 @@ export async function getCompletedTasksMedals(params: MedalsQueryParams, userId:
 		'completedTime',
 		undefined,
 		undefined,
-		params.timezone
+		params.timezone,
+		params.yearAgnostic
 	);
 
 	// Build aggregation pipeline

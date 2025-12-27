@@ -68,6 +68,7 @@ export interface CompletedTasksStatsQueryParams {
 	searchQuery?: string;
 	toDoListAppSources: string[];
 	timezone: string;
+	yearAgnostic?: boolean; // If true, filter by month-day only (ignore year)
 	groupBy: string; // 'day' | 'week' | 'month' | 'year' | 'project' | 'task'
 	nested?: boolean; // If true, include ancestorTasksById for nested display
 }
@@ -86,7 +87,8 @@ export async function getCompletedTasksStats(params: CompletedTasksStatsQueryPar
 		'completedTime',
 		params.intervalStartDate,
 		params.intervalEndDate,
-		params.timezone
+		params.timezone,
+		params.yearAgnostic
 	);
 
 	// Build base pipeline with filters

@@ -127,6 +127,7 @@ export async function getStatsTasksHandler(req: CustomRequest, res: Response) {
 				searchQuery: baseParams.searchQuery,
 				toDoListAppSources: baseParams.toDoListAppSources,
 				timezone: baseParams.timezone,
+				yearAgnostic: baseParams.yearAgnostic,
 				groupBy,
 				nested
 			},

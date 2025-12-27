@@ -761,6 +761,21 @@ export const DEFAULT_YEARLY_COMPLETED_TASKS_MEDALS = [
 		interval: 'yearly',
 	},
 	{
+		name: 'Complete 400 Tasks',
+		requiredCompletedTasks: 400,
+		interval: 'yearly',
+	},
+	{
+		name: 'Complete 300 Tasks',
+		requiredCompletedTasks: 300,
+		interval: 'yearly',
+	},
+	{
+		name: 'Complete 200 Tasks',
+		requiredCompletedTasks: 200,
+		interval: 'yearly',
+	},
+	{
 		name: 'Complete 100 Tasks',
 		requiredCompletedTasks: 100,
 		interval: 'yearly',
