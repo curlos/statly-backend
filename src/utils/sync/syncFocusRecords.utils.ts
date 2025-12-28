@@ -145,7 +145,7 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 					...task,
 					duration,
 					// If the task has no projectId, it must be an empty task or an older task like the "Full Stack Open" focus tasks from 2020.
-					projectId: taskData?.projectId || 'inbox116577688',
+					projectId: taskData?.projectId || userSettings?.tickTickInboxProjectId || '',
 					ancestorIds: taskData?.ancestorIds || []
 				};
 			});

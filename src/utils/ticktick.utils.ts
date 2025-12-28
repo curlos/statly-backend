@@ -117,8 +117,10 @@ export async function fetchAllTickTickProjects(cookie: string) {
 		})
 	);
 
+	const inboxId = batchCheckResponse.data.inboxId;
+
 	const projects = batchCheckResponse.data.projectProfiles || [];
-	return projects;
+	return { projects, inboxId };
 }
 
 export async function fetchAllTickTickProjectGroups(cookie: string) {

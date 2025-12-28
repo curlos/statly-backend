@@ -5,6 +5,7 @@ import { fetchSessionFocusRecordsWithNoBreaks } from "../focus.utils";
 import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { getAllTodoistProjects } from "../task.utils";
 import { fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from "../ticktick.utils";
+import UserSettings from "../../models/UserSettingsModel";
 
 export async function syncTickTickProjects(userId: Types.ObjectId) {
 	// Get or create sync metadata for projects
@@ -14,7 +15,7 @@ export async function syncTickTickProjects(userId: Types.ObjectId) {
 	const cookie = await getTickTickCookie(userId);
 
 	const lastSyncTime = syncMetadata.lastSyncTime;
-	const tickTickProjects = await fetchAllTickTickProjects(cookie);
+	const { projects: tickTickProjects, inboxId } = await fetchAllTickTickProjects(cookie);
 
 	const bulkOps = [];
 
@@ -39,6 +40,15 @@ export async function syncTickTickProjects(userId: Types.ObjectId) {
 
 	// Execute all operations in a single bulkWrite
 	const result = await ProjectTickTick.bulkWrite(bulkOps);
+
+	// Update inboxId in user settings if it has changed
+	if (inboxId) {
+		await UserSettings.findOneAndUpdate(
+			{ userId },
+			{ tickTickInboxProjectId: inboxId },
+			{ new: true }
+		);
+	}
 
 	// Update sync metadata with current time
 	syncMetadata.lastSyncTime = new Date();

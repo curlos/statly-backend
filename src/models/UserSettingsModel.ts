@@ -9,6 +9,7 @@ export interface IUserSettings extends Document {
 		fontFamily?: string;
 	};
 	tickTickCookie?: string;
+	tickTickInboxProjectId?: string;
 	autoSyncEnabled?: boolean;
 	pages?: {
 		focusRecords?: {
@@ -110,6 +111,7 @@ const UserSettingsSchema = new Schema(
 			fontFamily: { type: String, default: 'Default' }
 		},
 		tickTickCookie: { type: String, default: '' },
+		tickTickInboxProjectId: { type: String, default: '' },
 		autoSyncEnabled: { type: Boolean, default: false },
 		pages: {
 			focusRecords: {
