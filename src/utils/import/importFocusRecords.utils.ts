@@ -71,9 +71,9 @@ export async function importFocusRecords(records: ImportableFocusRecordDocument[
 
         const source = record.source;
         if (recordsBySource[source]) {
-            // Remove _id to allow MongoDB to generate new unique IDs for each user
-            const { _id, ...recordWithoutMongoDbId } = record;
-            recordsBySource[source].push({ ...recordWithoutMongoDbId, userId });
+            // Remove _id and old userId, then add the current user's userId
+            const { _id, userId: _oldUserId, ...recordWithoutIds } = record;
+            recordsBySource[source].push({ ...recordWithoutIds, userId });
         } else {
             errors.push(`Focus record ${record.id}: Unknown source ${source}`);
         }

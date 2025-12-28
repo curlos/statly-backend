@@ -4,6 +4,7 @@ import { applyUserIdEnforcement } from '../utils/schema.utils';
 // TypeScript Interface
 export interface ICustomImage extends Document {
 	userId: Types.ObjectId;
+	source: string;
 	imageUrl: string;
 	cloudinaryPublicId: string;
 	folder: string;
@@ -20,6 +21,7 @@ const CustomImageSchema = new Schema({
 		required: true,
 		index: true
 	},
+	source: { type: String, default: 'CustomImage', required: true, immutable: true },
 	imageUrl: {
 		type: String,
 		required: true,

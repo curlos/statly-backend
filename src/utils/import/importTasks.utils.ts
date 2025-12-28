@@ -52,9 +52,9 @@ export async function importTasks(tasks: ImportableTaskDocument[], userId: Types
 
 		const source = task.source;
 		if (tasksBySource[source]) {
-			// Remove _id to allow MongoDB to generate new unique IDs for each user
-			const { _id, ...taskWithoutMongoDbId } = task;
-			tasksBySource[source].push({ ...taskWithoutMongoDbId, userId });
+			// Remove _id and old userId, then add the current user's userId
+			const { _id, userId: _oldUserId, ...taskWithoutIds } = task;
+			tasksBySource[source].push({ ...taskWithoutIds, userId });
 		} else {
 			errors.push(`Task ${task.id}: Unknown source ${source}`);
 		}

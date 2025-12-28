@@ -7,12 +7,18 @@ import { importFocusRecords } from '../utils/import/importFocusRecords.utils';
 import { importProjectGroups } from '../utils/import/importProjectGroups.utils';
 import { importProjects } from '../utils/import/importProjects.utils';
 import { importTasks } from '../utils/import/importTasks.utils';
+import { importUserSettings } from '../utils/import/importUserSettings.utils';
+import { importCustomImages } from '../utils/import/importCustomImages.utils';
+import { importCustomImageFolders } from '../utils/import/importCustomImageFolders.utils';
 import { IFocusRecord } from '../models/FocusRecord';
 import { ITask } from '../models/TaskModel';
 import { IProject } from '../models/ProjectModel';
 import { IProjectGroup } from '../models/ProjectGroupModel';
+import { IUserSettings } from '../models/UserSettingsModel';
+import { ICustomImage } from '../models/CustomImageModel';
+import { ICustomImageFolder } from '../models/CustomImageFolderModel';
 
-type ImportableDocument = IFocusRecord | ITask | IProject | IProjectGroup;
+type ImportableDocument = IFocusRecord | ITask | IProject | IProjectGroup | IUserSettings | ICustomImage | ICustomImageFolder;
 
 const router = express.Router();
 
@@ -74,6 +80,9 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 		const tasks: ITask[] = [];
 		const projects: IProject[] = [];
 		const projectGroups: IProjectGroup[] = [];
+		const userSettings: IUserSettings[] = [];
+		const customImages: ICustomImage[] = [];
+		const customImageFolders: ICustomImageFolder[] = [];
 
 		documents.forEach((doc, index) => {
 			try {
@@ -94,6 +103,15 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 					case 'projectGroup':
 						projectGroups.push(doc as IProjectGroup);
 						break;
+					case 'userSettings':
+						userSettings.push(doc as IUserSettings);
+						break;
+					case 'customImage':
+						customImages.push(doc as ICustomImage);
+						break;
+					case 'customImageFolder':
+						customImageFolders.push(doc as ICustomImageFolder);
+						break;
 					default:
 						parseErrors.push(`Document at index ${index}: Unknown source type: ${(doc as { source?: string }).source || 'missing'}`);
 				}
@@ -103,11 +121,14 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 		});
 
 		// Import each category in parallel
-		const [focusRecordsResult, tasksResult, projectsResult, projectGroupsResult] = await Promise.all([
+		const [focusRecordsResult, tasksResult, projectsResult, projectGroupsResult, userSettingsResult, customImagesResult, customImageFoldersResult] = await Promise.all([
 			importFocusRecords(focusRecords, userId),
 			importTasks(tasks, userId),
 			importProjects(projects, userId),
 			importProjectGroups(projectGroups, userId),
+			importUserSettings(userSettings, userId),
+			importCustomImages(customImages, userId),
+			importCustomImageFolders(customImageFolders, userId),
 		]);
 
 		// Combine results
@@ -116,6 +137,9 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 			tasks: tasksResult,
 			projects: projectsResult,
 			projectGroups: projectGroupsResult,
+			userSettings: userSettingsResult,
+			customImages: customImagesResult,
+			customImageFolders: customImageFoldersResult,
 		};
 
 		// Calculate totals
@@ -123,22 +147,32 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 			focusRecordsResult.created +
 			tasksResult.created +
 			projectsResult.created +
-			projectGroupsResult.created;
+			projectGroupsResult.created +
+			userSettingsResult.created +
+			customImagesResult.created +
+			customImageFoldersResult.created;
 
 		const totalModified =
 			focusRecordsResult.modified +
 			tasksResult.modified +
 			projectsResult.modified +
-			projectGroupsResult.modified;
+			projectGroupsResult.modified +
+			userSettingsResult.modified +
+			customImagesResult.modified +
+			customImageFoldersResult.modified;
 
 		const totalMatched =
 			focusRecordsResult.matched +
 			tasksResult.matched +
 			projectsResult.matched +
-			projectGroupsResult.matched;
+			projectGroupsResult.matched +
+			userSettingsResult.matched +
+			customImagesResult.matched +
+			customImageFoldersResult.matched;
 
 		const totalFailed =
-			focusRecordsResult.failed + tasksResult.failed + projectsResult.failed + projectGroupsResult.failed;
+			focusRecordsResult.failed + tasksResult.failed + projectsResult.failed + projectGroupsResult.failed +
+			userSettingsResult.failed + customImagesResult.failed + customImageFoldersResult.failed;
 
 		// Combine all errors
 		const allErrors = [
@@ -147,6 +181,9 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 			...tasksResult.errors,
 			...projectsResult.errors,
 			...projectGroupsResult.errors,
+			...userSettingsResult.errors,
+			...customImagesResult.errors,
+			...customImageFoldersResult.errors,
 		];
 
 		res.status(200).json({

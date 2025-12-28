@@ -48,9 +48,9 @@ export async function importProjects(projects: ImportableProjectDocument[], user
 
         const source = project.source;
         if (projectsBySource[source]) {
-            // Remove _id to allow MongoDB to generate new unique IDs for each user
-            const { _id, ...projectWithoutMongoDbId } = project;
-            projectsBySource[source].push({ ...projectWithoutMongoDbId, userId });
+            // Remove _id and old userId, then add the current user's userId
+            const { _id, userId: _oldUserId, ...projectWithoutIds } = project;
+            projectsBySource[source].push({ ...projectWithoutIds, userId });
         } else {
             errors.push(`Project ${project.id}: Unknown source ${source}`);
         }

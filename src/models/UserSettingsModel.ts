@@ -1,7 +1,9 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 import { applyUserIdEnforcement } from '../utils/schema.utils';
 
 export interface IUserSettings extends Document {
+	userId: Types.ObjectId;
+	source?: string;
 	theme?: {
 		color?: string;
 		fontFamily?: string;
@@ -102,6 +104,7 @@ export interface IUserSettings extends Document {
 const UserSettingsSchema = new Schema(
 	{
 		userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+		source: { type: String, default: 'UserSettings', required: true, immutable: true },
 		theme: {
 			color: { type: String, default: 'blue-500' },
 			fontFamily: { type: String, default: 'Default' }

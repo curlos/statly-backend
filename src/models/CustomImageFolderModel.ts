@@ -4,6 +4,7 @@ import { applyUserIdEnforcement } from '../utils/schema.utils';
 // TypeScript Interface
 export interface ICustomImageFolder extends Document {
 	userId: Types.ObjectId;
+	source: string;
 	name: string;
 	sortOrder: number;
 	createdAt: Date;
@@ -18,6 +19,7 @@ const CustomImageFolderSchema = new Schema({
 		required: true,
 		index: true
 	},
+	source: { type: String, default: 'CustomImageFolder', required: true, immutable: true },
 	name: {
 		type: String,
 		required: true,

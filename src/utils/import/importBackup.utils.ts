@@ -11,9 +11,12 @@ export interface ImportResult {
 	tasks: ImportCategoryResult;
 	projects: ImportCategoryResult;
 	projectGroups: ImportCategoryResult;
+	userSettings: ImportCategoryResult;
+	customImages: ImportCategoryResult;
+	customImageFolders: ImportCategoryResult;
 }
 
-type DocumentType = 'focusRecord' | 'task' | 'project' | 'projectGroup' | 'unknown';
+type DocumentType = 'focusRecord' | 'task' | 'project' | 'projectGroup' | 'userSettings' | 'customImage' | 'customImageFolder' | 'unknown';
 
 // O(1) lookup map for document type detection - declared outside function for efficiency
 const SOURCE_TYPE_MAP: Record<string, DocumentType> = {
@@ -32,6 +35,12 @@ const SOURCE_TYPE_MAP: Record<string, DocumentType> = {
 	ProjectSession: 'project',
 	// Project Group sources
 	ProjectGroupTickTick: 'projectGroup',
+	// User Settings sources
+	UserSettings: 'userSettings',
+	// Custom Image sources
+	CustomImage: 'customImage',
+	// Custom Image Folder sources
+	CustomImageFolder: 'customImageFolder',
 };
 
 /**

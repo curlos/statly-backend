@@ -36,13 +36,13 @@ export async function importProjectGroups(projectGroups: ImportableProjectGroupD
 			continue;
 		}
 
-		// Remove _id to allow MongoDB to generate new unique IDs for each user
-		const { _id, ...groupWithoutMongoDbId } = group;
+		// Remove _id and old userId, then add the current user's userId
+		const { _id, userId: _oldUserId, ...groupWithoutIds } = group;
 
 		bulkOps.push({
 			updateOne: {
-				filter: { id: groupWithoutMongoDbId.id, userId },
-				update: { $set: { ...groupWithoutMongoDbId, userId } },
+				filter: { id: groupWithoutIds.id, userId },
+				update: { $set: { ...groupWithoutIds, userId } },
 				upsert: true,
 			},
 		});
