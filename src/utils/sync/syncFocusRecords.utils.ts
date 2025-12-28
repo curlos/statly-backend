@@ -8,6 +8,7 @@ import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { analyzeNoteEmotionsCore } from "../../controllers/sentimentBatchController";
 import UserSettings from "../../models/UserSettingsModel";
 import { TickTickFocusRecordRaw, BeFocusedRecordRaw, ForestRecordRaw, TideRecordRaw, SessionRecordRaw } from "../../types/externalApis";
+import { fetchAllTickTickProjects } from "../ticktick.utils";
 
 // Helper types for sync operations
 type TickTickTask = NonNullable<TickTickFocusRecordRaw['tasks']>[number];
@@ -64,6 +65,14 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 
 	// Get user settings for emotion analysis feature
 	const userSettings = await UserSettings.findOne({ userId });
+
+	// Get inboxId - fetch from TickTick if not in user settings
+	let inboxId = userSettings?.tickTickInboxProjectId || '';
+
+	if (!inboxId) {
+		const { inboxId: fetchedInboxId } = await fetchAllTickTickProjects(cookie);
+		inboxId = fetchedInboxId || '';
+	}
 
 	const lastSyncTime = syncMetadata.lastSyncTime;
 	const focusRecords = await fetchTickTickFocusRecords(cookie, userId);
@@ -145,7 +154,7 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 					...task,
 					duration,
 					// If the task has no projectId, it must be an empty task or an older task like the "Full Stack Open" focus tasks from 2020.
-					projectId: taskData?.projectId || userSettings?.tickTickInboxProjectId || '',
+					projectId: taskData?.projectId || inboxId,
 					ancestorIds: taskData?.ancestorIds || []
 				};
 			});
