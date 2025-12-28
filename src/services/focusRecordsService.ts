@@ -357,11 +357,10 @@ export interface FocusRecordsQueryParams {
 	searchQuery?: string;
 	focusAppSources: string[]; // Mapped focus app sources
 	emotions: string[]; // Emotions filter
-	crossesMidnight?: boolean;
 	timezone?: string;
 	showEmotionCount?: boolean; // User setting to show emotion counts
 	showNoteStats?: boolean; // User setting to show note statistics
-	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes')
+	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes', 'crosses-midnight')
 	yearAgnostic?: boolean; // Year-agnostic date filtering (filter by month and day only)
 }
 
@@ -380,7 +379,6 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.focusAppSources,
-		params.crossesMidnight,
 		params.intervalStartDate,
 		params.intervalEndDate,
 		params.emotions,
@@ -454,11 +452,10 @@ export interface ExportFocusRecordsQueryParams {
 	searchQuery?: string;
 	focusAppSources: string[];
 	emotions: string[];
-	crossesMidnight?: boolean;
 	groupBy: 'none' | 'project' | 'task' | 'emotion';
 	onlyExportTasksWithNoParent: boolean;
 	timezone?: string;
-	general?: string[];
+	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes', 'crosses-midnight')
 	yearAgnostic?: boolean; // Year-agnostic date filtering (filter by month and day only)
 }
 
@@ -489,7 +486,6 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.focusAppSources,
-		params.crossesMidnight,
 		params.intervalStartDate,
 		params.intervalEndDate,
 		params.emotions,

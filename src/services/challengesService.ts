@@ -128,7 +128,6 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams, use
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.focusAppSources,
-		params.crossesMidnight,
 		null,
 		null,
 		params.emotions,

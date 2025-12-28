@@ -19,8 +19,7 @@ export interface BaseQueryParams {
 	toDoListAppSources: string[]; // Mapped to-do list app sources
 	emotions: string[]; // Emotions filter (anger, joy, sadness, etc.)
 	timezone: string;
-	crossesMidnight?: boolean; // Filter for focus records that cross midnight
-	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes')
+	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes', 'crosses-midnight')
 	yearAgnostic?: boolean; // Year-agnostic date filtering (filter by month and day only)
 }
 
@@ -78,10 +77,6 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 	// Parse emotions query param
 	const emotions: string[] = req.query['emotions'] ? (req.query['emotions'] as string).split(',') : [];
 
-	// Parse crossesMidnight query param
-	const crossesMidnightParam = req.query['crosses-midnight'] as string;
-	const crossesMidnight = crossesMidnightParam === 'true' ? true : crossesMidnightParam === 'false' ? false : undefined;
-
 	// Parse general query param
 	const general: string[] = req.query['general'] ? (req.query['general'] as string).split(',').filter(Boolean) : [];
 
@@ -101,7 +96,6 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 		toDoListAppSources,
 		emotions,
 		timezone: (req.query.timezone as string) || 'UTC',
-		crossesMidnight,
 		general,
 		yearAgnostic,
 	};

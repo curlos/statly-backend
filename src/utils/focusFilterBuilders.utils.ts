@@ -157,7 +157,6 @@ export function buildFocusMatchAndFilterConditions(
 	endDate: string | undefined,
 	taskIdIncludeFocusRecordsFromSubtasks: boolean,
 	appSources: string[],
-	crossesMidnight?: boolean,
 	intervalStartDate?: string | null,
 	intervalEndDate?: string | null,
 	emotions?: string[],
@@ -358,8 +357,9 @@ export function buildFocusMatchAndFilterConditions(
 	}
 	// If neither is selected, no filter is applied
 
-	// Add crossesMidnight filter (only when explicitly true)
-	if (crossesMidnight === true) {
+	// Add crossesMidnight filter (only when selected in general filters)
+	const showOnlyCrossesMidnight = general?.includes('crosses-midnight') ?? false;
+	if (showOnlyCrossesMidnight) {
 		focusRecordMatchConditions.crossesMidnight = true;
 	}
 
@@ -661,7 +661,6 @@ export interface BuildFocusFilterPipelineParams {
 	endDate?: string;
 	taskIdIncludeFocusRecordsFromSubtasks?: boolean;
 	focusAppSources?: string[];
-	crossesMidnight?: boolean;
 	intervalStartDate?: string | null;
 	intervalEndDate?: string | null;
 	emotions?: string[];
@@ -693,7 +692,6 @@ export function buildFocusFilterPipeline(params: BuildFocusFilterPipelineParams)
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks || false,
 		params.focusAppSources || [],
-		params.crossesMidnight,
 		params.intervalStartDate,
 		params.intervalEndDate,
 		params.emotions,

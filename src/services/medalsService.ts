@@ -340,7 +340,6 @@ export async function getFocusHoursMedals(params: MedalsQueryParams, userId: Typ
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.focusAppSources,
-		params.crossesMidnight,
 		null,
 		null,
 		params.emotions,

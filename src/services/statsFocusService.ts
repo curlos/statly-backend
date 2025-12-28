@@ -53,11 +53,10 @@ export interface FocusRecordsStatsQueryParams {
 	focusAppSources: string[];
 	toDoListAppSources: string[];
 	timezone: string;
-	crossesMidnight?: boolean;
 	groupBy: string; // 'day' | 'project' | 'task' | 'hour' | 'timeline'
 	nested?: boolean; // If true, include ancestorTasksById for nested display
 	emotions?: string[]; // Emotions filter (anger, joy, sadness, etc.)
-	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes')
+	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes', 'crosses-midnight')
 	yearAgnostic?: boolean; // Year-agnostic date filtering (filter by month and day only)
 }
 
