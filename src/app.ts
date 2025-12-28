@@ -25,8 +25,9 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:5173', // local frontend site
+  process.env.MOBILE_ORIGIN, // mobile testing (iPhone/iPad) - set in .env
   'https://statly-pi.vercel.app' // deployed frontend site
-];
+].filter(Boolean); // Remove undefined/empty values
 
 // ✅ Dynamically allow based on origin
 app.use(
