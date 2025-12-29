@@ -18,7 +18,7 @@ export async function fetchActiveAndCompletedTasksFromTickTick(projectIds: strin
 		),
 		// Completed tasks
 		axios.get(
-			`https://api.ticktick.com/api/v2/project/${projectId}/completed/?from=&to=${dayAfterTodayStr}%2016:59:12&limit=9999`,
+			`https://api.ticktick.com/api/v2/project/${projectId}/completed/?from=&to=${dayAfterTodayStr}%2016:59:12&limit=9999999`,
 			{
 				headers: {
 					Cookie: cookie,
@@ -58,7 +58,7 @@ export async function fetchAllTickTickTasks(cookie: string, options?: {
 				},
 			}),
 			axios.get(
-				`https://api.ticktick.com/api/v2/project/all/completedInAll/?from=&to=${dayAfterTodayStr}%2010:50:58&limit=20000&=`,
+				`https://api.ticktick.com/api/v2/project/all/completedInAll/?from=&to=${dayAfterTodayStr}%2010:50:58&limit=9999999`,
 				{
 					headers: {
 						Cookie: cookie,
@@ -66,7 +66,7 @@ export async function fetchAllTickTickTasks(cookie: string, options?: {
 				}
 			),
 			axios.get(
-				`https://api.ticktick.com/api/v2/project/all/closed/?from=&to=${dayAfterTodayStr}%2010:50:58&limit=20000&=&status=Abandoned`,
+				`https://api.ticktick.com/api/v2/project/all/closed/?from=&to=${dayAfterTodayStr}%2010:50:58&limit=9999999&status=Abandoned`,
 				{
 					headers: {
 						Cookie: cookie,
