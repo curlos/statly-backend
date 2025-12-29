@@ -28,6 +28,7 @@ export interface IUserSettings extends Document {
 			showFocusRecordEmotions?: boolean;
 			showEmotionCount?: boolean;
 			showNoteStats?: boolean;
+			showTotalNumberOfFocusRecords?: boolean;
 			analyzeNoteEmotionsWhileSyncingFocusRecords?: boolean;
 			customDisplay?: {
 				useBackgroundImage?: boolean;
@@ -128,6 +129,7 @@ const UserSettingsSchema = new Schema(
 				showFocusRecordEmotions: { type: Boolean, default: false },
 				showEmotionCount: { type: Boolean, default: false },
 				showNoteStats: { type: Boolean, default: false },
+				showTotalNumberOfFocusRecords: { type: Boolean, default: true },
 				analyzeNoteEmotionsWhileSyncingFocusRecords: { type: Boolean, default: false },
 				customDisplay: {
 					useBackgroundImage: { type: Boolean, default: false },
