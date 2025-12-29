@@ -3,6 +3,7 @@ import { CustomRequest } from '../interfaces/CustomRequest';
 import FocusRecord from '../models/FocusRecord';
 import axios, { AxiosError } from 'axios';
 import mongoose, { Types } from 'mongoose';
+import { executeBatchedBulkWrite } from '../utils/bulkWrite.utils';
 
 interface EmotionResult {
 	emotion: string;
@@ -123,9 +124,7 @@ export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types
 
 	if (bulkOperations.length > 0) {
 		try {
-			// Cast to unknown to bypass Mongoose's overly strict DocumentArray typing
-			// At runtime, Mongoose accepts plain arrays and converts them properly
-			const bulkResult = await FocusRecord.bulkWrite(bulkOperations as unknown as Parameters<typeof FocusRecord.bulkWrite>[0]);
+			const bulkResult = await executeBatchedBulkWrite(bulkOperations, FocusRecord);
 			analyzedCount = bulkResult.modifiedCount;
 		} catch (error) {
 			console.error('Failed to bulk update records:', error);

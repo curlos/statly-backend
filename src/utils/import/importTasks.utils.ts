@@ -2,6 +2,7 @@ import { Types, Model } from 'mongoose';
 import { TaskTickTick, TaskTodoist } from "../../models/TaskModel";
 import type { ImportCategoryResult } from "./importBackup.utils";
 import { ImportableTaskDocument } from '../../types/import';
+import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 /**
  * Validates a task document against required fields
@@ -85,7 +86,7 @@ export async function importTasks(tasks: ImportableTaskDocument[], userId: Types
 
 		try {
 			const model = modelMap[source];
-			const result = await model.bulkWrite(bulkOps);
+			const result = await executeBatchedBulkWrite(bulkOps, model);
 			totalCreated += result.upsertedCount;
 			totalModified += result.modifiedCount;
 			totalMatched += result.matchedCount - result.modifiedCount;

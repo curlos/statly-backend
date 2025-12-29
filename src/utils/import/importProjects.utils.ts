@@ -2,6 +2,7 @@ import { Types, Model } from 'mongoose';
 import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/ProjectModel";
 import type { ImportCategoryResult } from "./importBackup.utils";
 import { ImportableProjectDocument } from '../../types/import';
+import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 /**
  * Validates a project document against required fields
@@ -82,7 +83,7 @@ export async function importProjects(projects: ImportableProjectDocument[], user
 
         try {
             const model = modelMap[source];
-            const result = await model.bulkWrite(bulkOps);
+            const result = await executeBatchedBulkWrite(bulkOps, model);
             totalCreated += result.upsertedCount;
             totalModified += result.modifiedCount;
             totalMatched += result.matchedCount - result.modifiedCount;

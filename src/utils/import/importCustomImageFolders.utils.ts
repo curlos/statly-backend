@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import CustomImageFolder from '../../models/CustomImageFolderModel';
 import type { ImportCategoryResult } from './importBackup.utils';
 import { ImportableCustomImageFolderDocument } from '../../types/import';
+import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 /**
  * Validates a custom image folder document against required fields
@@ -86,7 +87,7 @@ export async function importCustomImageFolders(
 	}));
 
 	try {
-		const result = await CustomImageFolder.bulkWrite(bulkOps);
+		const result = await executeBatchedBulkWrite(bulkOps, CustomImageFolder);
 
 		return {
 			created: result.upsertedCount,

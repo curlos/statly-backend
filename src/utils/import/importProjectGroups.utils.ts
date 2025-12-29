@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import ProjectGroupTickTick from "../../models/ProjectGroupModel";
 import type { ImportCategoryResult } from "./importBackup.utils";
 import { ImportableProjectGroupDocument } from '../../types/import';
+import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 /**
  * Validates a project group document against required fields
@@ -54,7 +55,7 @@ export async function importProjectGroups(projectGroups: ImportableProjectGroupD
 
 	if (bulkOps.length > 0) {
 		try {
-			const result = await ProjectGroupTickTick.bulkWrite(bulkOps);
+			const result = await executeBatchedBulkWrite(bulkOps, ProjectGroupTickTick);
 			created = result.upsertedCount;
 			modified = result.modifiedCount;
 			matched = result.matchedCount - result.modifiedCount;

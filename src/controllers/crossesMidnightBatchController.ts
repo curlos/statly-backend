@@ -3,6 +3,7 @@ import { CustomRequest } from '../interfaces/CustomRequest';
 import FocusRecord from '../models/FocusRecord';
 import mongoose, { Types } from 'mongoose';
 import { crossesMidnightInTimezone } from '../utils/timezone.utils';
+import { executeBatchedBulkWrite } from '../utils/bulkWrite.utils';
 
 interface RevalidationResult {
 	updated: number;
@@ -87,7 +88,7 @@ export async function revalidateCrossesMidnightCore(
 	// Execute bulk operations if there are any changes
 	if (bulkOperations.length > 0) {
 		try {
-			const bulkResult = await FocusRecord.bulkWrite(bulkOperations);
+			const bulkResult = await executeBatchedBulkWrite(bulkOperations, FocusRecord);
 			updatedCount = bulkResult.modifiedCount;
 		} catch (error) {
 			console.error('Failed to bulk update records:', error);

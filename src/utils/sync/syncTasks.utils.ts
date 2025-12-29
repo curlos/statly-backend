@@ -5,6 +5,7 @@ import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { fetchAllTickTickTasks } from "../ticktick.utils";
 import { getAllTodoistTasks } from "../task.utils";
 import { TickTickTaskRaw } from "../../types/externalApis";
+import { executeBatchedBulkWrite } from "../bulkWrite.utils";
 
 export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 	archivedProjectIds?: string[];
@@ -176,8 +177,7 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 		}
 	}
 
-	// Execute all operations in a single bulkWrite
-	const result = await TaskTickTick.bulkWrite(bulkOps);
+	const result = await executeBatchedBulkWrite(bulkOps, TaskTickTick);
 
 	// Update focus records with modified task data
 	let focusRecordResult = null;
@@ -231,9 +231,8 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 			}
 		}
 
-		// Execute focus record updates if there are any
 		if (focusRecordBulkOps.length > 0) {
-			focusRecordResult = await FocusRecordTickTick.bulkWrite(focusRecordBulkOps);
+			focusRecordResult = await executeBatchedBulkWrite(focusRecordBulkOps, FocusRecordTickTick);
 		}
 	}
 
@@ -336,8 +335,7 @@ export async function syncTodoistTasks(userId: Types.ObjectId) {
 		});
 	}
 
-	// Execute all operations in a single bulkWrite
-	const result = await TaskTodoist.bulkWrite(bulkOps);
+	const result = await executeBatchedBulkWrite(bulkOps, TaskTodoist);
 
 	// Update sync metadata with current time
 	syncMetadata.lastSyncTime = new Date();

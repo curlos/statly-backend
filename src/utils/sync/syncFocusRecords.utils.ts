@@ -9,6 +9,7 @@ import { analyzeNoteEmotionsCore } from "../../controllers/sentimentBatchControl
 import UserSettings from "../../models/UserSettingsModel";
 import { TickTickFocusRecordRaw, BeFocusedRecordRaw, ForestRecordRaw, TideRecordRaw, SessionRecordRaw } from "../../types/externalApis";
 import { fetchAllTickTickProjects } from "../ticktick.utils";
+import { executeBatchedBulkWrite } from "../bulkWrite.utils";
 
 // Helper types for sync operations
 type TickTickTask = NonNullable<TickTickFocusRecordRaw['tasks']>[number];
@@ -211,12 +212,7 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 		}
 	}
 
-	// Execute all operations in a single bulkWrite
-	const result = bulkOps.length > 0 ? await FocusRecordTickTick.bulkWrite(bulkOps) : {
-		upsertedCount: 0,
-		modifiedCount: 0,
-		matchedCount: 0,
-	};
+	const result = await executeBatchedBulkWrite(bulkOps, FocusRecordTickTick);
 
 	// Update sync metadata with current time
 	syncMetadata.lastSyncTime = new Date();
@@ -321,7 +317,7 @@ export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone
 		}
 	}));
 
-	const result = await FocusRecordBeFocused.bulkWrite(bulkOps);
+	const result = await executeBatchedBulkWrite(bulkOps, FocusRecordBeFocused);
 
 	// Update sync metadata
 	syncMetadata.lastSyncTime = new Date();
@@ -401,7 +397,7 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 		}
 	}));
 
-	const result = await FocusRecordForest.bulkWrite(bulkOps);
+	const result = await executeBatchedBulkWrite(bulkOps, FocusRecordForest);
 
 	// Update sync metadata
 	syncMetadata.lastSyncTime = new Date();
@@ -491,7 +487,8 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 		}
 	}));
 
-	const result = await FocusRecordTide.bulkWrite(bulkOps);
+	// Execute operations in batched bulkWrite to avoid 16MB BSON limit
+	const result = await executeBatchedBulkWrite(bulkOps, FocusRecordTide);
 
 	// Update sync metadata
 	syncMetadata.lastSyncTime = new Date();
@@ -614,7 +611,8 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 		}
 	}));
 
-	const result = await FocusRecordSession.bulkWrite(bulkOps);
+	// Execute operations in batched bulkWrite to avoid 16MB BSON limit
+	const result = await executeBatchedBulkWrite(bulkOps, FocusRecordSession);
 
 	// Update sync metadata
 	syncMetadata.lastSyncTime = new Date();

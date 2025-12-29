@@ -2,6 +2,7 @@ import { Types, Model } from 'mongoose';
 import { FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from "../../models/FocusRecord";
 import { isValidDate, ImportCategoryResult } from "./importBackup.utils";
 import { ImportableFocusRecordDocument } from '../../types/import';
+import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 /**
  * Validates a focus record document against required fields
@@ -107,7 +108,7 @@ export async function importFocusRecords(records: ImportableFocusRecordDocument[
 
         try {
             const model = modelMap[source];
-            const result = await model.bulkWrite(bulkOps);
+            const result = await executeBatchedBulkWrite(bulkOps, model);
             totalCreated += result.upsertedCount;
             totalModified += result.modifiedCount;
             totalMatched += result.matchedCount - result.modifiedCount;

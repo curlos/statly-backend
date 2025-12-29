@@ -6,6 +6,7 @@ import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
 import { getAllTodoistProjects } from "../task.utils";
 import { fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from "../ticktick.utils";
 import UserSettings from "../../models/UserSettingsModel";
+import { executeBatchedBulkWrite } from "../bulkWrite.utils";
 
 export async function syncTickTickProjects(userId: Types.ObjectId) {
 	// Get or create sync metadata for projects
@@ -38,8 +39,7 @@ export async function syncTickTickProjects(userId: Types.ObjectId) {
 		}
 	}
 
-	// Execute all operations in a single bulkWrite
-	const result = await ProjectTickTick.bulkWrite(bulkOps);
+	const result = await executeBatchedBulkWrite(bulkOps, ProjectTickTick);
 
 	// Update inboxId in user settings if it has changed
 	if (inboxId) {
@@ -88,8 +88,7 @@ export async function syncTickTickProjectGroups(userId: Types.ObjectId) {
 		});
 	}
 
-	// Execute all operations in a single bulkWrite
-	const result = await ProjectGroupTickTick.bulkWrite(bulkOps);
+	const result = await executeBatchedBulkWrite(bulkOps, ProjectGroupTickTick);
 
 	// Update sync metadata with current time
 	syncMetadata.lastSyncTime = new Date();
@@ -148,8 +147,7 @@ export async function syncTodoistProjects(userId: Types.ObjectId) {
 		});
 	}
 
-	// Execute all operations in a single bulkWrite
-	const result = await ProjectTodoist.bulkWrite(bulkOps);
+	const result = await executeBatchedBulkWrite(bulkOps, ProjectTodoist);
 
 	// Update sync metadata with current time
 	syncMetadata.lastSyncTime = new Date();
@@ -217,10 +215,7 @@ export async function syncSessionProjects(userId: Types.ObjectId) {
 		});
 	}
 
-	// Execute all operations in a single bulkWrite
-	const result = bulkOps.length > 0
-		? await ProjectSession.bulkWrite(bulkOps)
-		: { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
+	const result = await executeBatchedBulkWrite(bulkOps, ProjectSession);
 
 	// Update sync metadata with current time
 	syncMetadata.lastSyncTime = new Date();
