@@ -19,7 +19,6 @@ export interface IUserSettings extends Document {
 			showTaskAncestors?: boolean;
 			showTaskProjectName?: boolean;
 			taskIdIncludeFocusRecordsFromSubtasks?: boolean;
-			filterOutUnrelatedTasksWhenTaskIdIsApplied?: boolean;
 			maxFocusRecordsPerPage?: number;
 			onlyExportTasksWithNoParent?: boolean;
 			showMedals?: boolean;
@@ -42,7 +41,6 @@ export interface IUserSettings extends Document {
 		};
 		completedTasks?: {
 			taskIdIncludeCompletedTasksFromSubtasks?: boolean;
-			filterOutUnrelatedTasksWhenTaskIdIsApplied?: boolean;
 			groupedTasksCollapsedByDefault?: boolean;
 			showIndentedTasks?: boolean;
 			onlyExportTasksWithNoParent?: boolean;
@@ -121,7 +119,6 @@ const UserSettingsSchema = new Schema(
 				showTaskAncestors: { type: Boolean, default: true },
 				showTaskProjectName: { type: Boolean, default: true },
 				taskIdIncludeFocusRecordsFromSubtasks: { type: Boolean, default: true },
-				filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
 				maxFocusRecordsPerPage: { type: Number, default: 25 },
 				onlyExportTasksWithNoParent: { type: Boolean, default: true },
 				showMedals: { type: Boolean, default: false },
@@ -144,7 +141,6 @@ const UserSettingsSchema = new Schema(
 			},
 			completedTasks: {
 				taskIdIncludeCompletedTasksFromSubtasks: { type: Boolean, default: true },
-				filterOutUnrelatedTasksWhenTaskIdIsApplied: { type: Boolean, default: true },
 				groupedTasksCollapsedByDefault: { type: Boolean, default: true },
 				showIndentedTasks: { type: Boolean, default: true },
 				onlyExportTasksWithNoParent: { type: Boolean, default: true },
