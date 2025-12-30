@@ -95,8 +95,6 @@ export interface IUserSettings extends Document {
 				focus?: string;
 				tasks?: string;
 			};
-			defaultMedalInterval?: string;
-			customMedalStartDate?: string;
 		};
 	};
 }
@@ -112,6 +110,8 @@ const UserSettingsSchema = new Schema(
 		tickTickCookie: { type: String, default: '' },
 		tickTickInboxProjectId: { type: String, default: '' },
 		autoSyncEnabled: { type: Boolean, default: false },
+		defaultDateRangeInterval: { type: String, default: "All" },
+		defaultCustomStartDate: { type: String, default: "" },
 		pages: {
 			focusRecords: {
 				showFocusNotes: { type: Boolean, default: true },
@@ -205,9 +205,7 @@ const UserSettingsSchema = new Schema(
 				selectedMedalCardImage: {
 					focus: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007663/Statly/battlefield-1-medals/weapons/28_5HFD732.webp" },
 					tasks: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007766/Statly/battlefield-1-medals/combat/56_91AMzBS.webp" },
-				},
-				defaultMedalInterval: { type: String, default: "All" },
-				customMedalStartDate: { type: String, default: "" }
+				}
 			}
 		},
 	},
