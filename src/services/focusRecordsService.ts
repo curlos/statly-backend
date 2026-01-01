@@ -68,9 +68,9 @@ function buildSortCriteria(sortBy: string): { [key: string]: 1 | -1 } {
 	switch (sortBy) {
 		case 'Oldest':
 			return { startTime: 1 };
-		case 'Focus Hours: Most-Least':
+		case 'Focus Time: Most-Least':
 			return { duration: -1 };
-		case 'Focus Hours: Least-Most':
+		case 'Focus Time: Least-Most':
 			return { duration: 1 };
 		case 'Emotional Intensity: High-Low':
 			return { firstEmotionScore: -1 };
