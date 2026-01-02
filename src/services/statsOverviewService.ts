@@ -33,6 +33,10 @@ export interface OverviewStats {
 	firstFocusRecordDate?: string | null;
 }
 
+export interface SourceCountsResponse {
+	[source: string]: number;
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -431,4 +435,35 @@ export async function getOverviewStats(params: OverviewStatsQueryParams, userId:
 	}
 
 	return overviewStats;
+}
+
+/**
+ * Get counts of focus records and tasks by source
+ * Fast query using existing compound index { userId: 1, source: 1 }
+ */
+export async function getSourceCounts(userId: Types.ObjectId): Promise<SourceCountsResponse> {
+	// Run parallel aggregations for FocusRecord and Task
+	const [focusResults, taskResults] = await Promise.all([
+		FocusRecordTickTick.aggregate([
+			{ $match: { userId } },
+			{ $group: { _id: '$source', count: { $sum: 1 } } }
+		]),
+		Task.aggregate([
+			{ $match: { userId } },
+			{ $group: { _id: '$source', count: { $sum: 1 } } }
+		])
+	]);
+
+	// Merge results into single object
+	const sourceCounts: SourceCountsResponse = {};
+
+	focusResults.forEach(item => {
+		sourceCounts[item._id] = item.count;
+	});
+
+	taskResults.forEach(item => {
+		sourceCounts[item._id] = item.count;
+	});
+
+	return sourceCounts;
 }

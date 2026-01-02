@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { CustomRequest } from '../interfaces/CustomRequest';
-import { getOverviewStats } from '../services/statsOverviewService';
+import { getOverviewStats, getSourceCounts } from '../services/statsOverviewService';
 import { getFocusRecordsStats } from '../services/statsFocusService';
 import { getCompletedTasksStats } from '../services/statsTaskService';
 import { parseBaseQueryParams } from '../utils/queryParams.utils';
@@ -139,6 +139,21 @@ export async function getStatsTasksHandler(req: CustomRequest, res: Response) {
 	} catch (error) {
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching completed tasks stats.',
+		});
+	}
+}
+
+/**
+ * GET /stats/source-counts - Fetch counts by source for focus records and tasks
+ */
+export async function getSourceCountsHandler(req: CustomRequest, res: Response) {
+	try {
+		const userId = req.user!.userId;
+		const result = await getSourceCounts(userId);
+		res.status(200).json(result);
+	} catch (error) {
+		res.status(500).json({
+			message: error instanceof Error ? error.message : 'An error occurred fetching source counts.',
 		});
 	}
 }
