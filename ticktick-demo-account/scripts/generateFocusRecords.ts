@@ -233,14 +233,12 @@ function escapeCSVField(value: string): string {
 // ============================================================================
 
 /**
- * Generate focus records from JSON input
+ * Generate focus records from project data
  */
-function generateFocusRecords(inputPath: string): {
+function generateFocusRecords(projectData: ProjectData): {
   output: FocusRecordsOutput;
   completionTimes: CompletionTimeMap;
 } {
-  const content = fs.readFileSync(inputPath, 'utf-8');
-  const projectData: ProjectData = JSON.parse(content);
 
   const focusRecords: FocusRecord[] = [];
   const completionTimes: CompletionTimeMap = {};
@@ -442,14 +440,14 @@ const args = process.argv.slice(2);
 
 if (args.length < 3) {
   console.error(
-    '\nUsage: npm run generate-focus-records <input-json> <output-json> <csv-file> [csv-output]'
+    '\nUsage: npm run generate-focus-records <input-js> <output-json> <csv-file> [csv-output]'
   );
   console.error('\nExample:');
   console.error(
-    '  npm run generate-focus-records focusRecordsAndCompletedTasks.json focus-records.json TickTick-backup.csv'
+    '  npm run generate-focus-records focusRecordsAndCompletedTasks.js focus-records.json TickTick-backup.csv'
   );
   console.error(
-    '  npm run generate-focus-records input.json output.json input.csv output.csv\n'
+    '  npm run generate-focus-records input.js output.json input.csv output.csv\n'
   );
   process.exit(1);
 }
@@ -469,30 +467,37 @@ if (!fs.existsSync(csvPath)) {
   process.exit(1);
 }
 
-try {
-  console.log('\n=== Generating Focus Records ===\n');
+(async () => {
+  try {
+    console.log('\n=== Generating Focus Records ===\n');
 
-  // Part 1: Generate focus records
-  const { output, completionTimes } = generateFocusRecords(inputPath);
+    // Import the project data from JS file
+    const fullInputPath = path.resolve(inputPath);
+    const module = await import(fullInputPath);
+    const projectData: ProjectData = module.default;
 
-  // Write focus records to output file
-  const outputDir = path.dirname(outputPath);
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
+    // Part 1: Generate focus records
+    const { output, completionTimes } = generateFocusRecords(projectData);
+
+    // Write focus records to output file
+    const outputDir = path.dirname(outputPath);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    fs.writeFileSync(outputPath, JSON.stringify(output, null, 2), 'utf-8');
+
+    console.log(`✓ Generated ${output.add.length} focus records`);
+    console.log(`✓ Focus records written to: ${outputPath}\n`);
+
+    // Part 2: Update CSV with completed tasks
+    console.log('=== Updating TickTick CSV ===\n');
+    updateTickTickCSV(csvPath, completionTimes, csvOutputPath);
+
+    console.log('=== Done! ===\n');
+  } catch (error) {
+    console.error('\nError:');
+    console.error(error);
+    process.exit(1);
   }
-
-  fs.writeFileSync(outputPath, JSON.stringify(output, null, 2), 'utf-8');
-
-  console.log(`✓ Generated ${output.add.length} focus records`);
-  console.log(`✓ Focus records written to: ${outputPath}\n`);
-
-  // Part 2: Update CSV with completed tasks
-  console.log('=== Updating TickTick CSV ===\n');
-  updateTickTickCSV(csvPath, completionTimes, csvOutputPath);
-
-  console.log('=== Done! ===\n');
-} catch (error) {
-  console.error('\nError:');
-  console.error(error);
-  process.exit(1);
-}
+})();

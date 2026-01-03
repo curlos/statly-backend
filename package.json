@@ -2,6 +2,7 @@
   "name": "statly-backend",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "src/app.ts",
   "scripts": {
     "build": "tsc",
@@ -25,7 +26,7 @@
     "removeOldHabitLogs": "nodemon --exec ts-node src/db/removeOldHabitLogs.ts",
     "generate-focus-records": "ts-node ticktick-demo-account/scripts/generateFocusRecords.ts",
     "update-focus-records-with-ids": "ts-node ticktick-demo-account/scripts/updateFocusRecordsWithTaskIds.ts",
-    "generate-focus-records-and-update-csv-with-completed-times-for-tasks": "npm run generate-focus-records ticktick-demo-account/input/focusRecordsAndCompletedTasks.json ticktick-demo-account/output/focus-records.json ticktick-demo-account/input/TickTick-backup-2026-01-03.csv ticktick-demo-account/output/TickTick-backup-with-completed-times.csv",
+    "generate-focus-records-and-update-csv-with-completed-times-for-tasks": "npm run generate-focus-records ticktick-demo-account/input/focusRecordsAndCompletedTasks.js ticktick-demo-account/output/focus-records.json ticktick-demo-account/input/TickTick-backup-2026-01-03.csv ticktick-demo-account/output/TickTick-backup-with-completed-times.csv",
     "update-focus-records-with-task-ids-from-ticktick-object": "npm run update-focus-records-with-ids ticktick-demo-account/output/focus-records.json ticktick-demo-account/input/completedTaskObjectsFromTickTick.json",
     "vercel-build": "echo hello"
   },
