@@ -10,6 +10,7 @@ interface TaskRecord {
   duration: string;
   taskTitle: string;
   completedTasks: string[];
+  note?: string;
 }
 
 interface ProjectData {
@@ -306,7 +307,7 @@ function generateFocusRecords(projectData: ProjectData): {
             },
           ],
           added: true,
-          note: '',
+          note: taskRecord.note || '',
         };
 
         focusRecords.push(focusRecord);

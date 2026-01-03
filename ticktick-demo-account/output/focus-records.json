@@ -5,10 +5,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-01T10:17:40+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d4b",
+      "id": "6959a38e0458b8af019ac911",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b04",
+          "taskId": "6959a2f28f085c5332f08131",
           "title": "Introduction: Opening Credits + My Story",
           "tags": [],
           "projectName": "Books",
@@ -17,17 +17,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "James Clear shares his personal journey of recovering from a devastating high school baseball injury. He explains how small, daily habits were the key to regaining his strength and eventually achieving academic and athletic success, setting the stage for the 'atomic' philosophy."
     },
     {
       "startTime": "2024-01-01T10:32:40+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-01T10:57:24+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d4c",
+      "id": "6959a38e0458b8af019ac912",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b0c",
+          "taskId": "6959a2f28f085c5332f08139",
           "title": "Chapter 1 – The Surprising Power of Atomic Habits",
           "tags": [],
           "projectName": "Books",
@@ -36,17 +36,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "This chapter introduces the concept of 'marginal gains'—the idea that getting 1% better every day results in huge long-term shifts. Clear argues that habits are the compound interest of self-improvement and that you should focus on systems rather than goals."
     },
     {
       "startTime": "2024-01-01T11:12:24+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-01T11:32:11+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d4d",
+      "id": "6959a38e0458b8af019ac913",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b0d",
+          "taskId": "6959a2f28f085c5332f0813a",
           "title": "Chapter 2 – How Your Habits Shape Your Identity (and Vice Versa)",
           "tags": [],
           "projectName": "Books",
@@ -55,17 +55,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Clear discusses the three levels of behavior change: outcomes, processes, and identity. He argues that the most effective way to change your habits is to focus not on what you want to achieve, but on who you wish to become, as identity-based habits are more sustainable."
     },
     {
       "startTime": "2024-01-01T11:47:11+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-01T12:06:01+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d4e",
+      "id": "6959a38e0458b8af019ac914",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b0e",
+          "taskId": "6959a2f28f085c5332f0813b",
           "title": "Chapter 3 – How to Build Better Habits in 4 Simple Steps",
           "tags": [],
           "projectName": "Books",
@@ -74,17 +74,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Introduces the Four Steps of the Habit Loop: Cue, Craving, Response, and Reward. This framework explains how the brain builds habits and provides the foundation for the Four Laws of Behavior Change that the rest of the book explores."
     },
     {
       "startTime": "2024-01-01T12:21:01+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-01T12:34:11+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d4f",
+      "id": "6959a38e0458b8af019ac915",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b0f",
+          "taskId": "6959a2f28f085c5332f0813c",
           "title": "Chapter 4 – The Man Who Didn’t Look Right",
           "tags": [],
           "projectName": "Books",
@@ -93,17 +93,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Focuses on the 1st Law: Make It Obvious. Clear discusses the 'Habits Scorecard' to build awareness of current behaviors and 'Pointing-and-Calling' to raise the level of awareness from a non-conscious habit to a conscious one."
     },
     {
       "startTime": "2024-01-01T12:49:11+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-01T13:04:32+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d50",
+      "id": "6959a38e0458b8af019ac916",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b10",
+          "taskId": "6959a2f28f085c5332f0813d",
           "title": "Chapter 5 – The Best Way to Start a New Habit",
           "tags": [],
           "projectName": "Books",
@@ -112,17 +112,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Explains 'implementation intentions' and 'habit stacking.' By using the formula 'I will [BEHAVIOR] at [TIME] in [LOCATION]' or pairing a new habit with an old one, you create a clear plan that removes the need for motivation or willpower."
     },
     {
       "startTime": "2024-01-02T10:00:00+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-02T10:15:30+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d51",
+      "id": "6959a38e0458b8af019ac917",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b11",
+          "taskId": "6959a2f28f085c5332f0813e",
           "title": "Chapter 6 – Motivation Is Overrated; Environment Often Matters More",
           "tags": [],
           "projectName": "Books",
@@ -131,17 +131,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Discusses 'choice architecture' and how our environment shapes our behavior. By making the cues for good habits more visible and the cues for bad habits invisible, you can design your surroundings to make better choices easier."
     },
     {
       "startTime": "2024-01-02T10:30:30+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-02T10:39:32+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d52",
+      "id": "6959a38e0458b8af019ac918",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b12",
+          "taskId": "6959a2f28f085c5332f0813f",
           "title": "Chapter 7 – The Secret to Self-Control",
           "tags": [],
           "projectName": "Books",
@@ -150,17 +150,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Clear reveals that 'disciplined' people aren't necessarily stronger; they just design environments that don't require willpower. The secret to self-control is making the cues of your bad habits invisible rather than trying to resist them."
     },
     {
       "startTime": "2024-01-02T10:54:32+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-02T11:11:59+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d53",
+      "id": "6959a38e0458b8af019ac919",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b13",
+          "taskId": "6959a2f28f085c5332f08140",
           "title": "Chapter 8 – How to Make a Habit Irresistible",
           "tags": [],
           "projectName": "Books",
@@ -169,17 +169,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Introduces the 2nd Law: Make It Attractive. Using the concept of 'temptation bundling,' Clear explains how to link an action you want to do with an action you need to do, leveraging dopamine to make habits more enticing."
     },
     {
       "startTime": "2024-01-02T11:26:59+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-02T11:42:34+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d54",
+      "id": "6959a38e0458b8af019ac91a",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b14",
+          "taskId": "6959a2f28f085c5332f08141",
           "title": "Chapter 9 – The Role of Family and Friends in Shaping Your Habits",
           "tags": [],
           "projectName": "Books",
@@ -188,17 +188,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "We tend to adopt the habits of the people around us. This chapter explores how to join cultures where your desired behavior is the normal behavior, leveraging our biological drive to fit in with the close, the many, and the powerful."
     },
     {
       "startTime": "2024-01-02T11:57:34+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-02T12:13:42+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d55",
+      "id": "6959a38e0458b8af019ac91b",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b15",
+          "taskId": "6959a2f28f085c5332f08142",
           "title": "Chapter 10 – How to Find and Fix the Causes of Your Bad Habits",
           "tags": [],
           "projectName": "Books",
@@ -207,17 +207,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Explains how to reframe your mindset to make bad habits unattractive. By highlighting the benefits of avoiding a bad habit rather than the 'sacrifice' of giving it up, you can shift the underlying craving that drives the behavior."
     },
     {
       "startTime": "2024-01-03T10:00:00+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-03T10:08:58+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d56",
+      "id": "6959a38e0458b8af019ac91c",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b16",
+          "taskId": "6959a2f28f085c5332f08143",
           "title": "Chapter 11 – Walk Slowly, but Never Backward",
           "tags": [],
           "projectName": "Books",
@@ -226,17 +226,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Introduces the 3rd Law: Make It Easy. Clear distinguishes between 'being in motion' (planning/strategizing) and 'taking action' (performing the habit). He emphasizes that repetition, not perfection, is the key to habit formation."
     },
     {
       "startTime": "2024-01-03T10:23:58+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-03T10:39:26+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d57",
+      "id": "6959a38e0458b8af019ac91d",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b17",
+          "taskId": "6959a2f28f085c5332f08144",
           "title": "Chapter 12 – The Law of Least Effort",
           "tags": [],
           "projectName": "Books",
@@ -245,17 +245,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Human behavior follows the path of least resistance. Clear suggests reducing the friction associated with good behaviors (priming the environment) and increasing the friction for bad behaviors to make them harder to perform."
     },
     {
       "startTime": "2024-01-03T10:54:26+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-03T11:06:34+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d58",
+      "id": "6959a38e0458b8af019ac91e",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b18",
+          "taskId": "6959a2f28f085c5332f08145",
           "title": "Chapter 13 – How to Stop Procrastinating by Using the Two-Minute Rule",
           "tags": [],
           "projectName": "Books",
@@ -264,17 +264,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "The Two-Minute Rule states: 'When you start a new habit, it should take less than two minutes to do.' This helps you overcome procrastination by focusing on 'the art of showing up' rather than the difficulty of the entire task."
     },
     {
       "startTime": "2024-01-03T11:21:34+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-03T11:35:04+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d59",
+      "id": "6959a38e0458b8af019ac91f",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b19",
+          "taskId": "6959a2f28f085c5332f08146",
           "title": "Chapter 14 – How to Make Good Habits Inevitable and Bad Habits Impossible",
           "tags": [],
           "projectName": "Books",
@@ -283,17 +283,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Focuses on 'commitment devices'—choices you make in the present that lock in better behavior in the future. Automation through technology and one-time choices can ensure good habits happen automatically."
     },
     {
       "startTime": "2024-01-03T11:50:04+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-03T12:08:30+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d5a",
+      "id": "6959a38e0458b8af019ac920",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b1a",
+          "taskId": "6959a2f28f085c5332f08147",
           "title": "Chapter 15 – The Cardinal Rule of Behavior Change",
           "tags": [],
           "projectName": "Books",
@@ -302,17 +302,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Introduces the 4th Law: Make It Satisfying. While the first three laws increase the odds of doing it this time, the fourth law increases the odds of doing it next time. We repeat behaviors that are immediately rewarded."
     },
     {
       "startTime": "2024-01-04T10:00:00+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-04T10:15:55+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d5b",
+      "id": "6959a38e0458b8af019ac921",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b1b",
+          "taskId": "6959a2f28f085c5332f08148",
           "title": "Chapter 16 – How to Stick with Good Habits Every Day",
           "tags": [],
           "projectName": "Books",
@@ -321,17 +321,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Discusses habit tracking and the 'don't break the chain' strategy. Visual progress provides immediate satisfaction and motivation. Clear also shares the 'never miss twice' rule to help you recover quickly when life gets in the way."
     },
     {
       "startTime": "2024-01-04T10:30:55+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-04T10:42:39+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d5c",
+      "id": "6959a38e0458b8af019ac922",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b1c",
+          "taskId": "6959a2f28f085c5332f08149",
           "title": "Chapter 17 – How an Accountability Partner Can Change Everything",
           "tags": [],
           "projectName": "Books",
@@ -340,17 +340,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Explores the inverse of the 4th Law: Make It Unsatisfying. An accountability partner or a habit contract creates an immediate social cost for failure, making the pain of not doing the habit greater than the effort of doing it."
     },
     {
       "startTime": "2024-01-04T10:57:39+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-04T11:17:16+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d5d",
+      "id": "6959a38e0458b8af019ac923",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b1d",
+          "taskId": "6959a2f28f085c5332f0814a",
           "title": "Chapter 18 – The Truth About Talent (When Genes Matter and When They Don’t)",
           "tags": [],
           "projectName": "Books",
@@ -359,17 +359,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Clear explains how to pick the right 'game' to play. While genes don't eliminate the need for hard work, they clarify it. You should build habits that align with your natural strengths to make success more likely."
     },
     {
       "startTime": "2024-01-04T11:32:16+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-04T11:44:21+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d5e",
+      "id": "6959a38e0458b8af019ac924",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b1e",
+          "taskId": "6959a2f28f085c5332f0814b",
           "title": "Chapter 19 – The Goldilocks Rule: How to Stay Motivated in Life and Work",
           "tags": [],
           "projectName": "Books",
@@ -378,17 +378,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "The Goldilocks Rule states that humans experience peak motivation when working on tasks that are right on the edge of their current abilities—not too hard, not too easy. This is how to manage boredom and stay engaged long-term."
     },
     {
       "startTime": "2024-01-04T11:59:21+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-04T12:16:25+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d5f",
+      "id": "6959a38e0458b8af019ac925",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b1f",
+          "taskId": "6959a2f28f085c5332f0814c",
           "title": "Chapter 20 – The Downside of Creating Good Habits",
           "tags": [],
           "projectName": "Books",
@@ -397,17 +397,17 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "Habits can lead to complacency. Once a skill is automatic, we stop paying attention to small errors. Clear emphasizes 'Reflection and Review' to maintain mastery and ensure your habits continue to serve your goals as you evolve."
     },
     {
       "startTime": "2024-01-04T12:31:25+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-04T12:38:09+0000",
       "status": 1,
-      "id": "6959a0587f384805d63c5d60",
+      "id": "6959a38e0458b8af019ac926",
       "tasks": [
         {
-          "taskId": "6959a0658f085c5332f04b0b",
+          "taskId": "6959a2f28f085c5332f08138",
           "title": "Conclusion: The Secret to Results That Last",
           "tags": [],
           "projectName": "Books",
@@ -416,7 +416,7 @@
         }
       ],
       "added": true,
-      "note": ""
+      "note": "The final summary reinforces that success is not a goal to reach, but a system to improve. Small, atomic habits, when layered upon one another, create a powerful foundation for lasting change and continuous growth."
     }
   ],
   "update": [],
