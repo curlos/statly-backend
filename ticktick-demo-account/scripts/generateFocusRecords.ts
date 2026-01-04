@@ -441,14 +441,14 @@ const args = process.argv.slice(2);
 
 if (args.length < 3) {
   console.error(
-    '\nUsage: npm run generate-focus-records <input-js> <output-json> <csv-file> [csv-output]'
+    '\nUsage: npm run generate-focus-records <input-ts> <output-json> <csv-file> [csv-output]'
   );
   console.error('\nExample:');
   console.error(
-    '  npm run generate-focus-records focusRecordsAndCompletedTasks.js focus-records.json TickTick-backup.csv'
+    '  npm run generate-focus-records focusRecordsAndCompletedTasks.ts focus-records.json TickTick-backup.csv'
   );
   console.error(
-    '  npm run generate-focus-records input.js output.json input.csv output.csv\n'
+    '  npm run generate-focus-records input.ts output.json input.csv output.csv\n'
   );
   process.exit(1);
 }
@@ -472,7 +472,7 @@ if (!fs.existsSync(csvPath)) {
   try {
     console.log('\n=== Generating Focus Records ===\n');
 
-    // Import the project data from JS file
+    // Import the project data from TS file
     const fullInputPath = path.resolve(inputPath);
     const module = await import(fullInputPath);
     const projectData: ProjectData = module.default;
