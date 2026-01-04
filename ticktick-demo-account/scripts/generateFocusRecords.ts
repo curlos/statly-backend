@@ -6,10 +6,15 @@ import * as path from 'path';
 // INTERFACES
 // ============================================================================
 
+interface CompletedTaskEntry {
+  taskName: string;
+  parentTaskName?: string;
+}
+
 interface TaskRecord {
   duration: string;
   taskTitle: string;
-  completedTasks: string[];
+  completedTasks: (string | CompletedTaskEntry)[];
   note?: string;
 }
 
@@ -316,7 +321,19 @@ function generateFocusRecords(projectData: ProjectData): {
         // Track completion times for all completedTasks
         const completionTimeISO = toISOString(endTime);
         taskRecord.completedTasks.forEach((completedTask) => {
-          completionTimes[completedTask] = completionTimeISO;
+          // Handle both string and object format
+          const taskName =
+            typeof completedTask === 'string'
+              ? completedTask
+              : completedTask.taskName;
+          const parentName =
+            typeof completedTask === 'string'
+              ? undefined
+              : completedTask.parentTaskName;
+
+          // Create unique key: "taskName" or "taskName::parentName"
+          const key = parentName ? `${taskName}::${parentName}` : taskName;
+          completionTimes[key] = completionTimeISO;
         });
       });
     }
@@ -350,8 +367,11 @@ function updateTickTickCSV(
   let dueDateColumnIndex = -1;
   let createdTimeColumnIndex = -1;
   let completedTimeColumnIndex = -1;
+  let taskIdColumnIndex = -1;
+  let parentIdColumnIndex = -1;
 
   let updatedCount = 0;
+  const taskIdToName = new Map<string, string>(); // ID → name (reversed!)
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -372,6 +392,8 @@ function updateTickTickCSV(
       dueDateColumnIndex = fields.indexOf('Due Date');
       createdTimeColumnIndex = fields.indexOf('Created Time');
       completedTimeColumnIndex = fields.indexOf('Completed Time');
+      taskIdColumnIndex = fields.indexOf('taskId');
+      parentIdColumnIndex = fields.indexOf('parentId');
 
       if (
         titleColumnIndex === -1 ||
@@ -379,12 +401,29 @@ function updateTickTickCSV(
         startDateColumnIndex === -1 ||
         dueDateColumnIndex === -1 ||
         createdTimeColumnIndex === -1 ||
-        completedTimeColumnIndex === -1
+        completedTimeColumnIndex === -1 ||
+        taskIdColumnIndex === -1 ||
+        parentIdColumnIndex === -1
       ) {
         throw new Error('Required columns not found in CSV');
       }
 
       updatedLines.push(line);
+
+      // Build task ID to name map (first pass through data)
+      for (let j = 7; j < lines.length; j++) {
+        const dataLine = lines[j];
+        if (!dataLine.trim()) continue;
+
+        const dataFields = parseCSVLine(dataLine);
+        const dataTitle = dataFields[titleColumnIndex];
+        const dataTaskId = dataFields[taskIdColumnIndex];
+
+        if (dataTaskId) {
+          taskIdToName.set(dataTaskId, dataTitle); // Store ID → name
+        }
+      }
+
       continue;
     }
 
@@ -392,10 +431,34 @@ function updateTickTickCSV(
     if (line.trim()) {
       const fields = parseCSVLine(line);
       const title = fields[titleColumnIndex];
+      const taskId = fields[taskIdColumnIndex];
+      const parentId = fields[parentIdColumnIndex];
+
+      // Try to find completion time using parent relationship
+      let completionTime: string | undefined;
+
+      if (parentId) {
+        // Task has a parent - look up parent's name directly
+        const parentName = taskIdToName.get(parentId);
+
+        if (!parentName) {
+          // ERROR: Parent ID exists but parent task not found
+          throw new Error(
+            `Task "${title}" has parentId "${parentId}" but parent task not found in CSV`
+          );
+        }
+
+        const key = `${title}::${parentName}`;
+        completionTime = completionTimes[key];
+      }
+
+      // Fallback to simple title match (for top-level tasks)
+      if (!completionTime) {
+        completionTime = completionTimes[title];
+      }
 
       // Check if this task has a completion time
-      if (completionTimes[title]) {
-        const completionTime = completionTimes[title];
+      if (completionTime) {
         const startTime = subtract15Minutes(completionTime);
 
         // Update Status to 2 (Archived) - preserves completion time on CSV import
