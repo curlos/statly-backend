@@ -151,16 +151,18 @@ function parseDate(dateStr: string): Date {
 }
 
 /**
- * Parse duration in format "17m40s" or "5m" and return total seconds
+ * Parse duration in format "1h59m0s", "17m40s", or "5m" and return total seconds
  */
 function parseDuration(durationStr: string): number {
+  const hoursMatch = durationStr.match(/(\d+)h/);
   const minutesMatch = durationStr.match(/(\d+)m/);
   const secondsMatch = durationStr.match(/(\d+)s/);
 
+  const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
   const minutes = minutesMatch ? parseInt(minutesMatch[1]) : 0;
   const seconds = secondsMatch ? parseInt(secondsMatch[1]) : 0;
 
-  return minutes * 60 + seconds;
+  return hours * 3600 + minutes * 60 + seconds;
 }
 
 /**
@@ -319,8 +321,8 @@ function generateFocusRecords(projectData: ProjectData): {
         previousEndTime = endTime;
 
         // Track completion times for all completedTasks
-        const completionTimeISO = toISOString(endTime);
-        taskRecord.completedTasks.forEach((completedTask) => {
+        // Each task is completed 1 second after the previous one
+        taskRecord.completedTasks.forEach((completedTask, index) => {
           // Handle both string and object format
           const taskName =
             typeof completedTask === 'string'
@@ -330,6 +332,10 @@ function generateFocusRecords(projectData: ProjectData): {
             typeof completedTask === 'string'
               ? undefined
               : completedTask.parentTaskName;
+
+          // Calculate completion time: endTime + index seconds
+          const completionTime = addSeconds(endTime, index);
+          const completionTimeISO = toISOString(completionTime);
 
           // Create unique key: "taskName" or "taskName::parentName"
           const key = parentName ? `${taskName}::${parentName}` : taskName;

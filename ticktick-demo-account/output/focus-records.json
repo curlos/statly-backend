@@ -1,14 +1,736 @@
 {
   "add": [
     {
+      "startTime": "2026-01-01T12:00:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2026-01-01T15:45:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f31d",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010409",
+          "title": "1. GEARBOX & ENGINE",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2026-01-01T12:00:00+0000",
+          "endTime": "2026-01-01T15:45:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Constructed the highly complex 8-speed sequential gearbox and the V12 engine block. Focused on ensuring the gear timing was perfect before sealing the chassis."
+    },
+    {
+      "startTime": "2026-01-01T16:00:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2026-01-01T18:33:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f31e",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d01040a",
+          "title": "2. SUSPENSION",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2026-01-01T16:00:00+0000",
+          "endTime": "2026-01-01T18:33:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Assembled the front and rear suspension systems, including the shock absorbers and the structural linkage that connects the engine cradle to the mid-section."
+    },
+    {
+      "startTime": "2026-01-02T12:00:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2026-01-02T13:55:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f31f",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d01040b",
+          "title": "3. CAR FRAME",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2026-01-02T12:00:00+0000",
+          "endTime": "2026-01-02T13:55:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Completed the main structural skeleton of the car. This stage involved merging the previous sub-assemblies into a single, rigid 1:8 scale chassis."
+    },
+    {
+      "startTime": "2026-01-02T14:10:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2026-01-02T16:28:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f320",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d01040c",
+          "title": "4. CAR FRONT",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2026-01-02T14:10:00+0000",
+          "endTime": "2026-01-02T16:28:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Built the steering mechanism and the front-end bodywork. Added the headlights and the intricate aerodynamic curves of the front fenders."
+    },
+    {
+      "startTime": "2026-01-02T16:43:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2026-01-02T18:25:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f321",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d01040d",
+          "title": "5. REAR HOOD",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2026-01-02T16:43:00+0000",
+          "endTime": "2026-01-02T18:25:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Assembled the massive rear engine cover. This stage featured the iconic horizontal slats that define the SP3's aesthetic and the hinge mechanisms for opening the hood."
+    },
+    {
+      "startTime": "2026-01-03T12:00:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2026-01-03T14:25:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f322",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d01040e",
+          "title": "6. DOORS & SEATS",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2026-01-03T12:00:00+0000",
+          "endTime": "2026-01-03T14:25:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Installed the interior cabin details, including the blue seats, and built the complex butterfly door mechanisms that allow the doors to open upward smoothly."
+    },
+    {
+      "startTime": "2026-01-03T14:40:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2026-01-03T16:39:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f323",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d01040f",
+          "title": "7. CAR REAR",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2026-01-03T14:40:00+0000",
+          "endTime": "2026-01-03T16:39:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Finalized the build by completing the rear diffuser, tail lights, and attaching the unique silver-lacquered rims and tires to finish the model."
+    },
+    {
+      "startTime": "2025-06-23T16:08:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-06-23T18:53:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f324",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-06-23T16:08:00+0000",
+          "endTime": "2025-06-23T18:53:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Started the foundation. Bag 1 builds the massive Technic core frame. It's the most critical part to ensure the ship doesn't sag under its own weight later."
+    },
+    {
+      "startTime": "2025-06-24T15:52:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-06-24T17:12:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f325",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-06-24T15:52:00+0000",
+          "endTime": "2025-06-24T17:12:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Installed the seven heavy-duty landing legs. Getting the internal pins aligned was a bit tedious but essential for stability."
+    },
+    {
+      "startTime": "2025-06-25T16:15:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-06-25T19:25:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f326",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-06-25T16:15:00+0000",
+          "endTime": "2025-06-25T19:25:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Interior work. Built the main hold featuring the Dejarik (holochess) table and the engineering station. Includes Chewbacca and C-3PO."
+    },
+    {
+      "startTime": "2025-06-26T16:03:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-06-26T18:08:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f327",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-06-26T16:03:00+0000",
+          "endTime": "2025-06-26T18:08:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Completed the rear compartment interior detailing and the hyperdrive unit. Added the Han Solo and Princess Leia minifigures."
+    },
+    {
+      "startTime": "2025-06-27T15:47:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-06-27T17:37:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f328",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-06-27T15:47:00+0000",
+          "endTime": "2025-06-27T17:37:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Constructed the rear underside hull and the iconic blue light-up engine thrusters using transparent light-blue tubes."
+    },
+    {
+      "startTime": "2025-06-28T16:22:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-06-28T18:37:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f329",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-06-28T16:22:00+0000",
+          "endTime": "2025-06-28T18:37:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Built the internal framework for the two front mandibles. The greebling (mechanical detailing) starts to get very dense here."
+    },
+    {
+      "startTime": "2025-06-29T15:58:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-06-29T18:38:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f32a",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-06-29T15:58:00+0000",
+          "endTime": "2025-06-29T18:38:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Focused on the underside mandible plating. These sections use clever Technic pin connections to stay secure while inverted."
+    },
+    {
+      "startTime": "2025-06-30T16:10:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-06-30T18:05:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f32b",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-06-30T16:10:00+0000",
+          "endTime": "2025-06-30T18:05:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Assembled the top mandible panels. These are mostly plate-heavy and include the circular maintenance access bays."
+    },
+    {
+      "startTime": "2025-07-01T16:05:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-01T17:50:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f32c",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-01T16:05:00+0000",
+          "endTime": "2025-07-01T17:50:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Constructed the bottom quad-laser cannon and the functional boarding ramp mechanism."
+    },
+    {
+      "startTime": "2025-07-02T15:54:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-02T18:14:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f32d",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-02T15:54:00+0000",
+          "endTime": "2025-07-02T18:14:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Finished the top central hull panels and the rear-top plating. Added Finn and BB-8 to the crew."
+    },
+    {
+      "startTime": "2025-07-03T16:18:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-03T17:53:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f32e",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-03T16:18:00+0000",
+          "endTime": "2025-07-03T17:53:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Added the final large hull sections to the rear. The ship’s iconic silhouette is now almost entirely enclosed."
+    },
+    {
+      "startTime": "2025-07-04T16:02:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-04T18:32:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f32f",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-04T16:02:00+0000",
+          "endTime": "2025-07-04T18:32:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Built the complex circular docking ports for both the port and starboard sides."
+    },
+    {
+      "startTime": "2025-07-05T16:12:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-05T19:27:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f330",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010401",
+          "title": "LEGO® Star Wars™ Millennium Falcon (75192) | 7,541 Pieces",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-05T16:12:00+0000",
+          "endTime": "2025-07-05T19:27:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Final build day. Assembled the cockpit, the access tunnel, and the interchangeable sensor dishes. Build complete!."
+    },
+    {
+      "startTime": "2025-07-13T16:12:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-13T18:27:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f331",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010403",
+          "title": "SECTION 1: BOW AND WELL DECK",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-13T16:12:00+0000",
+          "endTime": "2025-07-13T18:27:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Finally cracking open Box 1! The scale of the base plates is already intimidating, but I'm so hyped to see this come together."
+    },
+    {
+      "startTime": "2025-07-14T15:48:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-14T18:18:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f332",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010403",
+          "title": "SECTION 1: BOW AND WELL DECK",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-14T15:48:00+0000",
+          "endTime": "2025-07-14T18:18:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Finished the Bow! The way the hull tapers using those hinge bricks is actually genius engineering. It looks so sleek sitting on the table."
+    },
+    {
+      "startTime": "2025-07-15T16:05:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-15T18:50:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f333",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010404",
+          "title": "SECTION 2: BRIDGE & FUNNEL",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-15T16:05:00+0000",
+          "endTime": "2025-07-15T18:50:00+0000"
+        }
+      ],
+      "added": true,
+      "note": ""
+    },
+    {
+      "startTime": "2025-07-16T16:22:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-16T18:17:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f334",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010404",
+          "title": "SECTION 2: BRIDGE & FUNNEL",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-16T16:22:00+0000",
+          "endTime": "2025-07-16T18:17:00+0000"
+        }
+      ],
+      "added": true,
+      "note": ""
+    },
+    {
+      "startTime": "2025-07-17T15:53:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-17T18:03:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f335",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010404",
+          "title": "SECTION 2: BRIDGE & FUNNEL",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-17T15:53:00+0000",
+          "endTime": "2025-07-17T18:03:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "The tiny boiler builds are actually adorable. It's crazy that most of this detail gets hidden once the decks go on, but I'm glad I know they're inside."
+    },
+    {
+      "startTime": "2025-07-18T16:09:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-18T18:29:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f336",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010404",
+          "title": "SECTION 2: BRIDGE & FUNNEL",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-18T16:09:00+0000",
+          "endTime": "2025-07-18T18:29:00+0000"
+        }
+      ],
+      "added": true,
+      "note": ""
+    },
+    {
+      "startTime": "2025-07-19T16:31:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-19T19:36:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f337",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010405",
+          "title": "SECTION 3: FUNNEL & MAIN CABINS",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-19T16:31:00+0000",
+          "endTime": "2025-07-19T19:36:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Starting the Grand Staircase. The repetition is setting in. My thumbs are actually starting to throb from all these tiny 1x1 plates."
+    },
+    {
+      "startTime": "2025-07-20T15:57:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-20T18:12:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f338",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010405",
+          "title": "SECTION 3: FUNNEL & MAIN CABINS",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-20T15:57:00+0000",
+          "endTime": "2025-07-20T18:12:00+0000"
+        }
+      ],
+      "added": true,
+      "note": ""
+    },
+    {
+      "startTime": "2025-07-21T16:02:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-21T18:42:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f339",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010405",
+          "title": "SECTION 3: FUNNEL & MAIN CABINS",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-21T16:02:00+0000",
+          "endTime": "2025-07-21T18:42:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Finally finished the first third of the ship. Standing the bow up next to the midsection... wow. This is going to be absolutely massive."
+    },
+    {
+      "startTime": "2025-07-22T16:14:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-22T18:19:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f33a",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010406",
+          "title": "SECTION 4: FUNNEL & COMPASS",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-22T16:14:00+0000",
+          "endTime": "2025-07-22T18:19:00+0000"
+        }
+      ],
+      "added": true,
+      "note": ""
+    },
+    {
+      "startTime": "2025-07-23T15:47:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-23T18:22:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f33b",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010406",
+          "title": "SECTION 4: FUNNEL & COMPASS",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-23T15:47:00+0000",
+          "endTime": "2025-07-23T18:22:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "I am so sick of white windows. Seriously. If I see another window frame I might scream. The repetition in this section is brutal."
+    },
+    {
+      "startTime": "2025-07-24T16:08:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-24T18:58:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f33c",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010406",
+          "title": "SECTION 4: FUNNEL & COMPASS",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-24T16:08:00+0000",
+          "endTime": "2025-07-24T18:58:00+0000"
+        }
+      ],
+      "added": true,
+      "note": ""
+    },
+    {
+      "startTime": "2025-07-25T16:19:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-25T18:44:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f33d",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010407",
+          "title": "SECTION 5: FUNNEL & ENGINE ROOM",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-25T16:19:00+0000",
+          "endTime": "2025-07-25T18:44:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "THE STERN IS A NIGHTMARE. Getting the angle of the hull to line up with the Technic pins is making me want to throw this whole box out the window. Why is this so difficult!?"
+    },
+    {
+      "startTime": "2025-07-26T15:59:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-26T18:09:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f33e",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010407",
+          "title": "SECTION 5: FUNNEL & ENGINE ROOM",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-26T15:59:00+0000",
+          "endTime": "2025-07-26T18:09:00+0000"
+        }
+      ],
+      "added": true,
+      "note": ""
+    },
+    {
+      "startTime": "2025-07-27T16:04:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-27T18:44:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f33f",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010407",
+          "title": "SECTION 5: FUNNEL & ENGINE ROOM",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-27T16:04:00+0000",
+          "endTime": "2025-07-27T18:44:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Okay, the stern curve is finished. I'm exhausted and my dining table is completely buried in Lego. I need a break."
+    },
+    {
+      "startTime": "2025-07-28T16:12:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-28T18:32:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f340",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010408",
+          "title": "SECTION 6: STERN & WELL DECK",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-28T16:12:00+0000",
+          "endTime": "2025-07-28T18:32:00+0000"
+        }
+      ],
+      "added": true,
+      "note": ""
+    },
+    {
+      "startTime": "2025-07-29T15:51:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-29T18:46:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f341",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010408",
+          "title": "SECTION 6: STERN & WELL DECK",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-29T15:51:00+0000",
+          "endTime": "2025-07-29T18:46:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Building the reciprocating engines was actually therapeutic. Seeing the pistons move when you turn the turbines is the coolest thing I've ever seen in a Lego set."
+    },
+    {
+      "startTime": "2025-07-30T16:25:00+0000",
+      "pauseDuration": 0,
+      "endTime": "2025-07-30T20:05:00+0000",
+      "status": 1,
+      "id": "695aa24e3c0bd49a5dc3f342",
+      "tasks": [
+        {
+          "taskId": "695aa25b8f081b703d010408",
+          "title": "SECTION 6: STERN & WELL DECK",
+          "tags": [],
+          "projectName": "LEGO",
+          "startTime": "2025-07-30T16:25:00+0000",
+          "endTime": "2025-07-30T20:05:00+0000"
+        }
+      ],
+      "added": true,
+      "note": "Done. 9,090 pieces later. Connecting the three massive sections was terrifying but so rewarding. It's a masterpiece. Now... where do I put it?"
+    },
+    {
       "startTime": "2024-01-01T10:00:00+0000",
       "pauseDuration": 0,
       "endTime": "2024-01-01T10:17:40+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece41",
+      "id": "695aa24e3c0bd49a5dc3f343",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce790",
+          "taskId": "695aa25b8f081b703d0103db",
           "title": "Introduction: Opening Credits + My Story",
           "tags": [],
           "projectName": "Books",
@@ -24,10 +746,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-01T10:57:24+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece42",
+      "id": "695aa24e3c0bd49a5dc3f344",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce79a",
+          "taskId": "695aa25b8f081b703d0103e5",
           "title": "Chapter 1 – The Surprising Power of Atomic Habits",
           "tags": [],
           "projectName": "Books",
@@ -43,10 +765,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-01T11:32:11+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece43",
+      "id": "695aa24e3c0bd49a5dc3f345",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce79b",
+          "taskId": "695aa25b8f081b703d0103e6",
           "title": "Chapter 2 – How Your Habits Shape Your Identity (and Vice Versa)",
           "tags": [],
           "projectName": "Books",
@@ -62,10 +784,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-01T12:06:01+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece44",
+      "id": "695aa24e3c0bd49a5dc3f346",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce79c",
+          "taskId": "695aa25b8f081b703d0103e7",
           "title": "Chapter 3 – How to Build Better Habits in 4 Simple Steps",
           "tags": [],
           "projectName": "Books",
@@ -81,10 +803,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-01T12:34:11+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece45",
+      "id": "695aa24e3c0bd49a5dc3f347",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce79d",
+          "taskId": "695aa25b8f081b703d0103e8",
           "title": "Chapter 4 – The Man Who Didn’t Look Right",
           "tags": [],
           "projectName": "Books",
@@ -100,10 +822,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-01T13:04:32+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece46",
+      "id": "695aa24e3c0bd49a5dc3f348",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce79e",
+          "taskId": "695aa25b8f081b703d0103e9",
           "title": "Chapter 5 – The Best Way to Start a New Habit",
           "tags": [],
           "projectName": "Books",
@@ -119,10 +841,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-02T10:15:30+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece47",
+      "id": "695aa24e3c0bd49a5dc3f349",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce79f",
+          "taskId": "695aa25b8f081b703d0103ea",
           "title": "Chapter 6 – Motivation Is Overrated; Environment Often Matters More",
           "tags": [],
           "projectName": "Books",
@@ -138,10 +860,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-02T10:39:32+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece48",
+      "id": "695aa24e3c0bd49a5dc3f34a",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a0",
+          "taskId": "695aa25b8f081b703d0103eb",
           "title": "Chapter 7 – The Secret to Self-Control",
           "tags": [],
           "projectName": "Books",
@@ -157,10 +879,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-02T11:11:59+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece49",
+      "id": "695aa24e3c0bd49a5dc3f34b",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a1",
+          "taskId": "695aa25b8f081b703d0103ec",
           "title": "Chapter 8 – How to Make a Habit Irresistible",
           "tags": [],
           "projectName": "Books",
@@ -176,10 +898,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-02T11:42:34+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece4a",
+      "id": "695aa24e3c0bd49a5dc3f34c",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a2",
+          "taskId": "695aa25b8f081b703d0103ed",
           "title": "Chapter 9 – The Role of Family and Friends in Shaping Your Habits",
           "tags": [],
           "projectName": "Books",
@@ -195,10 +917,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-02T12:13:42+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece4b",
+      "id": "695aa24e3c0bd49a5dc3f34d",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a3",
+          "taskId": "695aa25b8f081b703d0103ee",
           "title": "Chapter 10 – How to Find and Fix the Causes of Your Bad Habits",
           "tags": [],
           "projectName": "Books",
@@ -214,10 +936,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-03T10:08:58+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece4c",
+      "id": "695aa24e3c0bd49a5dc3f34e",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a4",
+          "taskId": "695aa25b8f081b703d0103ef",
           "title": "Chapter 11 – Walk Slowly, but Never Backward",
           "tags": [],
           "projectName": "Books",
@@ -233,10 +955,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-03T10:39:26+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece4d",
+      "id": "695aa24e3c0bd49a5dc3f34f",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a5",
+          "taskId": "695aa25b8f081b703d0103f0",
           "title": "Chapter 12 – The Law of Least Effort",
           "tags": [],
           "projectName": "Books",
@@ -252,10 +974,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-03T11:06:34+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece4e",
+      "id": "695aa24e3c0bd49a5dc3f350",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a6",
+          "taskId": "695aa25b8f081b703d0103f1",
           "title": "Chapter 13 – How to Stop Procrastinating by Using the Two-Minute Rule",
           "tags": [],
           "projectName": "Books",
@@ -271,10 +993,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-03T11:35:04+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece4f",
+      "id": "695aa24e3c0bd49a5dc3f351",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a7",
+          "taskId": "695aa25b8f081b703d0103f2",
           "title": "Chapter 14 – How to Make Good Habits Inevitable and Bad Habits Impossible",
           "tags": [],
           "projectName": "Books",
@@ -290,10 +1012,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-03T12:08:30+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece50",
+      "id": "695aa24e3c0bd49a5dc3f352",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a8",
+          "taskId": "695aa25b8f081b703d0103f3",
           "title": "Chapter 15 – The Cardinal Rule of Behavior Change",
           "tags": [],
           "projectName": "Books",
@@ -309,10 +1031,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-04T10:15:55+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece51",
+      "id": "695aa24e3c0bd49a5dc3f353",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7a9",
+          "taskId": "695aa25b8f081b703d0103f4",
           "title": "Chapter 16 – How to Stick with Good Habits Every Day",
           "tags": [],
           "projectName": "Books",
@@ -328,10 +1050,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-04T10:42:39+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece52",
+      "id": "695aa24e3c0bd49a5dc3f354",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7aa",
+          "taskId": "695aa25b8f081b703d0103f5",
           "title": "Chapter 17 – How an Accountability Partner Can Change Everything",
           "tags": [],
           "projectName": "Books",
@@ -347,10 +1069,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-04T11:17:16+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece53",
+      "id": "695aa24e3c0bd49a5dc3f355",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7ab",
+          "taskId": "695aa25b8f081b703d0103f6",
           "title": "Chapter 18 – The Truth About Talent (When Genes Matter and When They Don’t)",
           "tags": [],
           "projectName": "Books",
@@ -366,10 +1088,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-04T11:44:21+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece54",
+      "id": "695aa24e3c0bd49a5dc3f356",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7ac",
+          "taskId": "695aa25b8f081b703d0103f7",
           "title": "Chapter 19 – The Goldilocks Rule: How to Stay Motivated in Life and Work",
           "tags": [],
           "projectName": "Books",
@@ -385,10 +1107,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-04T12:16:25+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece55",
+      "id": "695aa24e3c0bd49a5dc3f357",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce7ad",
+          "taskId": "695aa25b8f081b703d0103f8",
           "title": "Chapter 20 – The Downside of Creating Good Habits",
           "tags": [],
           "projectName": "Books",
@@ -404,10 +1126,10 @@
       "pauseDuration": 0,
       "endTime": "2024-01-04T12:38:09+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece56",
+      "id": "695aa24e3c0bd49a5dc3f358",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce799",
+          "taskId": "695aa25b8f081b703d0103e4",
           "title": "Conclusion: The Secret to Results That Last",
           "tags": [],
           "projectName": "Books",
@@ -423,10 +1145,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-04T04:01:47+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece57",
+      "id": "695aa24e3c0bd49a5dc3f359",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce780",
+          "taskId": "695aa25b8f081b703d0103cb",
           "title": "Chapter 1 – The Boy Who Lived",
           "tags": [],
           "projectName": "Books",
@@ -442,10 +1164,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-05T03:52:28+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece58",
+      "id": "695aa24e3c0bd49a5dc3f35a",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce782",
+          "taskId": "695aa25b8f081b703d0103cd",
           "title": "Chapter 2 – The Vanishing Glass",
           "tags": [],
           "projectName": "Books",
@@ -461,10 +1183,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-06T03:55:29+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece59",
+      "id": "695aa24e3c0bd49a5dc3f35b",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce783",
+          "taskId": "695aa25b8f081b703d0103ce",
           "title": "Chapter 3 – The Letters from No One",
           "tags": [],
           "projectName": "Books",
@@ -480,10 +1202,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-07T03:55:21+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece5a",
+      "id": "695aa24e3c0bd49a5dc3f35c",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce784",
+          "taskId": "695aa25b8f081b703d0103cf",
           "title": "Chapter 4 – The Keeper of the Keys",
           "tags": [],
           "projectName": "Books",
@@ -499,10 +1221,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-08T04:16:17+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece5b",
+      "id": "695aa24e3c0bd49a5dc3f35d",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce785",
+          "taskId": "695aa25b8f081b703d0103d0",
           "title": "Chapter 5 – Diagon Alley",
           "tags": [],
           "projectName": "Books",
@@ -518,10 +1240,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-09T04:09:43+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece5c",
+      "id": "695aa24e3c0bd49a5dc3f35e",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce786",
+          "taskId": "695aa25b8f081b703d0103d1",
           "title": "Chapter 6 – The Journey from Platform Nine and Three-Quarters",
           "tags": [],
           "projectName": "Books",
@@ -537,10 +1259,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-10T04:00:48+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece5d",
+      "id": "695aa24e3c0bd49a5dc3f35f",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce787",
+          "taskId": "695aa25b8f081b703d0103d2",
           "title": "Chapter 7 – The Sorting Hat",
           "tags": [],
           "projectName": "Books",
@@ -556,10 +1278,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-11T03:49:25+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece5e",
+      "id": "695aa24e3c0bd49a5dc3f360",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce788",
+          "taskId": "695aa25b8f081b703d0103d3",
           "title": "Chapter 8 – The Potions Master",
           "tags": [],
           "projectName": "Books",
@@ -575,10 +1297,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-12T04:01:26+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece5f",
+      "id": "695aa24e3c0bd49a5dc3f361",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce789",
+          "taskId": "695aa25b8f081b703d0103d4",
           "title": "Chapter 9 – The Midnight Duel",
           "tags": [],
           "projectName": "Books",
@@ -594,10 +1316,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-13T03:56:47+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece60",
+      "id": "695aa24e3c0bd49a5dc3f362",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce78a",
+          "taskId": "695aa25b8f081b703d0103d5",
           "title": "Chapter 10 – Hallowe'en",
           "tags": [],
           "projectName": "Books",
@@ -613,10 +1335,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-14T03:50:58+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece61",
+      "id": "695aa24e3c0bd49a5dc3f363",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce78b",
+          "taskId": "695aa25b8f081b703d0103d6",
           "title": "Chapter 11 – Quidditch",
           "tags": [],
           "projectName": "Books",
@@ -632,10 +1354,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-15T04:05:47+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece62",
+      "id": "695aa24e3c0bd49a5dc3f364",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce78c",
+          "taskId": "695aa25b8f081b703d0103d7",
           "title": "Chapter 12 – The Mirror of Erised",
           "tags": [],
           "projectName": "Books",
@@ -651,10 +1373,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-16T03:49:34+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece63",
+      "id": "695aa24e3c0bd49a5dc3f365",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce78d",
+          "taskId": "695aa25b8f081b703d0103d8",
           "title": "Chapter 13 – Nicolas Flamel",
           "tags": [],
           "projectName": "Books",
@@ -670,10 +1392,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-17T03:51:22+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece64",
+      "id": "695aa24e3c0bd49a5dc3f366",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce78e",
+          "taskId": "695aa25b8f081b703d0103d9",
           "title": "Chapter 14 – Norbert the Norwegian Ridgeback",
           "tags": [],
           "projectName": "Books",
@@ -689,10 +1411,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-18T04:03:28+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece65",
+      "id": "695aa24e3c0bd49a5dc3f367",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce78f",
+          "taskId": "695aa25b8f081b703d0103da",
           "title": "Chapter 15 – The Forbidden Forest",
           "tags": [],
           "projectName": "Books",
@@ -708,10 +1430,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-19T04:08:57+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece66",
+      "id": "695aa24e3c0bd49a5dc3f368",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce791",
+          "taskId": "695aa25b8f081b703d0103dc",
           "title": "Chapter 16 – Through the Trapdoor",
           "tags": [],
           "projectName": "Books",
@@ -727,10 +1449,10 @@
       "pauseDuration": 0,
       "endTime": "2024-02-20T04:07:31+0000",
       "status": 1,
-      "id": "695a8367f26734a632bece67",
+      "id": "695aa24e3c0bd49a5dc3f369",
       "tasks": [
         {
-          "taskId": "695a83968f081b703cfce792",
+          "taskId": "695aa25b8f081b703d0103dd",
           "title": "Chapter 17 – The Man with Two Faces",
           "tags": [],
           "projectName": "Books",
