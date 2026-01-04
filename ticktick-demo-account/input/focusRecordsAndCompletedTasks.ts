@@ -3,6 +3,8 @@ import harryPotter from './focusRecordsAndCompletedTasks/002-harry-potter-and-th
 import legoFerrariDaytonaSP3 from './focusRecordsAndCompletedTasks/003-lego-ferrari-daytona-sp3'
 import legoMilleniumFalcon from './focusRecordsAndCompletedTasks/004-lego-millenium-falcon'
 import legoTitanic from './focusRecordsAndCompletedTasks/005-lego-titanic'
+import walking from './focusRecordsAndCompletedTasks/006-walking'
+import cycling from './focusRecordsAndCompletedTasks/007-cycling'
 
 // Combine all data from individual files
 const allData = {
@@ -11,7 +13,10 @@ const allData = {
     ...legoMilleniumFalcon,
     ...legoTitanic
   },
-  "Exercise": {},
+  "Exercise": {
+    ...walking,
+    ...cycling
+  },
   "Books": {
     ...atomicHabits,
     ...harryPotter
