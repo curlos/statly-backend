@@ -104,7 +104,7 @@ statly-backend/
 
 ## Related Projects
 
-- **[Statly Frontend](../statly)** - React-based web application
+- **[Statly Frontend](https://github.com/curlos/statly)** - React-based web application
 
 ---
 
