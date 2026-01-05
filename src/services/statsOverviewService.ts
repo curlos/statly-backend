@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import Task from '../models/TaskModel';
 import Project from '../models/ProjectModel';
 import FocusRecordTickTick from '../models/FocusRecord';
-import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
+import { buildTaskSearchFilter, buildTaskMatchConditions, buildTaskMatchConditionsWithMultiFieldDate } from '../utils/taskFilterBuilders.utils';
 import { buildFocusMatchAndFilterConditions, buildFocusSearchFilter } from '../utils/focusFilterBuilders.utils';
 import { BaseQueryParams } from '../utils/queryParams.utils';
 import { PipelineStage } from 'mongoose';
@@ -47,8 +47,8 @@ export interface SourceCountsResponse {
 async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean) {
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
 
-	// Build filter for all tasks
-	const allTasksFilter = buildTaskMatchConditions(
+	// Build filter for all tasks - checks ANY date field (completedTime, createdTime, modifiedTime, added_at, updated_at)
+	const allTasksFilter = buildTaskMatchConditionsWithMultiFieldDate(
 		userId,
 		params.taskId,
 		params.projectIds,
@@ -56,11 +56,10 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.toDoListAppSources,
-		'createdTime',
-		undefined,
+		undefined,  // No interval dates for total tasks
 		undefined,
 		params.timezone,
-		undefined // yearAgnostic not applicable for createdTime
+		params.yearAgnostic
 	);
 
 	// Build filter for completed tasks
@@ -322,14 +321,33 @@ async function getFirstData(userId: Types.ObjectId) {
 /**
  * Calculate the number of active days (days where user either completed a task or added a focus record)
  */
-async function getActiveDays(userId: Types.ObjectId, timezone: string = 'UTC') {
+async function getActiveDays(userId: Types.ObjectId, params: OverviewStatsQueryParams, timezone: string = 'UTC') {
+	// Build filters using existing builder functions
+	const completedTasksFilter = buildTaskMatchConditions(
+		userId,
+		params.taskId,
+		params.projectIds,
+		params.startDate,
+		params.endDate,
+		params.taskIdIncludeFocusRecordsFromSubtasks,
+		params.toDoListAppSources,
+		'completedTime',
+		undefined,  // No interval dates
+		undefined,
+		params.timezone,
+		params.yearAgnostic
+	);
+
+	// Apply search filter if provided
+	const searchFilter = buildTaskSearchFilter(params.searchQuery);
+	const taskQuery = searchFilter
+		? { $and: [searchFilter, completedTasksFilter] }
+		: completedTasksFilter;
+
 	// Get all unique dates where tasks were completed
 	const completedTaskDates = await Task.aggregate([
 		{
-			$match: {
-				userId,
-				completedTime: { $ne: null }
-			}
+			$match: taskQuery
 		},
 		{
 			$project: {
@@ -349,12 +367,33 @@ async function getActiveDays(userId: Types.ObjectId, timezone: string = 'UTC') {
 		}
 	]);
 
+	// Build filters using existing builder function
+	const { focusRecordMatchConditions } = buildFocusMatchAndFilterConditions(
+		userId,
+		params.taskId,
+		params.projectIds,
+		params.startDate,
+		params.endDate,
+		params.taskIdIncludeFocusRecordsFromSubtasks,
+		params.focusAppSources,
+		null,  // No interval dates
+		null,
+		params.emotions,
+		params.timezone,
+		params.general,
+		params.yearAgnostic
+	);
+
+	// Apply search filter if provided
+	const focusSearchFilter = buildFocusSearchFilter(params.searchQuery);
+	const focusQuery = focusSearchFilter
+		? { $and: [focusSearchFilter, focusRecordMatchConditions] }
+		: focusRecordMatchConditions;
+
 	// Get all unique dates where focus records were added
 	const focusRecordDates = await FocusRecordTickTick.aggregate([
 		{
-			$match: {
-				userId
-			}
+			$match: focusQuery
 		},
 		{
 			$project: {
@@ -406,7 +445,7 @@ export async function getOverviewStats(params: OverviewStatsQueryParams, userId:
 		getTaskStats(userId, params, todayDateString, skipTodayStats),
 		getFocusStats(userId, params, todayDateString, skipTodayStats, tz),
 		getProjectStats(userId, params),
-		getActiveDays(userId, tz)
+		getActiveDays(userId, params, tz)
 	];
 
 	if (includeFirstData) {
