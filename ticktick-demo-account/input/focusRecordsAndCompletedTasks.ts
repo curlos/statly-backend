@@ -5,6 +5,7 @@ import legoMilleniumFalcon from './focusRecordsAndCompletedTasks/004-lego-millen
 import legoTitanic from './focusRecordsAndCompletedTasks/005-lego-titanic'
 import walking from './focusRecordsAndCompletedTasks/006-walking'
 import cycling from './focusRecordsAndCompletedTasks/007-cycling'
+import harvardCS50 from './focusRecordsAndCompletedTasks/008-harvard-cs50'
 
 // Combine all data from individual files
 const allData = {
@@ -21,7 +22,9 @@ const allData = {
     ...atomicHabits,
     ...harryPotter
   },
-  "Online Courses": {}
+  "Online Courses": {
+    ...harvardCS50
+  }
 };
 
 export default allData;

@@ -28,8 +28,7 @@
 "","Online Courses","Lecture","TEXT","","","N","","","","","0","0","2026-01-03T01:00:37+0000","","18691697672192","America/New_York",,"false",,,"list","21","14"
 "","Online Courses","Lecture","TEXT","","","N","","","","","0","0","2026-01-03T00:58:47+0000","","18691697672192","America/New_York",,"false",,,"list","22","10"
 "","Online Courses","Lecture","TEXT","","","N","","","","","0","0","2026-01-03T00:58:49+0000","","19791209299968","America/New_York",,"false",,,"list","23","11"
-"","Online Courses","Final Project","TEXT","","The climax of this course is its final project. The final project is your opportunity to take your newfound savvy with programming out for a spin and develop your very own piece of software. So long as your project draws upon this course’s lessons, the nature of your project is entirely up to you. You may implement your project in any language(s). You are welcome to utilize infrastructure other than the CS50 Codespace. All that we ask is that you build something of interest to you, that you solve an actual problem, that you impact your community, or that you change the world. Strive to create something that outlives this course.
-In as much as software development is rarely a one-person effort, you are allowed an opportunity to collaborate with one or two classmates for this final project. Needless to say, it is expected that every student in any such group contribute equally to the design and implementation of that group’s project. Moreover, it is expected that the scope of a two- or three-person group’s project be, respectively, twice or thrice that of a typical one-person project. A one-person project, mind you, should entail more time and effort than is required by each of the course’s problem sets.","N","","","","","0","0","2026-01-03T00:59:39+0000","","20890720927744","America/New_York",,"false",,,"list","24","14"
+"","Online Courses","Final Project","TEXT","","The climax of this course is its final project. The final project is your opportunity to take your newfound savvy with programming out for a spin and develop your very own piece of software. So long as your project draws upon this course’s lessons, the nature of your project is entirely up to you. You may implement your project in any language(s). You are welcome to utilize infrastructure other than the CS50 Codespace. All that we ask is that you build something of interest to you, that you solve an actual problem, that you impact your community, or that you change the world. Strive to create something that outlives this course.In as much as software development is rarely a one-person effort, you are allowed an opportunity to collaborate with one or two classmates for this final project. Needless to say, it is expected that every student in any such group contribute equally to the design and implementation of that group’s project. Moreover, it is expected that the scope of a two- or three-person group’s project be, respectively, twice or thrice that of a typical one-person project. A one-person project, mind you, should entail more time and effort than is required by each of the course’s problem sets.","N","","","","","0","0","2026-01-03T00:59:39+0000","","20890720927744","America/New_York",,"false",,,"list","24","14"
 "","Online Courses","Lecture","TEXT","","","N","","","","","0","0","2026-01-03T00:58:51+0000","","20890720927744","America/New_York",,"false",,,"list","25","12"
 "","Online Courses","Lecture","TEXT","","","N","","","","","0","0","2026-01-03T00:58:53+0000","","21990232555520","America/New_York",,"false",,,"list","26","13"
 "","Online Courses","Problem Set 0","TEXT","","","N","","","","","0","0","2026-01-03T00:59:49+0000","","24189255811072","America/New_York",,"false",,,"list","27","4"
@@ -420,81 +419,14 @@ In as much as software development is rarely a one-person effort, you are allowe
 "","LEGO","Bag 15","TEXT","","","N","","","","","0","0","2026-01-04T01:50:57+0000","","80264348827648","America/New_York","true","false",,,"list","412","337"
 "","LEGO","Bag 16","TEXT","","","N","","","","","0","0","2026-01-04T01:50:57+0000","","81363860455424","America/New_York","true","false",,,"list","413","337"
 "","LEGO","Bag 17","TEXT","","","N","","","","","0","0","2026-01-04T01:51:04+0000","","82463372083200","America/New_York","true","false",,,"list","414","337"
-"","👋Welcome","✅ Click the input box to create a task","TEXT","","If you often forget what you must do, try writing them down, setting reminders, and freeing up your mind.
-
-![file](https://pull.ticktick.com/newuser3/desktop/en/task.mp4)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:22+0000","-1099511627776","Asia/Shanghai",,"false","Getting Start","-2199023255552","list","415",""
-"","👋Welcome","📋 Use lists to manage tasks","TEXT","","As the number of tasks grows, you can use lists to categorize and organize them.
-
-- **Inbox**: Where your temporary ideas and tasks gather.
-- **Smart List**: Tasks with due dates will intelligently appear in the ""Today"" and ""Next 7 Days"" lists, providing a clear overview of what needs to be done each day.
-- **List**: You can also add lists to manage tasks (such as work, life, etc.) according to your usage habits.
-
-[💡 Learn the list features](https://help.ticktick.com/articles/7055782283059396608)
-
-![file](https://pull.ticktick.com/newuser3/desktop/en/list.mp4)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:23+0000","-1099511627776","Asia/Shanghai",,"false","Getting Start","-2199023255552","list","416",""
-"","👋Welcome","🍅 Pomodoro: Rescue from procrastination","TEXT","","If you have procrastination tendencies, give the Pomodoro feature a try. The sense of achievement gained from completing individual Pomodoro sessions can help you achieve more goals.
-
-![file](https://pull.ticktick.com/newuser3/desktop/en/pomodoro.mp4)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:26+0000","-1099511627776","Asia/Shanghai",,"false","Feature Modules","-1099511627776","list","417",""
-"","👋Welcome","📅 Calendar: Check your schedule","TEXT","","The key to time management lies not only in reminders and memos but also in having a good plan. Our calendar views help you schedule events and appointments efficiently.
-
-![file](https://pull.ticktick.com/newuser3/desktop/en/calendar.mp4)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:25+0000","-1099511627776","Asia/Shanghai",,"false","Feature Modules","-1099511627776","list","418",""
-"","👋Welcome","🎯 Eisenhower Matrix: Prioritize tasks","TEXT","","If you have a lot to do every day, using the Eisenhower Matrix feature can help you focus on important and urgent tasks.
-
-![file](https://pull.ticktick.com/newuser3/desktop/en/matrix.mp4)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:25+0000","-1099511627776","Asia/Shanghai",,"false","Feature Modules","-1099511627776","list","419",""
-"","👋Welcome","✨ More unique features","TEXT","","Here are some of our unique features:
-
- - **Cross-platform support**: we support nearly all devices and operating systems, including phones, computers, and watches.  [👀 Check out our supported platforms](https://help.ticktick.com/articles/7055780388337090560)
-
- - **Collaboration**: Need to work on a project with colleagues? Quickly invite them to join your list and easily assign tasks to members.[🤝 How to share a list](https://help.ticktick.com/articles/7055781706355179520)
-
-- **Tag**: Want to personalize task management? Try adding tags to tasks for easy categorization and filtering, making management more convenient.[🏷️ How to use tags](https://help.ticktick.com/articles/7055782255804809216)
-
-- **Filter**: Need to view all high-priority tasks? Try the Filter feature to effortlessly screen the tasks you want to see.[🚀 How to use filters](https://help.ticktick.com/articles/7055782240994721792)
-
-- **Summary**: Still, pondering over your review content? Try the Summary feature to easily grasp the completion status of tasks over a specific period. [📋 How to use Summary](https://help.ticktick.com/articles/7055780476358754304#summary)
-
-- **Command Menu**: Want to quickly navigate to different modules? Simply use the command menu (Ctrl/Command+K) to go there effortlessly. [⌨️ Explore more shortcuts](https://help.ticktick.com/articles/7055780449171275776)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:29+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","420",""
-"","👋Welcome","📊 Kanban, Timeline View: Visual management","TEXT","","Efficiently switch between list views for better task management.
-
-- **Kanban View**: Need categorized tasks? Use Kanban View for clear category presentation in card format. [💡 Learn about Kanban View](https://help.ticktick.com/articles/7055782353376903168)
-
-- **Timeline View**: Tracking long-term projects? Try Timeline View. Easily visualize task timelines and effortlessly adjust plans with a simple drag-and-drop.  [💡 Learn about Timeline View](https://help.ticktick.com/articles/7055782331050622976)
-
-![file](https://pull.ticktick.com/newuser3/desktop/en/view.mp4)
-
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:27+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","421",""
-"","👋Welcome","🔗 Subscription Calendar: Never miss events","TEXT","","Tired of the constant back-and-forth between calendar apps for schedule checks? Consider trying out the Calendar Subscription feature—effortlessly subscribe to calendars including Google, Outlook, Exchange, iCloud, and more.
-
-[💡 How to subscribe to the calendar](https://help.ticktick.com/articles/7055781593733922816)
-
-![file](https://pull.ticktick.com/newuser3/desktop/en/subscription.mp4)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:28+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","422",""
-"","👋Welcome","⏰ Habit: Visualize your efforts","TEXT","","If you struggle to stick to good habits, consider exploring this feature! Your check-in records and data analytics will witness your persistence and growth.
-
-![file](https://pull.ticktick.com/newuser3/desktop/en/habit.mp4)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:27+0000","-1099511627776","Asia/Shanghai",,"false","Feature Modules","-1099511627776","list","423",""
-"","👋Welcome","💎 Premium","TEXT","","20 premium features and 10x the list and task capacity on all platforms, empowering you to achieve more goals and possibilities.
-
-[✌️ Learn about Premium](https://ticktick.com/about/upgrade?from=welcome)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:30+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","424",""
-"","👋Welcome","💡 Follow Us","TEXT","","Come and follow us!
-
-You will get
-🎉 what's new with TickTick
-⏳ great productivity tips
-⌨️ more channels to send us feedback
- [🤝 Go to the Help Center](https://help.ticktick.com)
-
-Follow Us at
-➡️ [Twitter](https://twitter.com/TickTick) (@TickTick)
-➡️ [Reddit](https://www.reddit.com/r/ticktick/) (r/ticktick)
-➡️ [Facebook](https://www.facebook.com/TickTickApp/) (@TickTickApp)
-➡️ [Instagram](https://www.instagram.com/ticktickapp) (@TickTickApp)
-➡️ [TickTick Blog](https://blog.ticktick.com/) (Productivity & Positivity)
-","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:29+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","425",""
+"","👋Welcome","✅ Click the input box to create a task","TEXT","","If you often forget what you must do, try writing them down, setting reminders, and freeing up your mind.![file](https://pull.ticktick.com/newuser3/desktop/en/task.mp4)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:22+0000","-1099511627776","Asia/Shanghai",,"false","Getting Start","-2199023255552","list","415",""
+"","👋Welcome","📋 Use lists to manage tasks","TEXT","","As the number of tasks grows, you can use lists to categorize and organize them.- **Inbox**: Where your temporary ideas and tasks gather.- **Smart List**: Tasks with due dates will intelligently appear in the ""Today"" and ""Next 7 Days"" lists, providing a clear overview of what needs to be done each day.- **List**: You can also add lists to manage tasks (such as work, life, etc.) according to your usage habits.[💡 Learn the list features](https://help.ticktick.com/articles/7055782283059396608)![file](https://pull.ticktick.com/newuser3/desktop/en/list.mp4)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:23+0000","-1099511627776","Asia/Shanghai",,"false","Getting Start","-2199023255552","list","416",""
+"","👋Welcome","🍅 Pomodoro: Rescue from procrastination","TEXT","","If you have procrastination tendencies, give the Pomodoro feature a try. The sense of achievement gained from completing individual Pomodoro sessions can help you achieve more goals.![file](https://pull.ticktick.com/newuser3/desktop/en/pomodoro.mp4)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:26+0000","-1099511627776","Asia/Shanghai",,"false","Feature Modules","-1099511627776","list","417",""
+"","👋Welcome","📅 Calendar: Check your schedule","TEXT","","The key to time management lies not only in reminders and memos but also in having a good plan. Our calendar views help you schedule events and appointments efficiently.![file](https://pull.ticktick.com/newuser3/desktop/en/calendar.mp4)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:25+0000","-1099511627776","Asia/Shanghai",,"false","Feature Modules","-1099511627776","list","418",""
+"","👋Welcome","🎯 Eisenhower Matrix: Prioritize tasks","TEXT","","If you have a lot to do every day, using the Eisenhower Matrix feature can help you focus on important and urgent tasks.![file](https://pull.ticktick.com/newuser3/desktop/en/matrix.mp4)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:25+0000","-1099511627776","Asia/Shanghai",,"false","Feature Modules","-1099511627776","list","419",""
+"","👋Welcome","✨ More unique features","TEXT","","Here are some of our unique features: - **Cross-platform support**: we support nearly all devices and operating systems, including phones, computers, and watches.  [👀 Check out our supported platforms](https://help.ticktick.com/articles/7055780388337090560) - **Collaboration**: Need to work on a project with colleagues? Quickly invite them to join your list and easily assign tasks to members.[🤝 How to share a list](https://help.ticktick.com/articles/7055781706355179520)- **Tag**: Want to personalize task management? Try adding tags to tasks for easy categorization and filtering, making management more convenient.[🏷️ How to use tags](https://help.ticktick.com/articles/7055782255804809216)- **Filter**: Need to view all high-priority tasks? Try the Filter feature to effortlessly screen the tasks you want to see.[🚀 How to use filters](https://help.ticktick.com/articles/7055782240994721792)- **Summary**: Still, pondering over your review content? Try the Summary feature to easily grasp the completion status of tasks over a specific period. [📋 How to use Summary](https://help.ticktick.com/articles/7055780476358754304#summary)- **Command Menu**: Want to quickly navigate to different modules? Simply use the command menu (Ctrl/Command+K) to go there effortlessly. [⌨️ Explore more shortcuts](https://help.ticktick.com/articles/7055780449171275776)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:29+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","420",""
+"","👋Welcome","📊 Kanban, Timeline View: Visual management","TEXT","","Efficiently switch between list views for better task management.- **Kanban View**: Need categorized tasks? Use Kanban View for clear category presentation in card format. [💡 Learn about Kanban View](https://help.ticktick.com/articles/7055782353376903168)- **Timeline View**: Tracking long-term projects? Try Timeline View. Easily visualize task timelines and effortlessly adjust plans with a simple drag-and-drop.  [💡 Learn about Timeline View](https://help.ticktick.com/articles/7055782331050622976)![file](https://pull.ticktick.com/newuser3/desktop/en/view.mp4)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:27+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","421",""
+"","👋Welcome","🔗 Subscription Calendar: Never miss events","TEXT","","Tired of the constant back-and-forth between calendar apps for schedule checks? Consider trying out the Calendar Subscription feature—effortlessly subscribe to calendars including Google, Outlook, Exchange, iCloud, and more.[💡 How to subscribe to the calendar](https://help.ticktick.com/articles/7055781593733922816)![file](https://pull.ticktick.com/newuser3/desktop/en/subscription.mp4)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:28+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","422",""
+"","👋Welcome","⏰ Habit: Visualize your efforts","TEXT","","If you struggle to stick to good habits, consider exploring this feature! Your check-in records and data analytics will witness your persistence and growth.![file](https://pull.ticktick.com/newuser3/desktop/en/habit.mp4)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:27+0000","-1099511627776","Asia/Shanghai",,"false","Feature Modules","-1099511627776","list","423",""
+"","👋Welcome","💎 Premium","TEXT","","20 premium features and 10x the list and task capacity on all platforms, empowering you to achieve more goals and possibilities.[✌️ Learn about Premium](https://ticktick.com/about/upgrade?from=welcome)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:30+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","424",""
+"","👋Welcome","💡 Follow Us","TEXT","","Come and follow us!You will get🎉 what's new with TickTick⏳ great productivity tips⌨️ more channels to send us feedback [🤝 Go to the Help Center](https://help.ticktick.com)Follow Us at➡️ [Twitter](https://twitter.com/TickTick) (@TickTick)➡️ [Reddit](https://www.reddit.com/r/ticktick/) (r/ticktick)➡️ [Facebook](https://www.facebook.com/TickTickApp/) (@TickTickApp)➡️ [Instagram](https://www.instagram.com/ticktickapp) (@TickTickApp)➡️ [TickTick Blog](https://blog.ticktick.com/) (Productivity & Positivity)","N","","","","","0","2","2026-01-02T16:42:12+0000","2026-01-02T16:54:29+0000","-1099511627776","Asia/Shanghai",,"false","Explore More","0","list","425",""
