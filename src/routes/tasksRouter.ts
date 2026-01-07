@@ -26,9 +26,10 @@ router.get('/all', verifyToken, async (req: CustomRequest, res) => {
 		const totalPages = Math.ceil(total / limit);
 
 		// Fetch paginated tasks with .lean() for better performance
-		// Sort by completedTime (if exists), then createdTime, then added_at - all descending (newest first)
+		// Sort by completedTime (if exists), then createdTime, then added_at, then _id - all descending (newest first)
+		// _id ensures deterministic ordering when other fields are identical
 		const tasks = await Task.find({ userId })
-			.sort({ completedTime: -1, createdTime: -1, added_at: -1 })
+			.sort({ completedTime: -1, createdTime: -1, added_at: -1, _id: -1 })
 			.skip(skip)
 			.limit(limit)
 			.lean();

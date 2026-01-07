@@ -31,9 +31,10 @@ router.get('/all', verifyToken, async (req: CustomRequest, res) => {
 		const totalPages = Math.ceil(total / limit);
 
 		// Fetch paginated focus records with .lean() for better performance
-		// Sort by startTime descending (newest first)
+		// Sort by startTime descending (newest first), then _id for deterministic ordering
+		// _id ensures deterministic ordering when startTime values are identical
 		const focusRecords = await FocusRecord.find({ userId })
-			.sort({ startTime: -1 })
+			.sort({ startTime: -1, _id: -1 })
 			.skip(skip)
 			.limit(limit)
 			.lean();

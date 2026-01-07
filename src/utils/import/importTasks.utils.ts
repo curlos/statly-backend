@@ -89,7 +89,13 @@ export async function importTasks(tasks: ImportableTaskDocument[], userId: Types
 			const result = await executeBatchedBulkWrite(bulkOps, model);
 			totalCreated += result.upsertedCount;
 			totalModified += result.modifiedCount;
-			totalMatched += result.matchedCount - result.modifiedCount;
+			const matchedNotModified = result.matchedCount - result.modifiedCount;
+			totalMatched += matchedNotModified;
+
+			// Warn if duplicate task IDs were found
+			if (matchedNotModified > 0) {
+				errors.push(`Warning: ${matchedNotModified} duplicate task IDs found in ${source} - only unique tasks imported. Consider re-exporting your data to get a clean backup.`);
+			}
 		} catch (error) {
 			errors.push(`Bulk insert error for ${source}: ${error instanceof Error ? error.message : 'Unknown error'}`);
 		}
