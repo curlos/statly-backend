@@ -34,6 +34,7 @@ router.post('/upload', verifyToken, upload.array('images', 10), async (req: Cust
 		const userId = req.user?.userId;
 		const files = req.files as Express.Multer.File[];
 		const { folder = 'GENERAL' } = req.body; // Get folder from request body, default to GENERAL
+		const compress = req.body.compress !== 'false';
 
 		if (!userId) {
 			return res.status(401).json({ message: 'Unauthorized' });
@@ -58,11 +59,13 @@ router.post('/upload', verifyToken, upload.array('images', 10), async (req: Cust
 							resource_type: 'image',
 							folder: `Statly/users/${userId}/custom-images`,
 							public_id: `${Date.now()}-custom-${index}`,
-							quality: 'auto:good',
-							fetch_format: 'auto',
-							width: 1000,
-							height: 1000,
-							crop: 'limit', // Don't upscale, maintain aspect ratio
+							...(compress ? {
+								quality: 'auto:good',
+								fetch_format: 'auto',
+								width: 1000,
+								height: 1000,
+								crop: 'limit', // Don't upscale, maintain aspect ratio
+							} : {}),
 						},
 						(error, result) => {
 							if (error) reject(error);
@@ -199,6 +202,7 @@ router.put('/:id', verifyToken, upload.single('image'), async (req: CustomReques
 		const userId = req.user?.userId;
 		const { id } = req.params;
 		const file = req.file;
+		const compress = req.body.compress !== 'false';
 
 		if (!userId) {
 			return res.status(401).json({ message: 'Unauthorized' });
@@ -232,11 +236,13 @@ router.put('/:id', verifyToken, upload.single('image'), async (req: CustomReques
 					resource_type: 'image',
 					folder: `Statly/users/${userId}/custom-images`,
 					public_id: `${Date.now()}-custom-updated`,
-					quality: 'auto:good',
-					fetch_format: 'auto',
-					width: 1000,
-					height: 1000,
-					crop: 'limit',
+					...(compress ? {
+						quality: 'auto:good',
+						fetch_format: 'auto',
+						width: 1000,
+						height: 1000,
+						crop: 'limit', // Don't upscale, maintain aspect ratio
+					} : {}),
 				},
 				(error, result) => {
 					if (error) reject(error);
