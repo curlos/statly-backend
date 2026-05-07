@@ -7,6 +7,7 @@ export interface IUserSettings extends Document {
 	theme?: {
 		color?: string;
 		fontFamily?: string;
+		colorMode?: string;
 	};
 	tickTickCookie?: string;
 	tickTickInboxProjectId?: string;
@@ -105,7 +106,8 @@ const UserSettingsSchema = new Schema(
 		source: { type: String, default: 'UserSettings', required: true, immutable: true },
 		theme: {
 			color: { type: String, default: 'blue-500' },
-			fontFamily: { type: String, default: 'Default' }
+			fontFamily: { type: String, default: 'Default' },
+			colorMode: { type: String, default: 'dark' },
 		},
 		tickTickCookie: { type: String, default: '' },
 		tickTickInboxProjectId: { type: String, default: '' },

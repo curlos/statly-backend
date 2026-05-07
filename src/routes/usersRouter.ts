@@ -79,7 +79,7 @@ router.get('/logged-in-user', async (req, res) => {
 
 router.post('/register', async (req, res) => {
 	try {
-		const { name, email, password } = req.body;
+		const { name, email, password, colorMode } = req.body;
 
 		// Validate all fields are present
 		if (!name || !email || !password) {
@@ -146,8 +146,13 @@ router.post('/register', async (req, res) => {
 			updatedAt: now
 		};
 
+		const ringColors = colorMode === 'light'
+			? ['#dc2626', '#16a34a', '#0891b2']
+			: ['#fa114f', '#a6ff00', '#00fff6'];
+
 		const userSettings = new UserSettings({
 			userId: user._id,
+			theme: { colorMode: colorMode || 'dark' },
 			habit: {
 				showInTimedSmartLists: true,
 			},
@@ -158,21 +163,21 @@ router.post('/register', async (req, res) => {
 							...baseRingDefaults,
 							id: `ring-1-${user._id}`,
 							name: 'Ring 1',
-							color: '#fa114f',
+							color: ringColors[0],
 							isActive: true
 						},
 						{
 							...baseRingDefaults,
 							id: `ring-2-${user._id}`,
 							name: 'Ring 2',
-							color: '#a6ff00',
+							color: ringColors[1],
 							isActive: false
 						},
 						{
 							...baseRingDefaults,
 							id: `ring-3-${user._id}`,
 							name: 'Ring 3',
-							color: '#00fff6',
+							color: ringColors[2],
 							isActive: false
 						}
 					]
