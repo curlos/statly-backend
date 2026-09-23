@@ -17,6 +17,7 @@ export interface IUserSettings extends Document {
 	pages?: {
 		focusRecords?: {
 			showFocusNotes?: boolean;
+			limitTextWidth?: boolean;
 			showTotalFocusDuration?: boolean;
 			showCompletedTasks?: boolean;
 			showTaskAncestors?: boolean;
@@ -49,6 +50,7 @@ export interface IUserSettings extends Document {
 			showIndentedTasks?: boolean;
 			onlyExportTasksWithNoParent?: boolean;
 			maxDaysPerPage?: number;
+			limitTextWidth?: boolean;
 		};
 		focusHoursGoal?: {
 			rings?: Array<{
@@ -121,6 +123,7 @@ const UserSettingsSchema = new Schema(
 		pages: {
 			focusRecords: {
 				showFocusNotes: { type: Boolean, default: true },
+				limitTextWidth: { type: Boolean, default: true },
 				showTotalFocusDuration: { type: Boolean, default: true },
 				showCompletedTasks: { type: Boolean, default: true },
 				showTaskAncestors: { type: Boolean, default: true },
@@ -152,7 +155,8 @@ const UserSettingsSchema = new Schema(
 				groupedTasksCollapsedByDefault: { type: Boolean, default: true },
 				showIndentedTasks: { type: Boolean, default: true },
 				onlyExportTasksWithNoParent: { type: Boolean, default: true },
-				maxDaysPerPage: { type: Number, default: 7 }
+				maxDaysPerPage: { type: Number, default: 7 },
+				limitTextWidth: { type: Boolean, default: true }
 			},
 			focusHoursGoal: {
 				rings: {
