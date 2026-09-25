@@ -10,6 +10,7 @@ export interface IUserSettings extends Document {
 		colorMode?: string;
 		customColor?: string;
 		useCustomColor?: boolean;
+		uiTheme?: string;
 	};
 	tickTickCookie?: string;
 	tickTickInboxProjectId?: string;
@@ -114,6 +115,7 @@ const UserSettingsSchema = new Schema(
 			colorMode: { type: String, default: 'dark' },
 			customColor: { type: String, default: '#3b82f6' },
 			useCustomColor: { type: Boolean, default: false },
+			uiTheme: { type: String, default: 'default' },
 		},
 		tickTickCookie: { type: String, default: '' },
 		tickTickInboxProjectId: { type: String, default: '' },
