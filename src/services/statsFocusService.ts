@@ -49,7 +49,7 @@ export interface FocusRecordsStatsQueryParams {
 	intervalStartDate?: string; // Interval Dropdown dates (second tier filter)
 	intervalEndDate?: string; // Interval Dropdown dates (second tier filter)
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
-	searchQuery?: string;
+	searchQuery?: string[];
 	focusAppSources: string[];
 	toDoListAppSources: string[];
 	timezone: string;

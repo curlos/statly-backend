@@ -354,7 +354,7 @@ export interface FocusRecordsQueryParams {
 	intervalEndDate?: string; // Interval Dropdown dates (second tier filter)
 	sortBy: string;
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
-	searchQuery?: string;
+	searchQuery?: string[];
 	focusAppSources: string[]; // Mapped focus app sources
 	emotions: string[]; // Emotions filter
 	timezone?: string;
@@ -449,7 +449,7 @@ export interface ExportFocusRecordsQueryParams {
 	intervalEndDate?: string;
 	sortBy: string;
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
-	searchQuery?: string;
+	searchQuery?: string[];
 	focusAppSources: string[];
 	emotions: string[];
 	groupBy: 'none' | 'project' | 'task' | 'emotion';

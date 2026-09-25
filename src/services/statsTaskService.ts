@@ -65,7 +65,7 @@ export interface CompletedTasksStatsQueryParams {
 	intervalStartDate?: string; // Interval Dropdown dates (second tier filter)
 	intervalEndDate?: string; // Interval Dropdown dates (second tier filter)
 	taskIdIncludeSubtasks: boolean;
-	searchQuery?: string;
+	searchQuery?: string[];
 	toDoListAppSources: string[];
 	timezone: string;
 	yearAgnostic?: boolean; // If true, filter by month-day only (ignore year)

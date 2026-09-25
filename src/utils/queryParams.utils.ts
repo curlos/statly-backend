@@ -14,7 +14,7 @@ export interface BaseQueryParams {
 	intervalStartDate?: string; // Interval Dropdown dates (second tier filter)
 	intervalEndDate?: string; // Interval Dropdown dates (second tier filter)
 	taskIdIncludeFocusRecordsFromSubtasks: boolean;
-	searchQuery?: string;
+	searchQuery?: string[]; // Final regex patterns built from the search text + search options. Every pattern must match.
 	focusAppSources: string[]; // Mapped focus app sources
 	toDoListAppSources: string[]; // Mapped to-do list app sources
 	emotions: string[]; // Emotions filter (anger, joy, sadness, etc.)
@@ -45,6 +45,59 @@ export interface ExportDaysWithCompletedTasksQueryParams extends BaseQueryParams
 	taskIdIncludeSubtasks: boolean;
 	onlyExportTasksWithNoParent: boolean;
 	exportMode?: 'flat' | 'nested';
+}
+
+// ============================================================================
+// Search Patterns
+// ============================================================================
+
+const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Converts the search text and search options into a list of regex patterns (all must match).
+ * - Default: comma-separated terms, matched literally, any term can match.
+ * - search-match-all: every term must match (one pattern per term).
+ * - search-whole-word: terms only match as whole words ("AI" won't match "gain").
+ * - search-case-sensitive: otherwise patterns get the inline (?i) flag.
+ * - search-regex: the search text is used as a raw regex (not split on commas).
+ */
+export function buildSearchPatterns(req: Request): string[] | undefined {
+	const searchText = ((req.query['search'] as string) || '').trim();
+	if (!searchText) {
+		return undefined;
+	}
+
+	const caseSensitive = req.query['search-case-sensitive'] === 'true';
+	const wholeWord = req.query['search-whole-word'] === 'true';
+	const matchAll = req.query['search-match-all'] === 'true';
+	const useRegex = req.query['search-regex'] === 'true';
+
+	let isValidRegex = useRegex;
+	if (useRegex) {
+		try {
+			new RegExp(searchText);
+		} catch {
+			isValidRegex = false;
+		}
+	}
+
+	// Invalid regex falls back to a literal match of the whole text
+	const terms = isValidRegex
+		? [searchText]
+		: useRegex
+			? [escapeRegex(searchText)]
+			: searchText.split(',').map(term => term.trim()).filter(Boolean).map(escapeRegex);
+
+	if (terms.length === 0) {
+		return undefined;
+	}
+
+	const patterns = matchAll ? terms : [terms.join('|')];
+
+	return patterns.map(pattern => {
+		const withWholeWord = wholeWord ? `\\b(?:${pattern})\\b` : pattern;
+		return caseSensitive ? withWholeWord : `(?i)${withWholeWord}`;
+	});
 }
 
 // ============================================================================
@@ -91,7 +144,7 @@ export function parseBaseQueryParams(req: Request): BaseQueryParams {
 		intervalStartDate: req.query['interval-start-date'] as string,
 		intervalEndDate: req.query['interval-end-date'] as string,
 		taskIdIncludeFocusRecordsFromSubtasks: req.query['task-id-include-focus-records-from-subtasks'] === 'true',
-		searchQuery: req.query['search'] as string,
+		searchQuery: buildSearchPatterns(req),
 		focusAppSources,
 		toDoListAppSources,
 		emotions,

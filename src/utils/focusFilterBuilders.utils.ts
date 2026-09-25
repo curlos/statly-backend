@@ -19,18 +19,20 @@ export const APP_SOURCE_MAPPING: Record<string, string> = {
 // Focus Records - Search Filter
 // ============================================================================
 
-export function buildFocusSearchFilter(searchQuery?: string) {
-	if (!searchQuery || !searchQuery.trim()) {
+// searchQuery is a list of regex patterns (built by buildSearchPatterns) that must ALL match
+export function buildFocusSearchFilter(searchQuery?: string[]) {
+	if (!searchQuery || searchQuery.length === 0) {
 		return null;
 	}
 
-	const trimmedQuery = searchQuery.trim();
 	return {
-		$or: [
-			{ note: { $regex: trimmedQuery, $options: 'i' } },
-			{ tasks: { $elemMatch: { title: { $regex: trimmedQuery, $options: 'i' } } } },
-			{ tasks: { $elemMatch: { projectName: { $regex: trimmedQuery, $options: 'i' } } } }
-		]
+		$and: searchQuery.map(pattern => ({
+			$or: [
+				{ note: { $regex: pattern } },
+				{ tasks: { $elemMatch: { title: { $regex: pattern } } } },
+				{ tasks: { $elemMatch: { projectName: { $regex: pattern } } } }
+			]
+		}))
 	};
 }
 
@@ -654,7 +656,7 @@ export function extractFocusTotalsFromResult(
 
 export interface BuildFocusFilterPipelineParams {
 	userId: Types.ObjectId;
-	searchQuery?: string;
+	searchQuery?: string[];
 	taskId?: string;
 	projectIds?: string[];
 	startDate?: string;

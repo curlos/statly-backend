@@ -15,17 +15,19 @@ export const TASK_APP_SOURCE_MAPPING: Record<string, string> = {
 // Tasks - Search Filter
 // ============================================================================
 
-export function buildTaskSearchFilter(searchQuery?: string) {
-	if (!searchQuery || !searchQuery.trim()) {
+// searchQuery is a list of regex patterns (built by buildSearchPatterns) that must ALL match
+export function buildTaskSearchFilter(searchQuery?: string[]) {
+	if (!searchQuery || searchQuery.length === 0) {
 		return null;
 	}
 
-	const trimmedQuery = searchQuery.trim();
 	return {
-		$or: [
-			{ title: { $regex: trimmedQuery, $options: 'i' } },
-			{ content: { $regex: trimmedQuery, $options: 'i' } },
-		]
+		$and: searchQuery.map(pattern => ({
+			$or: [
+				{ title: { $regex: pattern } },
+				{ content: { $regex: pattern } },
+			]
+		}))
 	};
 }
 
