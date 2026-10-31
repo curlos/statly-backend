@@ -205,6 +205,15 @@ function isConsecutiveWithFreebies(
 }
 
 /**
+ * Goal a day's focus time has to reach, allowing for TickTick being a little off.
+ * Goals of 30 minutes or less have no offset since 5 minutes is too big a share of them
+ * (e.g., 5h55m counts for a 6h goal and 55m for a 1h goal, but 25m doesn't count for a 30m goal)
+ */
+function getRequiredSecondsForGoal(goalSeconds: number) {
+	return goalSeconds > 1800 ? goalSeconds - 300 : goalSeconds; // 5-minute offset
+}
+
+/**
  * Calculate streaks from daily totals (no need to fill missing days!)
  * Tracks BOTH current streak (up to today) AND longest streak ever
  *
@@ -214,7 +223,7 @@ function isConsecutiveWithFreebies(
  * - If gap detected (date is not consecutive), break the streak
  * - Today doesn't break the streak (still have time to meet goal)
  *
- * Note: A 5-minute offset is applied to the goal (e.g., 5h55m counts for a 6h goal)
+ * Note: A 5-minute offset is applied to goals over 30 minutes (e.g., 5h55m counts for a 6h goal)
  */
 function calculateStreaks(
 	dailyTotals: Array<{ date: string; duration: number }>,
@@ -249,7 +258,7 @@ function calculateStreaks(
 
 		// Use custom daily goal if set for this date, otherwise use default goal
 		const dailyGoalSeconds = customDailyFocusGoal?.[date] ?? goalSeconds;
-		const offsetDailyGoal = dailyGoalSeconds - 300; // 5-minute offset
+		const offsetDailyGoal = getRequiredSecondsForGoal(dailyGoalSeconds);
 
 		const goalMet = duration >= offsetDailyGoal;
 
@@ -742,7 +751,7 @@ export async function getCombinedStreakHistoryForAllRings(
 
 			// Use custom goal for this date if set, otherwise use default goal
 			const dailyGoalSeconds = customDailyFocusGoal[date] ?? goalSeconds;
-			const offsetGoal = dailyGoalSeconds - 300; // 5-minute offset
+			const offsetGoal = getRequiredSecondsForGoal(dailyGoalSeconds);
 			const goalMet = duration >= offsetGoal;
 
 			// Check if goal was met
