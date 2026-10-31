@@ -98,6 +98,7 @@ interface FocusRecordWithTasks {
 interface CompletedTask {
 	title: string;
 	completedTime: Date;
+	status?: number;
 }
 
 // Helper function to add ancestor tasks and completed tasks to focus records
@@ -195,7 +196,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: FocusRecordWith
 			}
 		})
 		.sort({ completedTime: 1 })
-		.select('title completedTime -_id')
+		.select('title completedTime status -_id')
 		.lean();
 		allCompletedTasks = tasks as CompletedTask[];
 	} else {
@@ -211,7 +212,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: FocusRecordWith
 
 		const tasks = await Task.find({ userId, $or: orConditions })
 			.sort({ completedTime: 1 })
-			.select('title completedTime -_id')
+			.select('title completedTime status -_id')
 			.lean();
 		allCompletedTasks = tasks as CompletedTask[];
 	}
@@ -259,9 +260,10 @@ export const addAncestorAndCompletedTasks = async (focusRecords: FocusRecordWith
 			});
 		});
 
-		// Remove completedTime from tasks before adding to focus record (frontend only needs title)
+		// Remove completedTime from tasks before adding to focus record (frontend only needs title and status)
 		const completedTasksForResponse = completedTasks.map(task => ({
-			title: task.title
+			title: task.title,
+			status: task.status
 		}));
 
 		return {
