@@ -16,7 +16,9 @@ import {
 	buildFocusMatchAndFilterConditions,
 	buildFocusBasePipeline,
 	addFocusTaskDurationCalculation,
+	buildMonthDayFilter,
 } from '../utils/focusFilterBuilders.utils';
+import { calculateEffectiveDateBoundaries } from '../utils/timezone.utils';
 import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { MedalsQueryParams } from '../utils/queryParams.utils';
@@ -138,11 +140,16 @@ function calculateMedalsFromPeriodTotals(
  *
  * For records where crossesMidnight === false:
  * - Pass through unchanged
+ *
+ * If date boundaries are given, split pieces that fall outside them are dropped
+ * (e.g. the Oct 27 half of a record when only Oct 28 is selected).
  */
-function splitMidnightCrossingRecordsForMedals(
+export function splitMidnightCrossingRecordsForMedals(
 	pipeline: PipelineStage[],
 	interval: string,
-	timezone: string
+	timezone: string,
+	startDateBoundary: Date | null = null,
+	endDateBoundary: Date | null = null
 ) {
 	// Step 1: Generate split documents for midnight-crossing records
 	pipeline.push({
@@ -323,6 +330,44 @@ function splitMidnightCrossingRecordsForMedals(
 			newRoot: "$splitDocuments"
 		}
 	});
+
+	// Step 4: Drop split pieces outside the selected date range (if any)
+	if (startDateBoundary || endDateBoundary) {
+		const startTimeRange: Record<string, Date> = {};
+		if (startDateBoundary) startTimeRange.$gte = startDateBoundary;
+		if (endDateBoundary) startTimeRange.$lt = endDateBoundary;
+		pipeline.push({ $match: { startTime: startTimeRange } });
+	}
+}
+
+/**
+ * Splits midnight-crossing records by day and keeps only the pieces inside the selected range.
+ * Year-agnostic ranges match on month/day (in any year), plus the real interval dates if any.
+ */
+export function splitMidnightCrossingRecordsInDateRange(
+	pipeline: PipelineStage[],
+	params: {
+		startDate?: string;
+		endDate?: string;
+		intervalStartDate?: string | null;
+		intervalEndDate?: string | null;
+		timezone: string;
+		yearAgnostic?: boolean;
+	}
+) {
+	const { startDateBoundary, endDateBoundary } = calculateEffectiveDateBoundaries(
+		params.yearAgnostic
+			? { intervalStartDate: params.intervalStartDate, intervalEndDate: params.intervalEndDate, timezone: params.timezone }
+			: params
+	);
+	splitMidnightCrossingRecordsForMedals(pipeline, 'daily', params.timezone, startDateBoundary, endDateBoundary);
+
+	if (params.yearAgnostic) {
+		const monthDayFilter = buildMonthDayFilter(params.startDate, params.endDate, params.timezone, 'startTime');
+		if (monthDayFilter) {
+			pipeline.push({ $match: monthDayFilter });
+		}
+	}
 }
 
 // ============================================================================

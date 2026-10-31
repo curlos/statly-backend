@@ -15,7 +15,8 @@ import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
 import { buildTaskSearchFilter, buildTaskMatchConditions } from '../utils/taskFilterBuilders.utils';
 import { ChallengesQueryParams } from '../utils/queryParams.utils';
 import { addMidnightRecordDurationAdjustment } from '../utils/focus.utils';
-import { parseDateInTimezone } from '../utils/timezone.utils';
+import { getNextDayStartInTimezone, parseDateInTimezone } from '../utils/timezone.utils';
+import { splitMidnightCrossingRecordsForMedals } from './medalsService';
 
 // ============================================================================
 // Helper Functions
@@ -139,11 +140,7 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams, use
 	// Calculate date boundaries for duration adjustment
 	const tz = params.timezone || 'UTC';
 	const startDateBoundary = params.startDate ? parseDateInTimezone(params.startDate, tz) : null;
-	let endDateBoundary: Date | null = null;
-	if (params.endDate) {
-		endDateBoundary = parseDateInTimezone(params.endDate, tz);
-		endDateBoundary.setUTCDate(endDateBoundary.getUTCDate() + 1);
-	}
+	const endDateBoundary = params.endDate ? getNextDayStartInTimezone(params.endDate, tz) : null;
 
 	// Build aggregation pipeline
 	const pipeline = buildFocusBasePipeline(searchFilter, focusRecordMatchConditions);
@@ -152,6 +149,9 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams, use
 	if (startDateBoundary || endDateBoundary) {
 		addMidnightRecordDurationAdjustment(pipeline, startDateBoundary, endDateBoundary);
 	}
+
+	// Split midnight-crossing records into one document per day so each day gets only its portion
+	splitMidnightCrossingRecordsForMedals(pipeline, 'daily', tz, startDateBoundary, endDateBoundary);
 
 	// Add task duration calculation (shared logic)
 	addFocusTaskDurationCalculation(pipeline, taskFilterConditions);

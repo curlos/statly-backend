@@ -6,6 +6,7 @@ import { buildAncestorData } from '../utils/task.utils';
 import { getDateGroupingExpression } from '../utils/filterBuilders.utils';
 import { PipelineStage } from 'mongoose';
 import { MongooseFilter, TaskAncestorInfo } from '../types/aggregation';
+import { splitMidnightCrossingRecordsInDateRange } from './medalsService';
 
 // ============================================================================
 // Stats Aggregation Service
@@ -70,15 +71,19 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams,
 	// Apply grouping based on groupBy parameter
 	const nested = params.nested ?? false;
 
+	// Stages that split midnight-crossing records into one document per day (used by day/week/month/year grouping)
+	const splitByDayStages: PipelineStage[] = [];
+	splitMidnightCrossingRecordsInDateRange(splitByDayStages, params);
+
 	switch (params.groupBy) {
 		case 'day':
-			return await groupByDay(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
+			return await groupByDay(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone, splitByDayStages);
 		case 'week':
-			return await groupByWeek(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
+			return await groupByWeek(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone, splitByDayStages);
 		case 'month':
-			return await groupByMonth(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
+			return await groupByMonth(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone, splitByDayStages);
 		case 'year':
-			return await groupByYear(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
+			return await groupByYear(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone, splitByDayStages);
 		case 'project':
 			return await groupByProject(basePipeline, taskFilterConditions, nested, userId);
 		case 'task':
@@ -225,18 +230,20 @@ async function processTaskData(taskResults: TaskAggregationResult[], totalDurati
 	return { byTask, ancestorTasksById };
 }
 
-async function groupByDay(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC') {
+async function groupByDay(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC', splitByDayStages: PipelineStage[] = []) {
 	// Use $facet to calculate totals and group by day in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
 		$facet: {
 			totals: buildTotalsPipelineStages(taskFilterConditions),
 			byDay: [
+				// Split midnight-crossing records so each day only gets its own portion
+				...splitByDayStages,
 				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
 				{
 					$group: {
 						_id: {
-							$dateToString: { format: "%Y-%m-%d", date: "$tasks.startTime", timezone: timezone }
+							$dateToString: { format: "%Y-%m-%d", date: "$startTime", timezone: timezone }
 						},
 						duration: { $sum: "$tasks.duration" },
 						uniqueRecords: { $addToSet: "$_id" }
@@ -270,7 +277,7 @@ async function groupByDay(pipeline: PipelineStage[], startDate?: string, endDate
 	};
 }
 
-async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC') {
+async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC', splitByDayStages: PipelineStage[] = []) {
 	// Use $facet to calculate totals and group by week in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -280,6 +287,8 @@ async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDat
 
 			// Group by week (Monday of each week)
 			byWeek: [
+				// Split midnight-crossing records so each day only gets its own portion
+				...splitByDayStages,
 				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
 				// Add a field to get the Monday of the week for sorting purposes
 				{
@@ -336,7 +345,7 @@ async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDat
 	};
 }
 
-async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC') {
+async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC', splitByDayStages: PipelineStage[] = []) {
 	// Use $facet to calculate totals and group by month in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -346,6 +355,8 @@ async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDa
 
 			// Group by month
 			byMonth: [
+				// Split midnight-crossing records so each day only gets its own portion
+				...splitByDayStages,
 				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
 				// Add a field to get the first day of the month for sorting purposes
 				{
@@ -396,7 +407,7 @@ async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDa
 	};
 }
 
-async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC') {
+async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC', splitByDayStages: PipelineStage[] = []) {
 	// Use $facet to calculate totals and group by year in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -406,6 +417,8 @@ async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDat
 
 			// Group by year
 			byYear: [
+				// Split midnight-crossing records so each day only gets its own portion
+				...splitByDayStages,
 				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
 				// Add a field to get the first day of the year for sorting purposes
 				{
@@ -422,7 +435,7 @@ async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDat
 				{
 					$group: {
 						_id: {
-							$dateToString: { format: "%Y", date: "$tasks.startTime", timezone: timezone }
+							$dateToString: { format: "%Y", date: "$startTime", timezone: timezone }
 						},
 						yearStartDate: { $first: "$yearStartDate" }, // Keep for sorting
 						duration: { $sum: "$tasks.duration" },

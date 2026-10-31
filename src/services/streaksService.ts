@@ -4,6 +4,8 @@ import { buildFocusFilterPipeline } from '../utils/focusFilterBuilders.utils';
 import FocusRecord from '../models/FocusRecord';
 import { BaseQueryParams } from '../utils/queryParams.utils';
 import { fromZonedTime } from 'date-fns-tz';
+import { getNextDayStartInTimezone } from '../utils/timezone.utils';
+import { splitMidnightCrossingRecordsForMedals, splitMidnightCrossingRecordsInDateRange } from './medalsService';
 
 // Service-specific types
 interface InactivePeriod {
@@ -334,11 +336,15 @@ function calculateStreaks(
  */
 async function getDailyFocusDurations(
 	basePipeline: PipelineStage[],
-	timezone: string
+	params: StreaksQueryParams
 ) {
+	const { timezone } = params;
 	const pipeline = [...basePipeline];
 
-	// Group by day
+	// Split midnight-crossing records into one document per day so each day gets only its portion
+	splitMidnightCrossingRecordsInDateRange(pipeline, params);
+
+	// Group by day (using the split document's startTime, which is the day it belongs to)
 	pipeline.push({
 		$facet: {
 			byDay: [
@@ -346,7 +352,7 @@ async function getDailyFocusDurations(
 				{
 					$group: {
 						_id: {
-							$dateToString: { format: "%Y-%m-%d", date: "$tasks.startTime", timezone: timezone }
+							$dateToString: { format: "%Y-%m-%d", date: "$startTime", timezone: timezone }
 						},
 						duration: { $sum: "$tasks.duration" }
 					}
@@ -377,17 +383,19 @@ async function getTodayFocusDuration(
 	// Parse the YYYY-MM-DD string directly as a date in the user's timezone
 	// fromZonedTime interprets the date string in the user's timezone and returns UTC
 	const dayStart = fromZonedTime(`${todayDateKey} 00:00:00`, timezone);
-	const dayEnd = new Date(dayStart);
-	dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+	const dayEnd = getNextDayStartInTimezone(todayDateKey, timezone);
 
 	const pipeline = [...basePipeline];
 
-	// Filter to today's date only
+	// Split midnight-crossing records into one document per day so today gets only its portion
+	splitMidnightCrossingRecordsForMedals(pipeline, 'daily', timezone);
+
+	// Filter to today's date only (using the split document's startTime)
 	pipeline.push(
 		{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
 		{
 			$match: {
-				'tasks.startTime': { $gte: dayStart, $lt: dayEnd }
+				startTime: { $gte: dayStart, $lt: dayEnd }
 			}
 		},
 		{
@@ -472,7 +480,7 @@ export async function getStreakHistoryForRing(
 	});
 
 	// Get daily totals (filtered by user's applied filters)
-	const dailyTotals = await getDailyFocusDurations(basePipeline, params.timezone);
+	const dailyTotals = await getDailyFocusDurations(basePipeline, params);
 
 	// Calculate both current and longest streaks
 	const { currentStreak, longestStreak, allStreaks } = calculateStreaks(

@@ -21,6 +21,16 @@ export function parseDateInTimezone(dateString: string, timezone: string = 'UTC'
 }
 
 /**
+ * Returns midnight of the calendar day after dateString in the specified timezone.
+ * Unlike adding 24 hours, this stays correct on DST days (which are 23 or 25 hours long).
+ */
+export function getNextDayStartInTimezone(dateString: string, timezone: string = 'UTC'): Date {
+	const nextDay = new Date(dateString + ' 00:00:00 UTC');
+	nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+	return parseDateInTimezone(nextDay.toISOString().slice(0, 10), timezone);
+}
+
+/**
  * Check if a focus record crosses midnight in the user's timezone
  * @param startDate - Start date (UTC)
  * @param endDate - End date (UTC)
@@ -82,11 +92,7 @@ export function calculateEffectiveDateBoundaries(params: {
 	const tz = params.timezone || 'UTC';
 
 	const startDateBoundary = effectiveStartDate ? parseDateInTimezone(effectiveStartDate, tz) : null;
-	let endDateBoundary: Date | null = null;
-	if (effectiveEndDate) {
-		endDateBoundary = parseDateInTimezone(effectiveEndDate, tz);
-		endDateBoundary.setUTCDate(endDateBoundary.getUTCDate() + 1);
-	}
+	const endDateBoundary = effectiveEndDate ? getNextDayStartInTimezone(effectiveEndDate, tz) : null;
 
 	return { startDateBoundary, endDateBoundary };
 }

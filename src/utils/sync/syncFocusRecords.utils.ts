@@ -30,33 +30,6 @@ function createDeterministicId(source: string, ...fields: unknown[]): string {
 	return `${source}-${hash}`;
 }
 
-/**
- * Helper function to check if a record crosses midnight with caching
- * @param startTime - Start time of the record
- * @param endTime - End time of the record
- * @param timezone - User's timezone
- * @param cache - Map to cache results
- * @returns boolean indicating if record crosses midnight
- */
-function getCachedCrossesMidnight(
-	startTime: Date,
-	endTime: Date,
-	timezone: string,
-	cache: Map<string, boolean>
-): boolean {
-	const startDay = Math.floor(startTime.getTime() / 86400000);
-	const endDay = Math.floor(endTime.getTime() / 86400000);
-	const dateKey = `${timezone}_${startDay}_${endDay}`;
-
-	let crossesMidnight = cache.get(dateKey);
-	if (crossesMidnight === undefined) {
-		crossesMidnight = crossesMidnightInTimezone(startTime, endTime, timezone);
-		cache.set(dateKey, crossesMidnight);
-	}
-
-	return crossesMidnight;
-}
-
 export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone: string = 'UTC') {
 	// Get or create sync metadata for focus records
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickFocusRecords');
@@ -136,8 +109,6 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 
 	const bulkOps = [];
 	const recordsNeedingEmotionAnalysis: string[] = [];
-	// Cache for crossesMidnight calculations (keyed by start/end day pair)
-	const midnightCache = new Map<string, boolean>();
 
 	for (const record of focusRecords) {
 		const recordEndTime = new Date(record.endTime);
@@ -167,8 +138,8 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 			const pauseDuration = record.pauseDuration || 0; // pauseDuration is already in seconds
 			const realFocusDuration = totalDurationSeconds - pauseDuration; // Subtract pause duration
 
-			// Check if record crosses midnight in user's timezone (with caching)
-			const crossesMidnight = getCachedCrossesMidnight(startTime, endTime, timezone, midnightCache);
+			// Check if record crosses midnight in user's timezone
+			const crossesMidnight = crossesMidnightInTimezone(startTime, endTime, timezone);
 
 			// Normalize the focus record to match our schema
 			// Remove _id to prevent duplicate key errors on upsert
@@ -265,8 +236,6 @@ export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone
 	// Fetch raw BeFocused data
 	const rawBeFocusedRecords = await fetchBeFocusedAppFocusRecords();
 
-	// Initialize cache for crossesMidnight calculations
-	const midnightCache = new Map<string, boolean>();
 
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawBeFocusedRecords.map((record: BeFocusedRecordRaw) => {
@@ -282,8 +251,8 @@ export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone
 		// Create custom taskId: "TaskName - BeFocused"
 		const taskId = `${assignedTask} - BeFocused`;
 
-		// Check if record crosses midnight in user's timezone (with caching)
-		const crossesMidnight = getCachedCrossesMidnight(startDate, endDate, timezone, midnightCache);
+		// Check if record crosses midnight in user's timezone
+		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
 		const focusAppSource = 'FocusRecordBeFocused'
 
 		return {
@@ -339,8 +308,6 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 	// Fetch raw Forest data
 	const rawForestRecords = await fetchForestAppFocusRecords(true);
 
-	// Initialize cache for crossesMidnight calculations
-	const midnightCache = new Map<string, boolean>();
 
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawForestRecords.map((record: ForestRecordRaw) => {
@@ -358,8 +325,8 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 		// Create custom taskId: "Tag - Forest"
 		const taskId = `${tag} - Forest`;
 
-		// Check if record crosses midnight in user's timezone (with caching)
-		const crossesMidnight = getCachedCrossesMidnight(startDate, endDate, timezone, midnightCache);
+		// Check if record crosses midnight in user's timezone
+		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
 
 		const focusAppSource = 'FocusRecordForest'
 
@@ -419,8 +386,6 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 	// Fetch raw Tide data
 	const rawTideRecords = await fetchTideAppFocusRecords();
 
-	// Initialize cache for crossesMidnight calculations
-	const midnightCache = new Map<string, boolean>();
 
 	// Helper function to parse duration string (e.g., "1h50m", "35m", "3m")
 	const parseDuration = (durationStr: string): number => {
@@ -451,8 +416,8 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 		// Create custom taskId: "Name - Tide"
 		const taskId = `${name} - Tide`;
 
-		// Check if record crosses midnight in user's timezone (with caching)
-		const crossesMidnight = getCachedCrossesMidnight(startDate, endDate, timezone, midnightCache);
+		// Check if record crosses midnight in user's timezone
+		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
 
 		const focusAppSource = 'FocusRecordTide'
 
@@ -510,8 +475,6 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 	// Fetch raw Session data
 	const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
 
-	// Initialize cache for crossesMidnight calculations
-	const midnightCache = new Map<string, boolean>();
 
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawSessionRecords.map((record: SessionRecordRaw) => {
@@ -582,8 +545,8 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 			});
 		}
 
-		// Check if record crosses midnight in user's timezone (with caching)
-		const crossesMidnight = getCachedCrossesMidnight(startDate, endDate, timezone, midnightCache);
+		// Check if record crosses midnight in user's timezone
+		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
 
 		// Create deterministic ID using the parsed variables
 		const id = createDeterministicId('session', startDate.toISOString(), endDate.toISOString(), totalDurationInSeconds.toString(), title);

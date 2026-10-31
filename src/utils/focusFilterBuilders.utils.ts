@@ -50,7 +50,7 @@ export function buildFocusSearchFilter(searchQuery?: string[]) {
  * @param fieldPrefix - Field to filter on ('startTime' or 'endTime')
  * @returns MongoDB filter condition using $expr
  */
-function buildMonthDayFilter(
+export function buildMonthDayFilter(
 	startDate: string | undefined,
 	endDate: string | undefined,
 	timezone: string,
