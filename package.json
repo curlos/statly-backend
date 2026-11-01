@@ -16,6 +16,7 @@
     "dev:debug": "nodemon",
     "prod": "npm run build && npm run start",
     "lint": "eslint . --ext .ts --report-unused-disable-directives --max-warnings 0",
+    "test": "TS_NODE_TRANSPILE_ONLY=true node -r ts-node/register --test \"src/**/*.test.ts\"",
     "lint:fix": "eslint . --ext .ts --fix --report-unused-disable-directives --max-warnings 0",
     "lint:watch": "esw src/ --ext .ts,.tsx --watch --color --clear",
     "sync:to-atlas": "chmod +x scripts/sync-to-atlas.sh && ./scripts/sync-to-atlas.sh",

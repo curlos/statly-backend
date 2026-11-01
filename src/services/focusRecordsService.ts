@@ -7,10 +7,12 @@ import {
 	buildFocusMatchAndFilterConditions,
 	buildFocusBasePipeline,
 	addTaskFilteringAndDurationRecalculation,
+	buildFocusFilterPipeline,
 } from '../utils/focusFilterBuilders.utils';
 import { PipelineStage } from 'mongoose';
 import { MongooseFilter } from '../types/aggregation';
 import { calculateEffectiveDateBoundaries } from '../utils/timezone.utils';
+import { getProjectSeconds, getTopProject } from '../utils/forest.utils';
 
 // Service-specific types
 interface EmotionCountItem {
@@ -362,6 +364,46 @@ export interface FocusRecordsQueryParams {
 	showNoteStats?: boolean; // User setting to show note statistics
 	general?: string[]; // General filters (e.g., 'with-notes', 'without-notes', 'crosses-midnight')
 	yearAgnostic?: boolean; // Year-agnostic date filtering (filter by month and day only)
+}
+
+// The forest needs every record in the range so it has one tree per record, so it isn't paginated. This cap only keeps memory bounded, and when it is hit the newest records win.
+const FOREST_MAX_TREES = 100000;
+
+// Plants one tree per record, using the project with the most time in it (the first one if tied). A record with no tasks gets a tree with no project.
+export async function getForestTrees(params: FocusRecordsQueryParams, userId: Types.ObjectId) {
+	const { pipeline } = buildFocusFilterPipeline({ ...params, userId, timezone: params.timezone || 'UTC' });
+	const filterStages = [...pipeline];
+	pipeline.push(
+		{ $sort: { startTime: -1, _id: -1 } },
+		{ $limit: FOREST_MAX_TREES },
+		{ $project: { _id: 0, id: 1, startTime: 1, duration: 1, 'tasks.projectId': 1, 'tasks.duration': 1 } }
+	);
+
+	const records = await FocusRecord.aggregate(pipeline).allowDiskUse(true);
+
+	// When the cap cuts records off, the page needs to know how many there really are so it can say so.
+	const isTruncated = records.length === FOREST_MAX_TREES;
+	let totalRecords = records.length;
+	if (isTruncated) {
+		const [counted] = await FocusRecord.aggregate([...filterStages, { $count: 'total' }]).allowDiskUse(true);
+		totalRecords = counted?.total ?? records.length;
+	}
+
+	const rows = records.map((record) => {
+		const { projectId, seconds } = getTopProject(record.tasks);
+
+		return {
+			recordId: record.id,
+			startTime: record.startTime,
+			projectId,
+			// The whole record's length, for the tree's own tooltip
+			seconds: record.duration ?? seconds,
+			// The time each project had in this record, from its tasks. The forest adds these up so its totals match the stats page.
+			projectSeconds: Object.fromEntries(getProjectSeconds(record.tasks)),
+		};
+	});
+
+	return { rows, totalRecords, isTruncated: isTruncated && totalRecords > records.length };
 }
 
 export async function getFocusRecords(params: FocusRecordsQueryParams, userId: Types.ObjectId) {

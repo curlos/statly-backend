@@ -103,6 +103,10 @@ export interface IUserSettings extends Document {
 				tasks?: string;
 			};
 		};
+		forest?: {
+			landStyle?: string;
+			projectTrees?: Record<string, string>;
+		};
 	};
 }
 
@@ -220,6 +224,10 @@ const UserSettingsSchema = new Schema(
 					focus: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007663/Statly/battlefield-1-medals/weapons/28_5HFD732.webp" },
 					tasks: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007766/Statly/battlefield-1-medals/combat/56_91AMzBS.webp" },
 				}
+			},
+			forest: {
+				landStyle: { type: String, default: 'auto' },
+				projectTrees: { type: Map, of: String, default: {} },
 			}
 		},
 	},

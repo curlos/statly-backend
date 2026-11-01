@@ -1,7 +1,7 @@
 import express from 'express';
 import { getFocusChallengesHandler } from '../controllers/challengesController';
 import { revalidateCrossesMidnightHandler } from '../controllers/crossesMidnightBatchController';
-import { getFocusRecordsHandler, exportFocusRecordsHandler } from '../controllers/focusRecordsController';
+import { getFocusRecordsHandler, exportFocusRecordsHandler, getForestTreesHandler } from '../controllers/focusRecordsController';
 import { getFocusMedalsHandler } from '../controllers/medalsController';
 import { getFocusRecordsNeedingSentiment, analyzeNoteEmotionsHandler } from '../controllers/sentimentBatchController';
 import { CustomRequest } from '../interfaces/CustomRequest';
@@ -12,6 +12,7 @@ const router = express.Router();
 
 router.get('/', verifyToken, getFocusRecordsHandler);
 router.get('/export', verifyToken, exportFocusRecordsHandler);
+router.get('/forest', verifyToken, getForestTreesHandler);
 router.get('/medals', verifyToken, getFocusMedalsHandler);
 router.get('/challenges', verifyToken, getFocusChallengesHandler);
 router.get('/analyze-sentiment/ids', verifyToken, getFocusRecordsNeedingSentiment);

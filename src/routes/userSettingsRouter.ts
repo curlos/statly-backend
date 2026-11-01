@@ -21,7 +21,8 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 		}
 
 		// Convert to plain object and remove sensitive cookie value
-		const userSettingsObj = userSettings.toObject() as Record<string, unknown>;
+		// flattenMaps keeps Map fields like forest.projectTrees as plain objects, since a Map would be sent as {}
+		const userSettingsObj = userSettings.toObject({ flattenMaps: true }) as Record<string, unknown>;
 
 		// Replace cookie with status indicator
 		const hasCookie = !!userSettingsObj.tickTickCookie;
@@ -65,7 +66,7 @@ router.put('/edit', verifyToken, async (req: CustomRequest, res) => {
 		}
 
 		// Convert to plain object and remove sensitive cookie value
-		const userSettingsObj = updatedUserSettings.toObject() as Record<string, unknown>;
+		const userSettingsObj = updatedUserSettings.toObject({ flattenMaps: true }) as Record<string, unknown>;
 
 		// Replace cookie with status indicator
 		const hasCookie = !!userSettingsObj.tickTickCookie;
