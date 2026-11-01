@@ -105,6 +105,7 @@ export interface IUserSettings extends Document {
 		};
 		forest?: {
 			landStyle?: string;
+			hemisphere?: string;
 			projectTrees?: Record<string, string>;
 		};
 	};
@@ -227,6 +228,7 @@ const UserSettingsSchema = new Schema(
 			},
 			forest: {
 				landStyle: { type: String, default: 'auto' },
+				hemisphere: { type: String, default: 'auto' },
 				projectTrees: { type: Map, of: String, default: {} },
 			}
 		},
