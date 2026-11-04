@@ -748,7 +748,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 				// For project grouping, only include tasks in this project
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				filteredTasks = (focusRecord.tasks?.filter((task: any) => (task.projectId || 'no-project-id') === id) ||
-					[]) as any[];
+					[]) as FocusRecordTask[];
 				// Calculate duration for this specific group
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				duration = (filteredTasks as any[]).reduce(

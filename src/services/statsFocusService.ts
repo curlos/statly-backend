@@ -279,7 +279,7 @@ async function groupByDay(
 	splitByDayStages: PipelineStage[] = []
 ) {
 	// Use $facet to calculate totals and group by day in a single query
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 	pipeline.push({
 		$facet: {
 			totals: buildTotalsPipelineStages(taskFilterConditions),
@@ -333,7 +333,7 @@ async function groupByWeek(
 	splitByDayStages: PipelineStage[] = []
 ) {
 	// Use $facet to calculate totals and group by week in a single query
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 	pipeline.push({
 		$facet: {
 			// Calculate totals using task-level durations
@@ -405,7 +405,7 @@ async function groupByMonth(
 	splitByDayStages: PipelineStage[] = []
 ) {
 	// Use $facet to calculate totals and group by month in a single query
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 	pipeline.push({
 		$facet: {
 			// Calculate totals using task-level durations
@@ -474,7 +474,7 @@ async function groupByYear(
 	splitByDayStages: PipelineStage[] = []
 ) {
 	// Use $facet to calculate totals and group by year in a single query
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 	pipeline.push({
 		$facet: {
 			// Calculate totals using task-level durations
@@ -618,7 +618,7 @@ async function groupByTask(
 	userId: Types.ObjectId
 ) {
 	// Use $facet to calculate totals and fetch task data in a single query
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 	pipeline.push({
 		$facet: {
 			// Calculate totals using task-level durations
@@ -681,7 +681,7 @@ async function aggregateProjectAndTaskDataByEmotion(
 		}
 
 		// Use $facet to aggregate both projects and tasks in a single query
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 		emotionPipeline.push({
 			$facet: {
 				byProject: [
@@ -754,7 +754,7 @@ async function groupByEmotion(
 	const cleanPipeline = [...pipeline];
 
 	// Use $facet to run totals calculation and grouping in a single query
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 	pipeline.push({
 		$facet: {
 			totals: buildTotalsPipelineStages(taskFilterConditions),
@@ -847,7 +847,7 @@ async function groupByHour(
 	timezone: string = 'UTC'
 ) {
 	// Use $facet to run totals calculation and grouping in a single query
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 	pipeline.push({
 		$facet: {
 			totals: buildTotalsPipelineStages(taskFilterConditions),
@@ -990,7 +990,7 @@ async function groupByRecord(
 	_timezone: string = 'UTC'
 ) {
 	// Use $facet to run totals calculation and sorting in a single query
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 	pipeline.push({
 		$facet: {
 			totals: buildTotalsPipelineStages(taskFilterConditions),

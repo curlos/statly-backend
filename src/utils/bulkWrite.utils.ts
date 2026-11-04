@@ -16,7 +16,7 @@ import { Model } from 'mongoose';
  * @param maxBatchSizeBytes - Maximum batch size in bytes (default: 14MB, leaving 2MB buffer)
  * @returns Aggregated bulk write result
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export async function executeBatchedBulkWrite(
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	bulkOps: any[],

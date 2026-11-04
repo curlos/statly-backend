@@ -3,6 +3,7 @@ import { CustomRequest } from '../interfaces/CustomRequest';
 import { getOverviewStats, getSourceCounts } from '../services/statsOverviewService';
 import { getFocusRecordsStats } from '../services/statsFocusService';
 import { getCompletedTasksStats } from '../services/statsTaskService';
+import { getIntervalRankings, RankingInterval, RankingSort, RankingType } from '../services/statsRankingsService';
 import { parseBaseQueryParams } from '../utils/queryParams.utils';
 
 /**
@@ -150,6 +151,45 @@ export async function getStatsTasksHandler(req: CustomRequest, res: Response) {
 	} catch (error) {
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred fetching completed tasks stats.',
+		});
+	}
+}
+
+/**
+ * GET /stats/rankings - Rank days/weeks/months/years by completed tasks or focus time, most or least first (paginated)
+ */
+export async function getIntervalRankingsHandler(req: CustomRequest, res: Response) {
+	try {
+		const type = req.query.type as RankingType;
+		if (!['tasks', 'focus'].includes(type)) {
+			return res.status(400).json({ message: 'Invalid type parameter. Must be one of: tasks, focus' });
+		}
+
+		const interval = req.query.interval as RankingInterval;
+		if (!['day', 'week', 'month', 'year'].includes(interval)) {
+			return res.status(400).json({
+				message: 'Invalid interval parameter. Must be one of: day, week, month, year',
+			});
+		}
+
+		const sort = ((req.query.sort as string) || 'most') as RankingSort;
+		if (!['most', 'least'].includes(sort)) {
+			return res.status(400).json({ message: 'Invalid sort parameter. Must be one of: most, least' });
+		}
+
+		const page = Math.max(1, parseInt(req.query.page as string) || 1);
+		const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
+
+		const userId = req.user!.userId;
+		const result = await getIntervalRankings(
+			{ ...parseBaseQueryParams(req), type, interval, sort, page, limit },
+			userId
+		);
+
+		res.status(200).json(result);
+	} catch (error) {
+		res.status(500).json({
+			message: error instanceof Error ? error.message : 'An error occurred fetching interval rankings.',
 		});
 	}
 }

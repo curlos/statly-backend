@@ -23,6 +23,8 @@
     "sync:to-atlas": "chmod +x scripts/sync-to-atlas.sh && ./scripts/sync-to-atlas.sh",
     "sync:from-atlas": "chmod +x scripts/sync-from-atlas.sh && ./scripts/sync-from-atlas.sh",
     "formatAllFilesPrettier": "npx prettier --write '**/*.{ts,tsx}'",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "check": "npm run format && npm run lint && tsc --noEmit",
     "removeUnusedMatrixProperties": "nodemon --exec ts-node src/db/removeUnusedMatrixProperties.ts",
     "removeOldHabitLogs": "nodemon --exec ts-node src/db/removeOldHabitLogs.ts",
     "generate-focus-records": "ts-node ticktick-demo-account/scripts/generateFocusRecords.ts",

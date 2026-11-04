@@ -74,9 +74,7 @@ const SEEDED_DOCUMENT_COUNT = USER_OWNED_MODELS.length;
 
 // Counts the user's documents across every user-owned collection
 const countUserData = async (userId: Types.ObjectId) => {
-	const counts = await Promise.all(
-		USER_OWNED_MODELS.map((model) => model.collection.countDocuments({ userId }))
-	);
+	const counts = await Promise.all(USER_OWNED_MODELS.map((model) => model.collection.countDocuments({ userId })));
 	return counts.reduce((sum, count) => sum + count, 0);
 };
 
