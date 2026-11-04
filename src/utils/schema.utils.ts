@@ -21,7 +21,7 @@ export const applyUserIdEnforcement = (schema: Schema): void => {
 		'replaceOne',
 		'count',
 		'countDocuments',
-		'exists'
+		'exists',
 	];
 
 	queryTypesRequiringUserId.forEach((queryType) => {

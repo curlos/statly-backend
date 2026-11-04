@@ -8,28 +8,31 @@ export interface IApiCallStatus extends Document {
 	startedAt: Date;
 }
 
-const apiCallStatusSchema = new Schema<IApiCallStatus>({
-	userId: {
-		type: Schema.Types.ObjectId,
-		ref: 'User',
-		required: true,
+const apiCallStatusSchema = new Schema<IApiCallStatus>(
+	{
+		userId: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
+			required: true,
+		},
+		apiEndpoint: {
+			type: String,
+			required: true,
+		},
+		isInProgress: {
+			type: Boolean,
+			required: true,
+			default: false,
+		},
+		startedAt: {
+			type: Date,
+			required: true,
+		},
 	},
-	apiEndpoint: {
-		type: String,
-		required: true,
-	},
-	isInProgress: {
-		type: Boolean,
-		required: true,
-		default: false,
-	},
-	startedAt: {
-		type: Date,
-		required: true,
-	},
-}, {
-	collection: 'apiCallStatuses'
-});
+	{
+		collection: 'apiCallStatuses',
+	}
+);
 
 // Compound unique index to ensure one status per user per endpoint
 apiCallStatusSchema.index({ userId: 1, apiEndpoint: 1 }, { unique: true });

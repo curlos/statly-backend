@@ -58,19 +58,29 @@ const GRACE_PERIOD_SECONDS = 300; // 5 minutes
 function getMedalsByInterval(interval: string, type: 'focus' | 'tasks') {
 	if (type === 'focus') {
 		switch (interval) {
-			case 'daily': return DEFAULT_DAILY_FOCUS_HOURS_MEDALS;
-			case 'weekly': return DEFAULT_WEEKLY_FOCUS_HOURS_MEDALS;
-			case 'monthly': return DEFAULT_MONTHLY_FOCUS_HOURS_MEDALS;
-			case 'yearly': return DEFAULT_YEARLY_FOCUS_HOURS_MEDALS;
-			default: return DEFAULT_DAILY_FOCUS_HOURS_MEDALS;
+			case 'daily':
+				return DEFAULT_DAILY_FOCUS_HOURS_MEDALS;
+			case 'weekly':
+				return DEFAULT_WEEKLY_FOCUS_HOURS_MEDALS;
+			case 'monthly':
+				return DEFAULT_MONTHLY_FOCUS_HOURS_MEDALS;
+			case 'yearly':
+				return DEFAULT_YEARLY_FOCUS_HOURS_MEDALS;
+			default:
+				return DEFAULT_DAILY_FOCUS_HOURS_MEDALS;
 		}
 	} else {
 		switch (interval) {
-			case 'daily': return DEFAULT_DAILY_COMPLETED_TASKS_MEDALS;
-			case 'weekly': return DEFAULT_WEEKLY_COMPLETED_TASKS_MEDALS;
-			case 'monthly': return DEFAULT_MONTHLY_COMPLETED_TASKS_MEDALS;
-			case 'yearly': return DEFAULT_YEARLY_COMPLETED_TASKS_MEDALS;
-			default: return DEFAULT_DAILY_COMPLETED_TASKS_MEDALS;
+			case 'daily':
+				return DEFAULT_DAILY_COMPLETED_TASKS_MEDALS;
+			case 'weekly':
+				return DEFAULT_WEEKLY_COMPLETED_TASKS_MEDALS;
+			case 'monthly':
+				return DEFAULT_MONTHLY_COMPLETED_TASKS_MEDALS;
+			case 'yearly':
+				return DEFAULT_YEARLY_COMPLETED_TASKS_MEDALS;
+			default:
+				return DEFAULT_DAILY_COMPLETED_TASKS_MEDALS;
 		}
 	}
 }
@@ -84,10 +94,10 @@ function calculateMedalsFromPeriodTotals(
 	const medalResults: MedalResults = {};
 
 	// Initialize all medals with empty arrays
-	medals.forEach(medal => {
+	medals.forEach((medal) => {
 		medalResults[medal.name] = {
 			type: type,
-			intervalsEarned: []
+			intervalsEarned: [],
 		};
 	});
 
@@ -102,10 +112,9 @@ function calculateMedalsFromPeriodTotals(
 			formattedPeriodKey = formatDateWithoutLeadingZero(periodKey);
 		}
 
-		medals.forEach(medal => {
-			const threshold = type === 'focus'
-				? (medal as FocusMedal).requiredDuration
-				: (medal as TaskMedal).requiredCompletedTasks;
+		medals.forEach((medal) => {
+			const threshold =
+				type === 'focus' ? (medal as FocusMedal).requiredDuration : (medal as TaskMedal).requiredCompletedTasks;
 			const adjustedTotal = type === 'focus' ? total + GRACE_PERIOD_SECONDS : total;
 
 			if (adjustedTotal >= threshold) {
@@ -156,7 +165,7 @@ export function splitMidnightCrossingRecordsForMedals(
 		$addFields: {
 			splitDocuments: {
 				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
+					if: { $eq: ['$crossesMidnight', true] },
 					then: {
 						// For daily interval: split by days
 						$let: {
@@ -164,18 +173,18 @@ export function splitMidnightCrossingRecordsForMedals(
 								// Calculate how many days this record spans
 								startDate: {
 									$dateTrunc: {
-										date: "$startTime",
-										unit: "day",
-										timezone: timezone
-									}
+										date: '$startTime',
+										unit: 'day',
+										timezone: timezone,
+									},
 								},
 								endDate: {
 									$dateTrunc: {
-										date: "$endTime",
-										unit: "day",
-										timezone: timezone
-									}
-								}
+										date: '$endTime',
+										unit: 'day',
+										timezone: timezone,
+									},
+								},
 							},
 							in: {
 								// Generate array of split documents
@@ -193,18 +202,18 @@ export function splitMidnightCrossingRecordsForMedals(
 												$add: [
 													{
 														$dateDiff: {
-															startDate: "$$startDate",
-															endDate: "$$endDate",
-															unit: "day",
-															timezone: timezone
-														}
+															startDate: '$$startDate',
+															endDate: '$$endDate',
+															unit: 'day',
+															timezone: timezone,
+														},
 													},
-													1 // Converts "days of difference" to "number of days touched"
-												]
-											}
-										]
+													1, // Converts "days of difference" to "number of days touched"
+												],
+											},
+										],
 									},
-									as: "dayOffset",
+									as: 'dayOffset',
 									in: {
 										$let: {
 											vars: {
@@ -214,55 +223,65 @@ export function splitMidnightCrossingRecordsForMedals(
 												// These boundaries are independent of the record's actual start/end times
 												periodStart: {
 													$dateAdd: {
-														startDate: "$$startDate",
-														unit: "day",
-														amount: "$$dayOffset",
-														timezone: timezone
-													}
+														startDate: '$$startDate',
+														unit: 'day',
+														amount: '$$dayOffset',
+														timezone: timezone,
+													},
 												},
 												periodEnd: {
 													$dateAdd: {
-														startDate: "$$startDate",
-														unit: "day",
-														amount: { $add: ["$$dayOffset", 1] },
-														timezone: timezone
-													}
-												}
+														startDate: '$$startDate',
+														unit: 'day',
+														amount: { $add: ['$$dayOffset', 1] },
+														timezone: timezone,
+													},
+												},
 											},
 											in: {
 												$let: {
 													vars: {
 														// Clip record boundaries to this period
-														effectiveStart: { $max: ["$startTime", "$$periodStart"] },
-														effectiveEnd: { $min: ["$endTime", "$$periodEnd"] }
+														effectiveStart: { $max: ['$startTime', '$$periodStart'] },
+														effectiveEnd: { $min: ['$endTime', '$$periodEnd'] },
 													},
 													in: {
 														// Build the split document
-														startTime: "$$periodStart", // Use period start for grouping
-														endTime: "$endTime",
+														startTime: '$$periodStart', // Use period start for grouping
+														endTime: '$endTime',
 														duration: {
 															// Calculate duration for this period only
 															$divide: [
-																{ $subtract: ["$$effectiveEnd", "$$effectiveStart"] },
-																1000
-															]
+																{ $subtract: ['$$effectiveEnd', '$$effectiveStart'] },
+																1000,
+															],
 														},
 														tasks: {
 															// Adjust each task's duration for this period (same clipping logic as record, but per task)
 															$map: {
-																input: "$tasks",
-																as: "task",
+																input: '$tasks',
+																as: 'task',
 																in: {
 																	$mergeObjects: [
-																		"$$task",
+																		'$$task',
 																		{
 																			duration: {
 																				$let: {
 																					vars: {
 																						// Clip task times to period boundaries
 																						// Example: Task 11:50 PM → 12:10 AM, Period Oct 16
-																						taskEffectiveStart: { $max: ["$$task.startTime", "$$periodStart"] }, // max(11:50 PM, Oct 16 midnight) = 11:50 PM
-																						taskEffectiveEnd: { $min: ["$$task.endTime", "$$periodEnd"] }          // min(12:10 AM, Oct 17 midnight) = midnight
+																						taskEffectiveStart: {
+																							$max: [
+																								'$$task.startTime',
+																								'$$periodStart',
+																							],
+																						}, // max(11:50 PM, Oct 16 midnight) = 11:50 PM
+																						taskEffectiveEnd: {
+																							$min: [
+																								'$$task.endTime',
+																								'$$periodEnd',
+																							],
+																						}, // min(12:10 AM, Oct 17 midnight) = midnight
 																					},
 																					in: {
 																						$cond: {
@@ -271,64 +290,74 @@ export function splitMidnightCrossingRecordsForMedals(
 																							//   effectiveStart = max(12:05 AM, Oct 16 midnight) = 12:05 AM
 																							//   effectiveEnd = min(12:10 AM, Oct 17 midnight) = midnight
 																							//   midnight < 12:05 AM → no overlap
-																							if: { $gte: ["$$taskEffectiveEnd", "$$taskEffectiveStart"] },
+																							if: {
+																								$gte: [
+																									'$$taskEffectiveEnd',
+																									'$$taskEffectiveStart',
+																								],
+																							},
 																							then: {
 																								// Task overlaps: calculate duration for this period only
 																								// Example: midnight - 11:50 PM = 10 minutes
 																								$divide: [
-																									{ $subtract: ["$$taskEffectiveEnd", "$$taskEffectiveStart"] },
-																									1000
-																								]
+																									{
+																										$subtract: [
+																											'$$taskEffectiveEnd',
+																											'$$taskEffectiveStart',
+																										],
+																									},
+																									1000,
+																								],
 																							},
 																							// Task doesn't overlap: return 0 (it'll get proper duration on Oct 17 split)
-																							else: 0
-																						}
-																					}
-																				}
-																			}
-																		}
-																	]
-																}
-															}
+																							else: 0,
+																						},
+																					},
+																				},
+																			},
+																		},
+																	],
+																},
+															},
 														},
 														// Preserve other fields
-														crossesMidnight: "$crossesMidnight",
-														_id: "$_id"
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
+														crossesMidnight: '$crossesMidnight',
+														_id: '$_id',
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 					else: [
 						{
 							// For non-midnight-crossing records, keep as single document
-							startTime: "$startTime",
-							endTime: "$endTime",
-							duration: "$duration",
-							tasks: "$tasks",
-							crossesMidnight: "$crossesMidnight",
-							_id: "$_id"
-						}
-					]
-				}
-			}
-		}
+							startTime: '$startTime',
+							endTime: '$endTime',
+							duration: '$duration',
+							tasks: '$tasks',
+							crossesMidnight: '$crossesMidnight',
+							_id: '$_id',
+						},
+					],
+				},
+			},
+		},
 	});
 
 	// Step 2: Unwind split documents into separate records
 	pipeline.push({
-		$unwind: "$splitDocuments"
+		$unwind: '$splitDocuments',
 	});
 
 	// Step 3: Replace root with split document
 	pipeline.push({
 		$replaceRoot: {
-			newRoot: "$splitDocuments"
-		}
+			newRoot: '$splitDocuments',
+		},
 	});
 
 	// Step 4: Drop split pieces outside the selected date range (if any)
@@ -357,7 +386,11 @@ export function splitMidnightCrossingRecordsInDateRange(
 ) {
 	const { startDateBoundary, endDateBoundary } = calculateEffectiveDateBoundaries(
 		params.yearAgnostic
-			? { intervalStartDate: params.intervalStartDate, intervalEndDate: params.intervalEndDate, timezone: params.timezone }
+			? {
+					intervalStartDate: params.intervalStartDate,
+					intervalEndDate: params.intervalEndDate,
+					timezone: params.timezone,
+				}
 			: params
 	);
 	splitMidnightCrossingRecordsForMedals(pipeline, 'daily', params.timezone, startDateBoundary, endDateBoundary);
@@ -406,8 +439,8 @@ export async function getFocusHoursMedals(params: MedalsQueryParams, userId: Typ
 	pipeline.push({
 		$group: {
 			_id: getDateGroupingExpression(params.interval, params.timezone),
-			totalDuration: { $sum: "$tasksDuration" }
-		}
+			totalDuration: { $sum: '$tasksDuration' },
+		},
 	});
 
 	// Execute aggregation
@@ -419,7 +452,7 @@ export async function getFocusHoursMedals(params: MedalsQueryParams, userId: Typ
 
 	// Convert results to period totals object
 	const periodTotals: { [key: string]: number } = {};
-	results.forEach(result => {
+	results.forEach((result) => {
 		periodTotals[result._id] = result.totalDuration;
 	});
 
@@ -459,8 +492,8 @@ export async function getCompletedTasksMedals(params: MedalsQueryParams, userId:
 	pipeline.push({
 		$group: {
 			_id: getDateGroupingExpression(params.interval, params.timezone, '$completedTime'),
-			taskCount: { $sum: 1 }
-		}
+			taskCount: { $sum: 1 },
+		},
 	});
 
 	// Execute aggregation
@@ -468,7 +501,7 @@ export async function getCompletedTasksMedals(params: MedalsQueryParams, userId:
 
 	// Convert results to period totals object
 	const periodTotals: { [key: string]: number } = {};
-	results.forEach(result => {
+	results.forEach((result) => {
 		periodTotals[result._id] = result.taskCount;
 	});
 

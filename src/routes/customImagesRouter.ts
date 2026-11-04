@@ -47,7 +47,9 @@ router.post('/upload', verifyToken, upload.array('images', 10), async (req: Cust
 		const normalizedFolder = folder.toUpperCase().trim();
 
 		// Get current max sortOrder for this user in this folder
-		const maxSortOrderDoc = await CustomImage.findOne({ userId, folder: normalizedFolder }).sort({ sortOrder: -1 }).select('sortOrder');
+		const maxSortOrderDoc = await CustomImage.findOne({ userId, folder: normalizedFolder })
+			.sort({ sortOrder: -1 })
+			.select('sortOrder');
 		const startingSortOrder = maxSortOrderDoc ? maxSortOrderDoc.sortOrder + 1 : 0;
 
 		// Upload all files to Cloudinary in parallel
@@ -59,21 +61,24 @@ router.post('/upload', verifyToken, upload.array('images', 10), async (req: Cust
 							resource_type: 'image',
 							folder: `Statly/users/${userId}/custom-images`,
 							public_id: `${Date.now()}-custom-${index}`,
-							...(compress ? {
-								quality: 'auto:good',
-								fetch_format: 'auto',
-								width: 1000,
-								height: 1000,
-								crop: 'limit', // Don't upscale, maintain aspect ratio
-							} : {}),
+							...(compress
+								? {
+										quality: 'auto:good',
+										fetch_format: 'auto',
+										width: 1000,
+										height: 1000,
+										crop: 'limit', // Don't upscale, maintain aspect ratio
+									}
+								: {}),
 						},
 						(error, result) => {
 							if (error) reject(error);
-							else resolve({
-								secure_url: result!.secure_url,
-								public_id: result!.public_id,
-								index
-							});
+							else
+								resolve({
+									secure_url: result!.secure_url,
+									public_id: result!.public_id,
+									index,
+								});
 						}
 					);
 					stream.end(file.buffer);
@@ -124,7 +129,7 @@ router.put('/reorder', verifyToken, async (req: CustomRequest, res) => {
 	try {
 		const userId = req.user?.userId;
 		const { imageIds } = req.body; // Array of image IDs in new order
- 
+
 		if (!userId) {
 			return res.status(401).json({ message: 'Unauthorized' });
 		}
@@ -236,13 +241,15 @@ router.put('/:id', verifyToken, upload.single('image'), async (req: CustomReques
 					resource_type: 'image',
 					folder: `Statly/users/${userId}/custom-images`,
 					public_id: `${Date.now()}-custom-updated`,
-					...(compress ? {
-						quality: 'auto:good',
-						fetch_format: 'auto',
-						width: 1000,
-						height: 1000,
-						crop: 'limit', // Don't upscale, maintain aspect ratio
-					} : {}),
+					...(compress
+						? {
+								quality: 'auto:good',
+								fetch_format: 'auto',
+								width: 1000,
+								height: 1000,
+								crop: 'limit', // Don't upscale, maintain aspect ratio
+							}
+						: {}),
 				},
 				(error, result) => {
 					if (error) reject(error);
@@ -346,31 +353,32 @@ router.delete('/bulk', verifyToken, async (req: CustomRequest, res) => {
 			return res.json({
 				deletedCount: 0,
 				cloudinaryFailures: 0,
-				message: 'No images found in folder'
+				message: 'No images found in folder',
 			});
 		}
 
 		// Delete from Cloudinary and database in parallel
 		const [deleteResults, result] = await Promise.all([
-			Promise.allSettled(
-				imagesToDelete.map(image => cloudinary.uploader.destroy(image.cloudinaryPublicId))
-			),
-			CustomImage.deleteMany({ userId, folder: normalizedFolder })
+			Promise.allSettled(imagesToDelete.map((image) => cloudinary.uploader.destroy(image.cloudinaryPublicId))),
+			CustomImage.deleteMany({ userId, folder: normalizedFolder }),
 		]);
 
-		const cloudinaryFailures = deleteResults.filter(result => result.status === 'rejected').length;
+		const cloudinaryFailures = deleteResults.filter((result) => result.status === 'rejected').length;
 
 		// Log any failures for debugging
 		deleteResults.forEach((result, index) => {
 			if (result.status === 'rejected') {
-				console.error(`Failed to delete image from Cloudinary (${imagesToDelete[index].cloudinaryPublicId}):`, result.reason);
+				console.error(
+					`Failed to delete image from Cloudinary (${imagesToDelete[index].cloudinaryPublicId}):`,
+					result.reason
+				);
 			}
 		});
 
 		res.json({
 			deletedCount: result.deletedCount,
 			cloudinaryFailures,
-			message: `${result.deletedCount} image(s) deleted successfully${cloudinaryFailures > 0 ? ` (${cloudinaryFailures} Cloudinary deletion(s) failed)` : ''}`
+			message: `${result.deletedCount} image(s) deleted successfully${cloudinaryFailures > 0 ? ` (${cloudinaryFailures} Cloudinary deletion(s) failed)` : ''}`,
 		});
 	} catch (error) {
 		res.status(500).json({

@@ -12,7 +12,7 @@ export const APP_SOURCE_MAPPING: Record<string, string> = {
 	'be-focused-app': 'FocusRecordBeFocused',
 	'forest-app': 'FocusRecordForest',
 	'tide-ios-app': 'FocusRecordTide',
-	'TickTick': 'FocusRecordTickTick'
+	TickTick: 'FocusRecordTickTick',
 };
 
 // ============================================================================
@@ -26,13 +26,13 @@ export function buildFocusSearchFilter(searchQuery?: string[]) {
 	}
 
 	return {
-		$and: searchQuery.map(pattern => ({
+		$and: searchQuery.map((pattern) => ({
 			$or: [
 				{ note: { $regex: pattern } },
 				{ tasks: { $elemMatch: { title: { $regex: pattern } } } },
-				{ tasks: { $elemMatch: { projectName: { $regex: pattern } } } }
-			]
-		}))
+				{ tasks: { $elemMatch: { projectName: { $regex: pattern } } } },
+			],
+		})),
 	};
 }
 
@@ -66,8 +66,8 @@ export function buildMonthDayFilter(
 	const parseMonthDay = (dateString: string) => {
 		const date = new Date(dateString + ' 00:00:00 UTC');
 		return {
-			month: date.getUTCMonth() + 1,  // 1 through 12
-			day: date.getUTCDate()           // 1 through 31
+			month: date.getUTCMonth() + 1, // 1 through 12
+			day: date.getUTCDate(), // 1 through 31
 		};
 	};
 
@@ -83,10 +83,10 @@ export function buildMonthDayFilter(
 				{
 					$and: [
 						{ $eq: [{ $month: { date: `$${fieldPrefix}`, timezone: tz } }, month] },
-						{ $gte: [{ $dayOfMonth: { date: `$${fieldPrefix}`, timezone: tz } }, day] }
-					]
-				}
-			]
+						{ $gte: [{ $dayOfMonth: { date: `$${fieldPrefix}`, timezone: tz } }, day] },
+					],
+				},
+			],
 		};
 	};
 
@@ -98,18 +98,16 @@ export function buildMonthDayFilter(
 				{
 					$and: [
 						{ $eq: [{ $month: { date: `$${fieldPrefix}`, timezone: tz } }, month] },
-						{ $lte: [{ $dayOfMonth: { date: `$${fieldPrefix}`, timezone: tz } }, day] }
-					]
-				}
-			]
+						{ $lte: [{ $dayOfMonth: { date: `$${fieldPrefix}`, timezone: tz } }, day] },
+					],
+				},
+			],
 		};
 	};
 
 	if (start && end) {
-
 		// Check if range crosses year boundary (e.g., Dec 25 to Jan 5)
-		const crossesYear = start.month > end.month ||
-			(start.month === end.month && start.day > end.day);
+		const crossesYear = start.month > end.month || (start.month === end.month && start.day > end.day);
 
 		if (crossesYear) {
 			// Range crosses year boundary: Dec 25-31 OR Jan 1-5
@@ -117,9 +115,9 @@ export function buildMonthDayFilter(
 				$expr: {
 					$or: [
 						buildOnOrAfterCondition(start.month, start.day),
-						buildOnOrBeforeCondition(end.month, end.day)
-					]
-				}
+						buildOnOrBeforeCondition(end.month, end.day),
+					],
+				},
 			};
 		} else {
 			// Normal range within calendar year: month-day >= start AND month-day <= end
@@ -127,20 +125,20 @@ export function buildMonthDayFilter(
 				$expr: {
 					$and: [
 						buildOnOrAfterCondition(start.month, start.day),
-						buildOnOrBeforeCondition(end.month, end.day)
-					]
-				}
+						buildOnOrBeforeCondition(end.month, end.day),
+					],
+				},
 			};
 		}
 	} else if (start) {
 		// Only start date specified: month-day >= start
 		return {
-			$expr: buildOnOrAfterCondition(start.month, start.day)
+			$expr: buildOnOrAfterCondition(start.month, start.day),
 		};
 	} else if (end) {
 		// Only end date specified: month-day <= end
 		return {
-			$expr: buildOnOrBeforeCondition(end.month, end.day)
+			$expr: buildOnOrBeforeCondition(end.month, end.day),
 		};
 	}
 
@@ -195,10 +193,7 @@ export function buildFocusMatchAndFilterConditions(
 
 			if (startTimeFilter && endTimeFilter) {
 				andedOrConditions.push({
-					$or: [
-						startTimeFilter,
-						endTimeFilter
-					]
+					$or: [startTimeFilter, endTimeFilter],
 				});
 			}
 		} else {
@@ -210,7 +205,12 @@ export function buildFocusMatchAndFilterConditions(
 				// This ensures DST transitions are handled correctly
 				const endDateObj = new Date(endDate + ' 00:00:00 UTC');
 				endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
-				const nextDayFormatted = endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+				const nextDayFormatted = endDateObj.toLocaleDateString('en-US', {
+					month: 'short',
+					day: 'numeric',
+					year: 'numeric',
+					timeZone: 'UTC',
+				});
 				endBoundary = parseDateInTimezone(nextDayFormatted, tz);
 			}
 
@@ -220,10 +220,10 @@ export function buildFocusMatchAndFilterConditions(
 			if (startBoundary && endBoundary) {
 				// Both start and end date specified
 				dateConditions.push({
-					startTime: { $gte: startBoundary, $lt: endBoundary }
+					startTime: { $gte: startBoundary, $lt: endBoundary },
 				});
 				dateConditions.push({
-					endTime: { $gt: startBoundary, $lte: endBoundary }
+					endTime: { $gt: startBoundary, $lte: endBoundary },
 				});
 			} else if (startBoundary) {
 				// Only start date specified
@@ -252,7 +252,12 @@ export function buildFocusMatchAndFilterConditions(
 			// This ensures DST transitions are handled correctly
 			const endDateObj = new Date(intervalEndDate + ' 00:00:00 UTC');
 			endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
-			const nextDayFormatted = endDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+			const nextDayFormatted = endDateObj.toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				year: 'numeric',
+				timeZone: 'UTC',
+			});
 			intervalEndBoundary = parseDateInTimezone(nextDayFormatted, tz);
 		}
 
@@ -262,10 +267,10 @@ export function buildFocusMatchAndFilterConditions(
 		if (intervalStartBoundary && intervalEndBoundary) {
 			// Both interval start and end date specified
 			intervalDateConditions.push({
-				startTime: { $gte: intervalStartBoundary, $lt: intervalEndBoundary }
+				startTime: { $gte: intervalStartBoundary, $lt: intervalEndBoundary },
 			});
 			intervalDateConditions.push({
-				endTime: { $gt: intervalStartBoundary, $lte: intervalEndBoundary }
+				endTime: { $gt: intervalStartBoundary, $lte: intervalEndBoundary },
 			});
 		} else if (intervalStartBoundary) {
 			// Only interval start date specified
@@ -291,28 +296,24 @@ export function buildFocusMatchAndFilterConditions(
 	if (emotions && emotions.length > 0) {
 		// Check if "none" is included
 		const hasNoEmotions = emotions.includes('none');
-		const regularEmotions = emotions.filter(e => e !== 'none');
+		const regularEmotions = emotions.filter((e) => e !== 'none');
 
 		if (hasNoEmotions && regularEmotions.length > 0) {
 			// Include both records with no emotions AND records with the specified emotions
 			andedOrConditions.push({
 				$or: [
 					{ $or: [{ emotions: [] }, { emotions: null }, { emotions: { $exists: false } }] },
-					{ "emotions.emotion": { $in: regularEmotions } }
-				]
+					{ 'emotions.emotion': { $in: regularEmotions } },
+				],
 			});
 		} else if (hasNoEmotions) {
 			// Only filter for records with no emotions
 			andedOrConditions.push({
-				$or: [
-					{ emotions: [] },
-					{ emotions: null },
-					{ emotions: { $exists: false } }
-				]
+				$or: [{ emotions: [] }, { emotions: null }, { emotions: { $exists: false } }],
 			});
 		} else {
 			// Only filter for regular emotions - no $or needed
-			focusRecordMatchConditions["emotions.emotion"] = { $in: emotions };
+			focusRecordMatchConditions['emotions.emotion'] = { $in: emotions };
 		}
 	}
 
@@ -324,20 +325,12 @@ export function buildFocusMatchAndFilterConditions(
 	if (showOnlyWithNotes && !showOnlyWithoutNotes) {
 		// Only show records with notes (note exists, not null, and has length > 0)
 		andedOrConditions.push({
-			$and: [
-				{ note: { $exists: true } },
-				{ note: { $ne: null } },
-				{ note: { $ne: '' } }
-			]
+			$and: [{ note: { $exists: true } }, { note: { $ne: null } }, { note: { $ne: '' } }],
 		});
 	} else if (showOnlyWithoutNotes && !showOnlyWithNotes) {
 		// Only show records without notes (note doesn't exist, is null, or is empty)
 		andedOrConditions.push({
-			$or: [
-				{ note: { $exists: false } },
-				{ note: null },
-				{ note: '' }
-			]
+			$or: [{ note: { $exists: false } }, { note: null }, { note: '' }],
 		});
 	}
 	// If both are true (shouldn't happen with UI logic), ignore both filters
@@ -367,29 +360,23 @@ export function buildFocusMatchAndFilterConditions(
 
 	// Add project filter
 	if (projectIds.length > 0) {
-		focusRecordMatchConditions["tasks.projectId"] = { $in: projectIds };
-		taskFilterConditions.push({ $in: ["$$task.projectId", projectIds] });
+		focusRecordMatchConditions['tasks.projectId'] = { $in: projectIds };
+		taskFilterConditions.push({ $in: ['$$task.projectId', projectIds] });
 	}
 
 	// Add task filter
 	if (taskId) {
 		if (taskIdIncludeFocusRecordsFromSubtasks) {
 			andedOrConditions.push({
-				$or: [
-					{ "tasks.taskId": taskId },
-					{ "tasks.ancestorIds": taskId }
-				]
+				$or: [{ 'tasks.taskId': taskId }, { 'tasks.ancestorIds': taskId }],
 			});
 
 			taskFilterConditions.push({
-				$or: [
-					{ $eq: ["$$task.taskId", taskId] },
-					{ $in: [taskId, "$$task.ancestorIds"] }
-				]
+				$or: [{ $eq: ['$$task.taskId', taskId] }, { $in: [taskId, '$$task.ancestorIds'] }],
 			});
 		} else {
-			focusRecordMatchConditions["tasks.taskId"] = taskId;
-			taskFilterConditions.push({ $eq: ["$$task.taskId", taskId] });
+			focusRecordMatchConditions['tasks.taskId'] = taskId;
+			taskFilterConditions.push({ $eq: ['$$task.taskId', taskId] });
 		}
 	}
 
@@ -405,7 +392,10 @@ export function buildFocusMatchAndFilterConditions(
 // Focus Records - Base Pipeline
 // ============================================================================
 
-export function buildFocusBasePipeline(searchFilter: MongooseFilter | null, focusRecordMatchConditions: MongooseFilter) {
+export function buildFocusBasePipeline(
+	searchFilter: MongooseFilter | null,
+	focusRecordMatchConditions: MongooseFilter
+) {
 	const pipeline: PipelineStage[] = [];
 
 	if (searchFilter) {
@@ -427,10 +417,7 @@ export function buildFocusBasePipeline(searchFilter: MongooseFilter | null, focu
  * Adds task duration calculation stages to the pipeline.
  * This is shared logic for both challenges and medals services.
  */
-export function addFocusTaskDurationCalculation(
-	pipeline: PipelineStage[],
-	taskFilterConditions: MongooseFilter[]
-) {
+export function addFocusTaskDurationCalculation(pipeline: PipelineStage[], taskFilterConditions: MongooseFilter[]) {
 	const hasTaskOrProjectFilters = taskFilterConditions.length > 0;
 
 	if (hasTaskOrProjectFilters) {
@@ -439,14 +426,13 @@ export function addFocusTaskDurationCalculation(
 			$addFields: {
 				filteredTasks: {
 					$filter: {
-						input: "$tasks",
-						as: "task",
-						cond: taskFilterConditions.length > 1
-							? { $and: taskFilterConditions }
-							: taskFilterConditions[0]
-					}
-				}
-			}
+						input: '$tasks',
+						as: 'task',
+						cond:
+							taskFilterConditions.length > 1 ? { $and: taskFilterConditions } : taskFilterConditions[0],
+					},
+				},
+			},
 		});
 
 		// Calculate duration from filtered tasks
@@ -454,12 +440,12 @@ export function addFocusTaskDurationCalculation(
 			$addFields: {
 				tasksDuration: {
 					$reduce: {
-						input: "$filteredTasks",
+						input: '$filteredTasks',
 						initialValue: 0,
-						in: { $add: ["$$value", "$$this.duration"] }
-					}
-				}
-			}
+						in: { $add: ['$$value', '$$this.duration'] },
+					},
+				},
+			},
 		});
 	} else {
 		// No filters: calculate duration from all tasks
@@ -467,12 +453,12 @@ export function addFocusTaskDurationCalculation(
 			$addFields: {
 				tasksDuration: {
 					$reduce: {
-						input: "$tasks",
+						input: '$tasks',
 						initialValue: 0,
-						in: { $add: ["$$value", "$$this.duration"] }
-					}
-				}
-			}
+						in: { $add: ['$$value', '$$this.duration'] },
+					},
+				},
+			},
 		});
 	}
 }
@@ -498,8 +484,8 @@ export function addTaskFilteringAndDurationRecalculation(
 		if (preserveOriginalDuration) {
 			pipeline.push({
 				$addFields: {
-					originalDuration: "$duration"
-				}
+					originalDuration: '$duration',
+				},
 			});
 		}
 
@@ -509,14 +495,13 @@ export function addTaskFilteringAndDurationRecalculation(
 			$addFields: {
 				tasks: {
 					$filter: {
-						input: "$tasks",
-						as: "task",
-						cond: taskFilterConditions.length > 1
-							? { $and: taskFilterConditions }
-							: taskFilterConditions[0]
-					}
-				}
-			}
+						input: '$tasks',
+						as: 'task',
+						cond:
+							taskFilterConditions.length > 1 ? { $and: taskFilterConditions } : taskFilterConditions[0],
+					},
+				},
+			},
 		});
 
 		// Recalculate duration based on filtered tasks only
@@ -525,12 +510,12 @@ export function addTaskFilteringAndDurationRecalculation(
 			$addFields: {
 				duration: {
 					$reduce: {
-						input: "$tasks",
+						input: '$tasks',
 						initialValue: 0,
-						in: { $add: ["$$value", "$$this.duration"] }
-					}
-				}
-			}
+						in: { $add: ['$$value', '$$this.duration'] },
+					},
+				},
+			},
 		});
 	}
 }
@@ -555,17 +540,16 @@ export function buildFocusTotalsCalculationPipeline(
 		// Step 1: Store original duration and create a filtered tasks array
 		pipeline.push({
 			$addFields: {
-				originalDuration: "$duration",
+				originalDuration: '$duration',
 				filteredTasks: {
 					$filter: {
-						input: "$tasks",
-						as: "task",
-						cond: taskFilterConditions.length > 1
-							? { $and: taskFilterConditions }
-							: taskFilterConditions[0]
-					}
-				}
-			}
+						input: '$tasks',
+						as: 'task',
+						cond:
+							taskFilterConditions.length > 1 ? { $and: taskFilterConditions } : taskFilterConditions[0],
+					},
+				},
+			},
 		});
 
 		// Step 2: Calculate the total duration of just the filtered tasks
@@ -573,12 +557,12 @@ export function buildFocusTotalsCalculationPipeline(
 			$addFields: {
 				filteredTasksDuration: {
 					$reduce: {
-						input: "$filteredTasks",
+						input: '$filteredTasks',
 						initialValue: 0,
-						in: { $add: ["$$value", "$$this.duration"] }
-					}
-				}
-			}
+						in: { $add: ['$$value', '$$this.duration'] },
+					},
+				},
+			},
 		});
 
 		// Step 3: Aggregate across ALL focus records to get totals
@@ -586,38 +570,38 @@ export function buildFocusTotalsCalculationPipeline(
 			$group: {
 				_id: null,
 				total: { $sum: 1 },
-				totalDuration: { $sum: "$originalDuration" },
-				onlyTasksTotalDuration: { $sum: "$filteredTasksDuration" }
-			}
+				totalDuration: { $sum: '$originalDuration' },
+				onlyTasksTotalDuration: { $sum: '$filteredTasksDuration' },
+			},
 		});
 	} else {
 		// Simple case (no task/project filters): use $facet to calculate 3 things in parallel
 		pipeline.push({
 			$facet: {
 				// Pipeline 1: Count total number of focus records
-				count: [{ $count: "total" }],
+				count: [{ $count: 'total' }],
 
 				// Pipeline 2: Sum up all focus record durations
 				baseDuration: [
 					{
 						$group: {
 							_id: null,
-							total: { $sum: "$duration" }
-						}
-					}
+							total: { $sum: '$duration' },
+						},
+					},
 				],
 
 				// Pipeline 3: Sum up individual task durations
 				tasksDuration: [
-					{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: true } },
+					{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: true } },
 					{
 						$group: {
 							_id: null,
-							total: { $sum: "$tasks.duration" }
-						}
-					}
-				]
-			}
+							total: { $sum: '$tasks.duration' },
+						},
+					},
+				],
+			},
 		});
 	}
 
@@ -637,7 +621,7 @@ export function extractFocusTotalsFromResult(
 		return {
 			total: (result[0]?.total as number) || 0,
 			totalDuration: (result[0]?.totalDuration as number) || 0,
-			onlyTasksTotalDuration: (result[0]?.onlyTasksTotalDuration as number) || 0
+			onlyTasksTotalDuration: (result[0]?.onlyTasksTotalDuration as number) || 0,
 		};
 	} else {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -645,7 +629,7 @@ export function extractFocusTotalsFromResult(
 		return {
 			total: firstResult?.count[0]?.total || 0,
 			totalDuration: firstResult?.baseDuration[0]?.total || 0,
-			onlyTasksTotalDuration: firstResult?.tasksDuration[0]?.total || 0
+			onlyTasksTotalDuration: firstResult?.tasksDuration[0]?.total || 0,
 		};
 	}
 }
@@ -728,6 +712,6 @@ export function buildFocusFilterPipeline(params: BuildFocusFilterPipelineParams)
 		pipeline: basePipeline,
 		effectiveStartDate,
 		effectiveEndDate,
-		taskFilterConditions
+		taskFilterConditions,
 	};
 }

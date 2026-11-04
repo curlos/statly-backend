@@ -41,10 +41,7 @@ export function encrypt(text: string): string {
 
 	const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
-	const encrypted = Buffer.concat([
-		cipher.update(text, 'utf8'),
-		cipher.final()
-	]);
+	const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
 
 	const tag = cipher.getAuthTag();
 
@@ -75,10 +72,7 @@ export function decrypt(encryptedHex: string): string {
 	const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
 	decipher.setAuthTag(tag);
 
-	const decrypted = Buffer.concat([
-		decipher.update(encrypted),
-		decipher.final()
-	]);
+	const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 
 	return decrypted.toString('utf8');
 }

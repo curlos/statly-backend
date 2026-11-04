@@ -88,14 +88,14 @@ router.get('/document-counts', verifyToken, async (req: CustomRequest, res) => {
 			FocusRecord.countDocuments({ userId }),
 			Task.countDocuments({ userId }),
 			Project.countDocuments({ userId }),
-			ProjectGroupTickTick.countDocuments({ userId })
+			ProjectGroupTickTick.countDocuments({ userId }),
 		]);
 
 		res.json({
 			focusRecords: focusRecordsCount,
 			tasks: tasksCount,
 			projects: projectsCount,
-			projectGroups: projectGroupsCount
+			projectGroups: projectGroupsCount,
 		});
 	} catch (error) {
 		res.status(500).json({ message: error instanceof Error ? error.message : error });

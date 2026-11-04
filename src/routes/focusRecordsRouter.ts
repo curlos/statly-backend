@@ -1,7 +1,11 @@
 import express from 'express';
 import { getFocusChallengesHandler } from '../controllers/challengesController';
 import { revalidateCrossesMidnightHandler } from '../controllers/crossesMidnightBatchController';
-import { getFocusRecordsHandler, exportFocusRecordsHandler, getForestTreesHandler } from '../controllers/focusRecordsController';
+import {
+	getFocusRecordsHandler,
+	exportFocusRecordsHandler,
+	getForestTreesHandler,
+} from '../controllers/focusRecordsController';
 import { getFocusMedalsHandler } from '../controllers/medalsController';
 import { getFocusRecordsNeedingSentiment, analyzeNoteEmotionsHandler } from '../controllers/sentimentBatchController';
 import { CustomRequest } from '../interfaces/CustomRequest';
@@ -45,7 +49,7 @@ router.get('/all', verifyToken, async (req: CustomRequest, res) => {
 			total,
 			page,
 			totalPages,
-			limit
+			limit,
 		});
 	} catch (error) {
 		res.status(500).json({

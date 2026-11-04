@@ -8,26 +8,29 @@ interface ISyncMetadata extends Document {
 	tasksUpdated?: number;
 }
 
-const syncMetadataSchema = new Schema<ISyncMetadata>({
-	userId: {
-		type: Schema.Types.ObjectId,
-		ref: 'User',
-		required: true,
+const syncMetadataSchema = new Schema<ISyncMetadata>(
+	{
+		userId: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
+			required: true,
+		},
+		syncType: {
+			type: String,
+			required: true,
+		},
+		lastSyncTime: {
+			type: Date,
+			required: true,
+		},
+		tasksUpdated: {
+			type: Number,
+		},
 	},
-	syncType: {
-		type: String,
-		required: true,
-	},
-	lastSyncTime: {
-		type: Date,
-		required: true,
-	},
-	tasksUpdated: {
-		type: Number,
-	},
-}, {
-	collection: 'syncMetaDatas'
-});
+	{
+		collection: 'syncMetaDatas',
+	}
+);
 
 // Compound index for efficient queries
 syncMetadataSchema.index({ userId: 1, syncType: 1 }, { unique: true });

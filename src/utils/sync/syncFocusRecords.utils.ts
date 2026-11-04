@@ -1,15 +1,33 @@
-import { createHash } from "crypto";
+import { createHash } from 'crypto';
 import { Types } from 'mongoose';
-import { FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession } from "../../models/FocusRecord";
-import { TaskTickTick } from "../../models/TaskModel";
-import { fetchBeFocusedAppFocusRecords, fetchForestAppFocusRecords, fetchSessionFocusRecordsWithNoBreaks, fetchTickTickFocusRecords, fetchTideAppFocusRecords } from "../focus.utils";
-import { crossesMidnightInTimezone } from "../timezone.utils";
-import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
-import { analyzeNoteEmotionsCore } from "../../controllers/sentimentBatchController";
-import UserSettings from "../../models/UserSettingsModel";
-import { TickTickFocusRecordRaw, BeFocusedRecordRaw, ForestRecordRaw, TideRecordRaw, SessionRecordRaw } from "../../types/externalApis";
-import { fetchAllTickTickProjects } from "../ticktick.utils";
-import { executeBatchedBulkWrite } from "../bulkWrite.utils";
+import {
+	FocusRecordTickTick,
+	FocusRecordBeFocused,
+	FocusRecordForest,
+	FocusRecordTide,
+	FocusRecordSession,
+} from '../../models/FocusRecord';
+import { TaskTickTick } from '../../models/TaskModel';
+import {
+	fetchBeFocusedAppFocusRecords,
+	fetchForestAppFocusRecords,
+	fetchSessionFocusRecordsWithNoBreaks,
+	fetchTickTickFocusRecords,
+	fetchTideAppFocusRecords,
+} from '../focus.utils';
+import { crossesMidnightInTimezone } from '../timezone.utils';
+import { getOrCreateSyncMetadata, getTickTickCookie } from '../helpers.utils';
+import { analyzeNoteEmotionsCore } from '../../controllers/sentimentBatchController';
+import UserSettings from '../../models/UserSettingsModel';
+import {
+	TickTickFocusRecordRaw,
+	BeFocusedRecordRaw,
+	ForestRecordRaw,
+	TideRecordRaw,
+	SessionRecordRaw,
+} from '../../types/externalApis';
+import { fetchAllTickTickProjects } from '../ticktick.utils';
+import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 // Helper types for sync operations
 type TickTickTask = NonNullable<TickTickFocusRecordRaw['tasks']>[number];
@@ -56,19 +74,20 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 	threeDaysBeforeLastSync.setDate(threeDaysBeforeLastSync.getDate() - 3);
 
 	// Check if we should analyze emotions (do this early to avoid unnecessary work)
-	const shouldAnalyzeEmotions = userSettings?.pages?.focusRecords?.analyzeNoteEmotionsWhileSyncingFocusRecords || false;
+	const shouldAnalyzeEmotions =
+		userSettings?.pages?.focusRecords?.analyzeNoteEmotionsWhileSyncingFocusRecords || false;
 
 	// Only fetch existing records if we need to analyze emotions
 	let existingRecordsMap = new Map<string, ExistingRecordData>();
 	if (shouldAnalyzeEmotions) {
-		const recordIds = focusRecords
-			.filter(r => new Date(r.endTime) >= threeDaysBeforeLastSync)
-			.map(r => r.id);
+		const recordIds = focusRecords.filter((r) => new Date(r.endTime) >= threeDaysBeforeLastSync).map((r) => r.id);
 
 		const existingRecords = await FocusRecordTickTick.find({
 			userId,
-			id: { $in: recordIds }
-		}).select('id note emotions').lean();
+			id: { $in: recordIds },
+		})
+			.select('id note emotions')
+			.lean();
 
 		existingRecordsMap = new Map(
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,14 +114,16 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 	if (allTaskIds.size > 0) {
 		const fullTasks = await TaskTickTick.find({
 			userId,
-			id: { $in: Array.from(allTaskIds) }
-		}).select('id projectId ancestorIds').lean();
+			id: { $in: Array.from(allTaskIds) },
+		})
+			.select('id projectId ancestorIds')
+			.lean();
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(fullTasks as any[]).forEach((task: any) => {
 			tasksById[task.id] = {
 				projectId: task.projectId,
-				ancestorIds: task.ancestorIds || []
+				ancestorIds: task.ancestorIds || [],
 			};
 		});
 	}
@@ -127,7 +148,7 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 					duration,
 					// If the task has no projectId, it must be an empty task or an older task like the "Full Stack Open" focus tasks from 2020.
 					projectId: taskData?.projectId || inboxId,
-					ancestorIds: taskData?.ancestorIds || []
+					ancestorIds: taskData?.ancestorIds || [],
 				};
 			});
 
@@ -198,15 +219,19 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 			// Fetch the MongoDB _id values for these records (using their TickTick IDs)
 			const recordsToAnalyze = await FocusRecordTickTick.find({
 				userId,
-				id: { $in: recordsNeedingEmotionAnalysis }
-			}).select('_id').lean();
+				id: { $in: recordsNeedingEmotionAnalysis },
+			})
+				.select('_id')
+				.lean();
 
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const mongoIds = (recordsToAnalyze as any[]).map((r: any) => r._id.toString());
+			const mongoIds = (recordsToAnalyze as any[]).map((r: any) => r._id.toString());
 
 			if (mongoIds.length > 0) {
 				emotionAnalysisResult = await analyzeNoteEmotionsCore(mongoIds, userId);
-				console.log(`✅ Emotion analysis complete: ${emotionAnalysisResult.analyzed} analyzed, ${emotionAnalysisResult.failed} failed`);
+				console.log(
+					`✅ Emotion analysis complete: ${emotionAnalysisResult.analyzed} analyzed, ${emotionAnalysisResult.failed} failed`
+				);
 			} else {
 				console.log('⚠️ No records found to analyze');
 				emotionAnalysisResult = { analyzed: 0, failed: 0 };
@@ -214,7 +239,11 @@ export async function syncTickTickFocusRecords(userId: Types.ObjectId, timezone:
 		} catch (error) {
 			console.error('Error analyzing emotions during sync:', error);
 			// Don't fail the sync if emotion analysis fails
-			emotionAnalysisResult = { error: 'Failed to analyze emotions', analyzed: 0, failed: recordsNeedingEmotionAnalysis.length };
+			emotionAnalysisResult = {
+				error: 'Failed to analyze emotions',
+				analyzed: 0,
+				failed: recordsNeedingEmotionAnalysis.length,
+			};
 		}
 	}
 
@@ -236,7 +265,6 @@ export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone
 	// Fetch raw BeFocused data
 	const rawBeFocusedRecords = await fetchBeFocusedAppFocusRecords();
 
-
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawBeFocusedRecords.map((record: BeFocusedRecordRaw) => {
 		const startDate = new Date(record['Start date']);
@@ -246,14 +274,19 @@ export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone
 		const assignedTask = record['Assigned task'] || 'Untitled';
 
 		// Create deterministic ID using the parsed variables
-		const id = createDeterministicId('befocused', startDate.toISOString(), durationInSeconds.toString(), assignedTask);
+		const id = createDeterministicId(
+			'befocused',
+			startDate.toISOString(),
+			durationInSeconds.toString(),
+			assignedTask
+		);
 
 		// Create custom taskId: "TaskName - BeFocused"
 		const taskId = `${assignedTask} - BeFocused`;
 
 		// Check if record crosses midnight in user's timezone
 		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
-		const focusAppSource = 'FocusRecordBeFocused'
+		const focusAppSource = 'FocusRecordBeFocused';
 
 		return {
 			id,
@@ -271,9 +304,9 @@ export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone
 					endTime: endDate, // Date object for MongoDB
 					duration: durationInSeconds, // Each task has the full duration since there's only one task,
 					projectId: focusAppSource,
-					projectName: focusAppSource
-				}
-			]
+					projectName: focusAppSource,
+				},
+			],
 		};
 	});
 
@@ -282,8 +315,8 @@ export async function syncBeFocusedFocusRecords(userId: Types.ObjectId, timezone
 		updateOne: {
 			filter: { id: record.id, userId },
 			update: { $set: record },
-			upsert: true
-		}
+			upsert: true,
+		},
 	}));
 
 	const result = await executeBatchedBulkWrite(bulkOps, FocusRecordBeFocused);
@@ -308,7 +341,6 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 	// Fetch raw Forest data
 	const rawForestRecords = await fetchForestAppFocusRecords(true);
 
-
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawForestRecords.map((record: ForestRecordRaw) => {
 		const startDate = new Date(record['Start Time'] as string);
@@ -320,7 +352,13 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 		const isSuccess = record['Is Success'] === 'True';
 
 		// Create deterministic ID using the parsed variables
-		const id = createDeterministicId('forest', startDate.toISOString(), endDate.toISOString(), tag, isSuccess.toString());
+		const id = createDeterministicId(
+			'forest',
+			startDate.toISOString(),
+			endDate.toISOString(),
+			tag,
+			isSuccess.toString()
+		);
 
 		// Create custom taskId: "Tag - Forest"
 		const taskId = `${tag} - Forest`;
@@ -328,7 +366,7 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 		// Check if record crosses midnight in user's timezone
 		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
 
-		const focusAppSource = 'FocusRecordForest'
+		const focusAppSource = 'FocusRecordForest';
 
 		return {
 			id,
@@ -349,9 +387,9 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 					endTime: endDate, // Date object for MongoDB
 					duration: durationInSeconds, // Each task has the full duration since there's only one task
 					projectId: focusAppSource,
-					projectName: focusAppSource
-				}
-			]
+					projectName: focusAppSource,
+				},
+			],
 		};
 	});
 
@@ -360,8 +398,8 @@ export async function syncForestFocusRecords(userId: Types.ObjectId, timezone: s
 		updateOne: {
 			filter: { id: record.id, userId },
 			update: { $set: record },
-			upsert: true
-		}
+			upsert: true,
+		},
 	}));
 
 	const result = await executeBatchedBulkWrite(bulkOps, FocusRecordForest);
@@ -386,7 +424,6 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 	// Fetch raw Tide data
 	const rawTideRecords = await fetchTideAppFocusRecords();
 
-
 	// Helper function to parse duration string (e.g., "1h50m", "35m", "3m")
 	const parseDuration = (durationStr: string): number => {
 		let totalSeconds = 0;
@@ -406,12 +443,17 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawTideRecords.map((record: TideRecordRaw) => {
 		const startDate = new Date(record['startTime']);
-		const durationInSeconds = parseDuration((record['duration'] as unknown) as string) || 0;
+		const durationInSeconds = parseDuration(record['duration'] as unknown as string) || 0;
 		const endDate = new Date(startDate.getTime() + durationInSeconds * 1000);
 		const name = record['name'] || 'Untitled';
 
 		// Create deterministic ID using the parsed variables
-		const id = createDeterministicId('tide', startDate.toISOString(), endDate.toISOString(), durationInSeconds.toString());
+		const id = createDeterministicId(
+			'tide',
+			startDate.toISOString(),
+			endDate.toISOString(),
+			durationInSeconds.toString()
+		);
 
 		// Create custom taskId: "Name - Tide"
 		const taskId = `${name} - Tide`;
@@ -419,7 +461,7 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 		// Check if record crosses midnight in user's timezone
 		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
 
-		const focusAppSource = 'FocusRecordTide'
+		const focusAppSource = 'FocusRecordTide';
 
 		return {
 			id,
@@ -437,9 +479,9 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 					endTime: endDate, // Date object for MongoDB
 					duration: durationInSeconds, // Each task has the full duration since there's only one task
 					projectId: focusAppSource,
-					projectName: focusAppSource
-				}
-			]
+					projectName: focusAppSource,
+				},
+			],
 		};
 	});
 
@@ -448,8 +490,8 @@ export async function syncTideFocusRecords(userId: Types.ObjectId, timezone: str
 		updateOne: {
 			filter: { id: record.id, userId },
 			update: { $set: record },
-			upsert: true
-		}
+			upsert: true,
+		},
 	}));
 
 	// Execute operations in batched bulkWrite to avoid 16MB BSON limit
@@ -474,7 +516,6 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 
 	// Fetch raw Session data
 	const rawSessionRecords = await fetchSessionFocusRecordsWithNoBreaks();
-
 
 	// Normalize each record to match TickTick format
 	const normalizedRecords = rawSessionRecords.map((record: SessionRecordRaw) => {
@@ -501,7 +542,7 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 			.filter((m: Record<string, unknown>) => m.type === 'PAUSE')
 			.map((m: Record<string, unknown>) => ({
 				start: new Date(m['start_date'] as string),
-				end: new Date(m['end_date'] as string)
+				end: new Date(m['end_date'] as string),
 			}))
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			.sort((a: any, b: any) => a.start.getTime() - b.start.getTime());
@@ -549,7 +590,13 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 		const crossesMidnight = crossesMidnightInTimezone(startDate, endDate, timezone);
 
 		// Create deterministic ID using the parsed variables
-		const id = createDeterministicId('session', startDate.toISOString(), endDate.toISOString(), totalDurationInSeconds.toString(), title);
+		const id = createDeterministicId(
+			'session',
+			startDate.toISOString(),
+			endDate.toISOString(),
+			totalDurationInSeconds.toString(),
+			title
+		);
 
 		return {
 			id,
@@ -561,7 +608,7 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 			crossesMidnight,
 			note,
 			pauseDuration: pauseDurationInSeconds,
-			tasks
+			tasks,
 		};
 	});
 
@@ -570,8 +617,8 @@ export async function syncSessionFocusRecords(userId: Types.ObjectId, timezone: 
 		updateOne: {
 			filter: { id: record.id, userId },
 			update: { $set: record },
-			upsert: true
-		}
+			upsert: true,
+		},
 	}));
 
 	// Execute operations in batched bulkWrite to avoid 16MB BSON limit

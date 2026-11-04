@@ -149,7 +149,7 @@ async function processTaskResults(taskResults: TaskResult[], totalCount: number,
 				title: task.title,
 				parentId: task.parentId ?? null,
 				ancestorIds: task.ancestorIds,
-				projectId: task.projectId ?? null
+				projectId: task.projectId ?? null,
 			};
 		});
 	}
@@ -166,7 +166,7 @@ async function processTaskResults(taskResults: TaskResult[], totalCount: number,
 			projectId: r.projectId,
 			count: 1,
 			percentage: formattedPercentage,
-			type: 'task'
+			type: 'task',
 		};
 	});
 
@@ -182,21 +182,19 @@ async function groupByDay(pipeline: PipelineStage[], startDate?: string, endDate
 	const aggPipeline = [...pipeline];
 	aggPipeline.push({
 		$facet: {
-			totals: [
-				{ $group: { _id: null, totalCount: { $sum: 1 } } }
-			],
+			totals: [{ $group: { _id: null, totalCount: { $sum: 1 } } }],
 			byDay: [
 				{
 					$group: {
 						_id: {
-							$dateToString: { format: "%Y-%m-%d", date: "$completedTime", timezone: timezone }
+							$dateToString: { format: '%Y-%m-%d', date: '$completedTime', timezone: timezone },
 						},
-						count: { $sum: 1 }
-					}
+						count: { $sum: 1 },
+					},
 				},
-				{ $sort: { _id: 1 } }
-			]
-		}
+				{ $sort: { _id: 1 } },
+			],
+		},
 	});
 
 	const result = await Task.aggregate(aggPipeline);
@@ -206,12 +204,12 @@ async function groupByDay(pipeline: PipelineStage[], startDate?: string, endDate
 	return {
 		summary: {
 			totalCount,
-			dateRange: { start: startDate || null, end: endDate || null }
+			dateRange: { start: startDate || null, end: endDate || null },
 		},
 		byDay: facetResult.byDay.map((r: DateGroupResult) => ({
 			date: r._id,
-			count: r.count
-		}))
+			count: r.count,
+		})),
 	};
 }
 
@@ -224,36 +222,31 @@ async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDat
 		$addFields: {
 			weekStartDate: {
 				$dateSubtract: {
-					startDate: "$completedTime",
-					unit: "day",
+					startDate: '$completedTime',
+					unit: 'day',
 					amount: {
-						$subtract: [
-							{ $isoDayOfWeek: { date: "$completedTime", timezone: timezone } },
-							1
-						]
+						$subtract: [{ $isoDayOfWeek: { date: '$completedTime', timezone: timezone } }, 1],
 					},
-					timezone: timezone
-				}
-			}
-		}
+					timezone: timezone,
+				},
+			},
+		},
 	});
 
 	aggPipeline.push({
 		$facet: {
-			totals: [
-				{ $group: { _id: null, totalCount: { $sum: 1 } } }
-			],
+			totals: [{ $group: { _id: null, totalCount: { $sum: 1 } } }],
 			byWeek: [
 				{
 					$group: {
 						_id: getDateGroupingExpression('weekly', timezone, '$completedTime'),
-						weekStartDate: { $first: "$weekStartDate" },
-						count: { $sum: 1 }
-					}
+						weekStartDate: { $first: '$weekStartDate' },
+						count: { $sum: 1 },
+					},
 				},
-				{ $sort: { weekStartDate: 1 } }
-			]
-		}
+				{ $sort: { weekStartDate: 1 } },
+			],
+		},
 	});
 
 	const result = await Task.aggregate(aggPipeline);
@@ -263,12 +256,12 @@ async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDat
 	return {
 		summary: {
 			totalCount,
-			dateRange: { start: startDate || null, end: endDate || null }
+			dateRange: { start: startDate || null, end: endDate || null },
 		},
 		byWeek: facetResult.byWeek.map((r: DateGroupResult) => ({
 			date: r._id, // Format: "January 1, 2025" (Monday of the week)
-			count: r.count
-		}))
+			count: r.count,
+		})),
 	};
 }
 
@@ -281,30 +274,28 @@ async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDa
 		$addFields: {
 			monthStartDate: {
 				$dateTrunc: {
-					date: "$completedTime",
-					unit: "month",
-					timezone: timezone
-				}
-			}
-		}
+					date: '$completedTime',
+					unit: 'month',
+					timezone: timezone,
+				},
+			},
+		},
 	});
 
 	aggPipeline.push({
 		$facet: {
-			totals: [
-				{ $group: { _id: null, totalCount: { $sum: 1 } } }
-			],
+			totals: [{ $group: { _id: null, totalCount: { $sum: 1 } } }],
 			byMonth: [
 				{
 					$group: {
 						_id: getDateGroupingExpression('monthly', timezone, '$completedTime'),
-						monthStartDate: { $first: "$monthStartDate" },
-						count: { $sum: 1 }
-					}
+						monthStartDate: { $first: '$monthStartDate' },
+						count: { $sum: 1 },
+					},
 				},
-				{ $sort: { monthStartDate: 1 } }
-			]
-		}
+				{ $sort: { monthStartDate: 1 } },
+			],
+		},
 	});
 
 	const result = await Task.aggregate(aggPipeline);
@@ -314,12 +305,12 @@ async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDa
 	return {
 		summary: {
 			totalCount,
-			dateRange: { start: startDate || null, end: endDate || null }
+			dateRange: { start: startDate || null, end: endDate || null },
 		},
 		byMonth: facetResult.byMonth.map((r: DateGroupResult) => ({
 			date: r._id, // Format: "January 2025"
-			count: r.count
-		}))
+			count: r.count,
+		})),
 	};
 }
 
@@ -332,32 +323,30 @@ async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDat
 		$addFields: {
 			yearStartDate: {
 				$dateTrunc: {
-					date: "$completedTime",
-					unit: "year",
-					timezone: timezone
-				}
-			}
-		}
+					date: '$completedTime',
+					unit: 'year',
+					timezone: timezone,
+				},
+			},
+		},
 	});
 
 	aggPipeline.push({
 		$facet: {
-			totals: [
-				{ $group: { _id: null, totalCount: { $sum: 1 } } }
-			],
+			totals: [{ $group: { _id: null, totalCount: { $sum: 1 } } }],
 			byYear: [
 				{
 					$group: {
 						_id: {
-							$dateToString: { format: "%Y", date: "$completedTime", timezone: timezone }
+							$dateToString: { format: '%Y', date: '$completedTime', timezone: timezone },
 						},
-						yearStartDate: { $first: "$yearStartDate" },
-						count: { $sum: 1 }
-					}
+						yearStartDate: { $first: '$yearStartDate' },
+						count: { $sum: 1 },
+					},
 				},
-				{ $sort: { yearStartDate: 1 } }
-			]
-		}
+				{ $sort: { yearStartDate: 1 } },
+			],
+		},
 	});
 
 	const result = await Task.aggregate(aggPipeline);
@@ -367,12 +356,12 @@ async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDat
 	return {
 		summary: {
 			totalCount,
-			dateRange: { start: startDate || null, end: endDate || null }
+			dateRange: { start: startDate || null, end: endDate || null },
 		},
 		byYear: facetResult.byYear.map((r: DateGroupResult) => ({
 			date: r._id, // Format: "2025"
-			count: r.count
-		}))
+			count: r.count,
+		})),
 	};
 }
 
@@ -381,21 +370,19 @@ async function groupByProject(pipeline: PipelineStage[], nested: boolean = false
 	const aggPipeline = [...pipeline];
 
 	const facetStages: Record<string, PipelineStage[]> = {
-		totals: [
-			{ $group: { _id: null, totalCount: { $sum: 1 } } }
-		],
+		totals: [{ $group: { _id: null, totalCount: { $sum: 1 } } }],
 		byProject: [
 			{
 				$group: {
 					_id: {
-						projectId: "$projectId",
-						source: "$source"
+						projectId: '$projectId',
+						source: '$source',
 					},
-					count: { $sum: 1 }
-				}
+					count: { $sum: 1 },
+				},
 			},
-			{ $sort: { count: -1 } }
-		]
+			{ $sort: { count: -1 } },
+		],
 	};
 
 	// If nested, also fetch all tasks in the same query
@@ -413,7 +400,7 @@ async function groupByProject(pipeline: PipelineStage[], nested: boolean = false
 	const response: StatsResponse = {
 		summary: {
 			totalCount,
-			dateRange: { start: null, end: null }
+			dateRange: { start: null, end: null },
 		},
 		byProject: facetResult.byProject.map((r: ProjectGroupResult) => {
 			const percentage = totalCount > 0 ? (r.count / totalCount) * 100 : 0;
@@ -423,9 +410,9 @@ async function groupByProject(pipeline: PipelineStage[], nested: boolean = false
 				id: projectId,
 				count: r.count,
 				percentage: Number(percentage.toFixed(2)),
-				type: 'project'
+				type: 'project',
 			};
-		})
+		}),
 	};
 
 	// If nested, process the task results that were fetched in the same query
@@ -444,11 +431,9 @@ async function groupByTask(pipeline: PipelineStage[], _nested: boolean = false, 
 
 	aggPipeline.push({
 		$facet: {
-			totals: [
-				{ $group: { _id: null, totalCount: { $sum: 1 } } }
-			],
-			tasks: []
-		}
+			totals: [{ $group: { _id: null, totalCount: { $sum: 1 } } }],
+			tasks: [],
+		},
 	});
 
 	const result = await Task.aggregate(aggPipeline);
@@ -461,10 +446,10 @@ async function groupByTask(pipeline: PipelineStage[], _nested: boolean = false, 
 	const response: StatsResponse = {
 		summary: {
 			totalCount,
-			dateRange: { start: null, end: null }
+			dateRange: { start: null, end: null },
 		},
 		byTask,
-		ancestorTasksById
+		ancestorTasksById,
 	};
 
 	return response;

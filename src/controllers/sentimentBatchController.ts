@@ -39,7 +39,10 @@ const HUGGINGFACE_SPACE_URL = process.env.HUGGINGFACE_SPACE_URL;
  * @param userId - User ID to filter records
  * @returns Object with analyzed and failed counts
  */
-export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types.ObjectId): Promise<{ analyzed: number; failed: number }> {
+export async function analyzeNoteEmotionsCore(
+	recordIds: string[],
+	userId: Types.ObjectId
+): Promise<{ analyzed: number; failed: number }> {
 	if (!recordIds || !Array.isArray(recordIds) || recordIds.length === 0) {
 		throw new Error('recordIds array is required and must not be empty');
 	}
@@ -53,40 +56,38 @@ export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types
 	// Fetch the specific records by ID
 	const records = await FocusRecord.find({
 		userId,
-		_id: { $in: recordIds }
-	}).select('_id note').lean();
+		_id: { $in: recordIds },
+	})
+		.select('_id note')
+		.lean();
 
 	if (records.length === 0) {
 		throw new Error('No records found with provided IDs');
 	}
 
 	// Prepare records for analysis
-	const recordsData: RecordToAnalyze[] = (records as FocusRecordLean[]).map(record => ({
+	const recordsData: RecordToAnalyze[] = (records as FocusRecordLean[]).map((record) => ({
 		id: record._id.toString(),
-		note: record.note || ''
+		note: record.note || '',
 	}));
 
 	// Call HuggingFace API
 	const payload = {
-		records: recordsData.map(r => ({
+		records: recordsData.map((r) => ({
 			id: r.id,
 			note: r.note,
-			emotion: null  // Always analyze, never skip
-		}))
+			emotion: null, // Always analyze, never skip
+		})),
 	};
 
 	const endpoint = `${HUGGINGFACE_SPACE_URL}/analyze`;
 	console.log(`🔗 Calling HuggingFace endpoint: ${endpoint}`);
 	console.log(`📦 Payload: ${recordsData.length} records`);
 
-	const response = await axios.post(
-		endpoint,
-		payload,
-		{
-			headers: { 'Content-Type': 'application/json' },
-			timeout: 240000 // 4 minutes timeout
-		}
-	);
+	const response = await axios.post(endpoint, payload, {
+		headers: { 'Content-Type': 'application/json' },
+		timeout: 240000, // 4 minutes timeout
+	});
 
 	const result: HuggingFaceResponse = response.data;
 	const analysisResults = result.results;
@@ -101,7 +102,7 @@ export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types
 		}
 
 		// Check if this is an error result
-		const isError = analysisResult.emotions.some(e => e.emotion === 'error');
+		const isError = analysisResult.emotions.some((e) => e.emotion === 'error');
 
 		if (isError) {
 			failedCount++;
@@ -113,10 +114,10 @@ export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types
 				filter: { _id: new mongoose.Types.ObjectId(analysisResult.id) },
 				update: {
 					$set: {
-						'emotions': analysisResult.emotions
-					}
-				}
-			}
+						emotions: analysisResult.emotions,
+					},
+				},
+			},
 		});
 	}
 
@@ -136,7 +137,7 @@ export async function analyzeNoteEmotionsCore(recordIds: string[], userId: Types
 
 	return {
 		analyzed: analyzedCount,
-		failed: failedCount
+		failed: failedCount,
 	};
 }
 
@@ -156,26 +157,24 @@ export async function getFocusRecordsNeedingSentiment(req: CustomRequest, res: R
 			userId,
 			$and: [
 				{
-					$or: [
-						{ 'emotions': { $exists: false } },
-						{ 'emotions': { $size: 0 } },
-						{ 'emotions': null }
-					]
+					$or: [{ emotions: { $exists: false } }, { emotions: { $size: 0 } }, { emotions: null }],
 				},
-				{ 'note': { $exists: true } },
-				{ 'note': { $ne: '' } }
-			]
-		}).select('_id').lean();
+				{ note: { $exists: true } },
+				{ note: { $ne: '' } },
+			],
+		})
+			.select('_id')
+			.lean();
 
-		const recordIds = records.map(record => record._id.toString());
+		const recordIds = records.map((record) => record._id.toString());
 
 		res.status(200).json({
-			recordIds
+			recordIds,
 		});
 	} catch (error) {
 		console.error('Error fetching records needing sentiment:', error);
 		res.status(500).json({
-			message: error instanceof Error ? error.message : 'An error occurred while fetching records'
+			message: error instanceof Error ? error.message : 'An error occurred while fetching records',
 		});
 	}
 }
@@ -192,7 +191,7 @@ export async function analyzeNoteEmotionsHandler(req: CustomRequest, res: Respon
 
 		if (!recordIds || !Array.isArray(recordIds) || recordIds.length === 0) {
 			return res.status(400).json({
-				message: 'recordIds array is required and must not be empty'
+				message: 'recordIds array is required and must not be empty',
 			});
 		}
 
@@ -210,13 +209,13 @@ export async function analyzeNoteEmotionsHandler(req: CustomRequest, res: Respon
 				return res.status(500).json({
 					message: `HuggingFace API error: ${axiosError.response.status}`,
 					analyzed: 0,
-					failed: req.body.recordIds?.length || 0
+					failed: req.body.recordIds?.length || 0,
 				});
 			} else if (axiosError.request) {
 				return res.status(500).json({
 					message: 'HuggingFace API: No response received (timeout or connection error)',
 					analyzed: 0,
-					failed: req.body.recordIds?.length || 0
+					failed: req.body.recordIds?.length || 0,
 				});
 			}
 		}
@@ -225,7 +224,7 @@ export async function analyzeNoteEmotionsHandler(req: CustomRequest, res: Respon
 		res.status(500).json({
 			message: error instanceof Error ? error.message : 'An error occurred during sentiment analysis',
 			analyzed: 0,
-			failed: req.body.recordIds?.length || 0
+			failed: req.body.recordIds?.length || 0,
 		});
 	}
 }

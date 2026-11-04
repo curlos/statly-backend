@@ -18,32 +18,32 @@ interface MongooseCache {
 let cached = (global as Record<string, unknown>).mongoose as MongooseCache | undefined;
 
 if (!cached) {
-  cached = (global as Record<string, unknown>).mongoose = { conn: null, promise: null } as MongooseCache;
+	cached = (global as Record<string, unknown>).mongoose = { conn: null, promise: null } as MongooseCache;
 }
 
 export const connectDB = async () => {
-  if (!cached) {
-    throw new Error('Database cache not initialized');
-  }
+	if (!cached) {
+		throw new Error('Database cache not initialized');
+	}
 
-  if (cached.conn) return cached.conn;
+	if (cached.conn) return cached.conn;
 
-  if (!cached.promise) {
-    console.log('⏳ Connecting to MongoDB...');
-    cached.promise = mongoose.connect(process.env.ATLAS_URI!, {
-      bufferCommands: false,
-    });
-  }
+	if (!cached.promise) {
+		console.log('⏳ Connecting to MongoDB...');
+		cached.promise = mongoose.connect(process.env.ATLAS_URI!, {
+			bufferCommands: false,
+		});
+	}
 
-  try {
-    cached.conn = await cached.promise;
-    console.log(`✅ MongoDB Connected: ${cached.conn.connection.host}`);
-    return cached.conn;
-  } catch (error) {
-    cached.promise = null; // 💡 Reset so next call can retry
-    console.error(`❌ MongoDB connection failed:`, error);
-    throw error;
-  }
+	try {
+		cached.conn = await cached.promise;
+		console.log(`✅ MongoDB Connected: ${cached.conn.connection.host}`);
+		return cached.conn;
+	} catch (error) {
+		cached.promise = null; // 💡 Reset so next call can retry
+		console.error(`❌ MongoDB connection failed:`, error);
+		throw error;
+	}
 };
 
-export default connectDB
+export default connectDB;

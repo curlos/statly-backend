@@ -51,7 +51,6 @@ export type StreaksQueryParams = BaseQueryParams;
 // Helper Functions
 // ============================================================================
 
-
 /**
  * Get all active rings from user settings
  */
@@ -132,7 +131,7 @@ function getTodayDateKey(timezone: string): string {
 		timeZone: timezone,
 		year: 'numeric',
 		month: '2-digit',
-		day: '2-digit'
+		day: '2-digit',
 	});
 	return formatted; // en-CA locale gives YYYY-MM-DD format
 }
@@ -155,7 +154,7 @@ function getDayOfWeek(dateString: string, timezone: string): string {
 	const date = new Date(dateString + 'T12:00:00Z'); // Use noon to avoid timezone edge cases
 	const dayName = date.toLocaleDateString('en-US', {
 		weekday: 'long',
-		timeZone: timezone
+		timeZone: timezone,
 	});
 	return dayName.toLowerCase();
 }
@@ -238,7 +237,7 @@ function calculateStreaks(
 		return {
 			currentStreak: { days: 0, from: null as string | null, to: null as string | null },
 			longestStreak: { days: 0, from: null as string | null, to: null as string | null },
-			allStreaks: []
+			allStreaks: [],
 		};
 	}
 
@@ -263,7 +262,14 @@ function calculateStreaks(
 		const goalMet = duration >= offsetDailyGoal;
 
 		// Check if this date is consecutive to the last date, accounting for freebie/rest/inactive days
-		const isConsecutive = isConsecutiveWithFreebies(date, lastDate, timezone, selectedDaysOfWeek, restDays, inactivePeriods);
+		const isConsecutive = isConsecutiveWithFreebies(
+			date,
+			lastDate,
+			timezone,
+			selectedDaysOfWeek,
+			restDays,
+			inactivePeriods
+		);
 
 		if (goalMet && isConsecutive) {
 			// Goal met (regardless of whether day is selected) → continue streak
@@ -334,7 +340,7 @@ function calculateStreaks(
 	}
 
 	// Filter to only include streaks with 1+ days (no need to sort here - frontend will handle it)
-	const filteredStreaks = allStreaks.filter(streak => streak.days >= 1);
+	const filteredStreaks = allStreaks.filter((streak) => streak.days >= 1);
 
 	return { currentStreak, longestStreak, allStreaks: filteredStreaks };
 }
@@ -343,10 +349,7 @@ function calculateStreaks(
  * Get daily focus durations by aggregating ALL focus records by day
  * Efficient: Single MongoDB aggregation groups all historical data
  */
-async function getDailyFocusDurations(
-	basePipeline: PipelineStage[],
-	params: StreaksQueryParams
-) {
+async function getDailyFocusDurations(basePipeline: PipelineStage[], params: StreaksQueryParams) {
 	const { timezone } = params;
 	const pipeline = [...basePipeline];
 
@@ -357,18 +360,18 @@ async function getDailyFocusDurations(
 	pipeline.push({
 		$facet: {
 			byDay: [
-				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+				{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 				{
 					$group: {
 						_id: {
-							$dateToString: { format: "%Y-%m-%d", date: "$startTime", timezone: timezone }
+							$dateToString: { format: '%Y-%m-%d', date: '$startTime', timezone: timezone },
 						},
-						duration: { $sum: "$tasks.duration" }
-					}
+						duration: { $sum: '$tasks.duration' },
+					},
 				},
-				{ $sort: { _id: 1 } }
-			]
-		}
+				{ $sort: { _id: 1 } },
+			],
+		},
 	});
 
 	const result = await FocusRecord.aggregate(pipeline);
@@ -377,17 +380,14 @@ async function getDailyFocusDurations(
 
 	return results.map((r: DailyDurationResult) => ({
 		date: r._id,
-		duration: r.duration
+		duration: r.duration,
 	}));
 }
 
 /**
  * Get today's focus duration only (fast, single-day query)
  */
-async function getTodayFocusDuration(
-	basePipeline: PipelineStage[],
-	timezone: string
-): Promise<number> {
+async function getTodayFocusDuration(basePipeline: PipelineStage[], timezone: string): Promise<number> {
 	const todayDateKey = getTodayDateKey(timezone);
 	// Parse the YYYY-MM-DD string directly as a date in the user's timezone
 	// fromZonedTime interprets the date string in the user's timezone and returns UTC
@@ -401,17 +401,17 @@ async function getTodayFocusDuration(
 
 	// Filter to today's date only (using the split document's startTime)
 	pipeline.push(
-		{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+		{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 		{
 			$match: {
-				startTime: { $gte: dayStart, $lt: dayEnd }
-			}
+				startTime: { $gte: dayStart, $lt: dayEnd },
+			},
 		},
 		{
 			$group: {
 				_id: null,
-				duration: { $sum: "$tasks.duration" }
-			}
+				duration: { $sum: '$tasks.duration' },
+			},
 		}
 	);
 
@@ -446,7 +446,7 @@ export async function getTodayFocusDataForRing(
 	const { pipeline: basePipeline } = buildFocusFilterPipeline({
 		...params,
 		projectIds: mergedProjectIds,
-		userId
+		userId,
 	});
 
 	// Fast: Only get today's duration
@@ -456,8 +456,8 @@ export async function getTodayFocusDataForRing(
 		todayData: {
 			totalFocusDurationForDay,
 			ringId: ring.id,
-			ringName: ring.name
-		}
+			ringName: ring.name,
+		},
 	};
 }
 
@@ -485,7 +485,7 @@ export async function getStreakHistoryForRing(
 	const { pipeline: basePipeline } = buildFocusFilterPipeline({
 		...params,
 		projectIds: mergedProjectIds,
-		userId
+		userId,
 	});
 
 	// Get daily totals (filtered by user's applied filters)
@@ -514,7 +514,7 @@ export async function getStreakHistoryForRing(
 		allStreaks,
 		dailyDurationsMap,
 		ringId: ring.id,
-		ringName: ring.name
+		ringName: ring.name,
 	};
 }
 
@@ -535,14 +535,12 @@ export async function getTodayFocusDataForAllRings(
 	}
 
 	// Fetch data for all active rings in parallel
-	const ringDataPromises = activeRings.map(ring =>
-		getTodayFocusDataForRing(params, userId, ring)
-	);
+	const ringDataPromises = activeRings.map((ring) => getTodayFocusDataForRing(params, userId, ring));
 
 	const ringDataArray = await Promise.all(ringDataPromises);
 
 	return {
-		rings: ringDataArray
+		rings: ringDataArray,
 	};
 }
 
@@ -563,14 +561,12 @@ export async function getStreakHistoryForAllRings(
 	}
 
 	// Fetch data for all active rings in parallel
-	const ringDataPromises = activeRings.map(ring =>
-		getStreakHistoryForRing(params, userId, ring)
-	);
+	const ringDataPromises = activeRings.map((ring) => getStreakHistoryForRing(params, userId, ring));
 
 	const ringDataArray = await Promise.all(ringDataPromises);
 
 	return {
-		rings: ringDataArray
+		rings: ringDataArray,
 	};
 }
 
@@ -589,7 +585,7 @@ function calculateCombinedStreaks(
 		return {
 			currentStreak: { days: 0, from: null as string | null, to: null as string | null },
 			longestStreak: { days: 0, from: null as string | null, to: null as string | null },
-			allStreaks: []
+			allStreaks: [],
 		};
 	}
 
@@ -675,7 +671,7 @@ function calculateCombinedStreaks(
 	return {
 		currentStreak,
 		longestStreak,
-		allStreaks
+		allStreaks,
 	};
 }
 
@@ -691,14 +687,14 @@ export async function getCombinedStreakHistoryForAllRings(
 ) {
 	const userSettings = await UserSettings.findOne({ userId });
 	const emptyValue = {
-			combinedStreaks: {
-				currentStreak: { days: 0, from: null, to: null },
-				longestStreak: { days: 0, from: null, to: null },
-				allStreaks: []
-			},
-			combinedGoalMetMap: {},
-			rings: []
-		}
+		combinedStreaks: {
+			currentStreak: { days: 0, from: null, to: null },
+			longestStreak: { days: 0, from: null, to: null },
+			allStreaks: [],
+		},
+		combinedGoalMetMap: {},
+		rings: [],
+	};
 
 	// A guest's own rings are enough even when the account has no saved settings
 	if (!userSettings && !ringsOverride) {
@@ -712,16 +708,14 @@ export async function getCombinedStreakHistoryForAllRings(
 	}
 
 	// Fetch streak history for all active rings in parallel
-	const ringDataPromises = activeRings.map(ring =>
-		getStreakHistoryForRing(params, userId, ring)
-	);
+	const ringDataPromises = activeRings.map((ring) => getStreakHistoryForRing(params, userId, ring));
 
 	const ringDataArray = await Promise.all(ringDataPromises);
 
 	// Get all unique dates across all rings
 	const allDatesSet = new Set<string>();
 	for (const ringData of ringDataArray) {
-		Object.keys(ringData.dailyDurationsMap).forEach(date => allDatesSet.add(date));
+		Object.keys(ringData.dailyDurationsMap).forEach((date) => allDatesSet.add(date));
 	}
 	const allDates = Array.from(allDatesSet).sort();
 
@@ -797,7 +791,7 @@ export async function getCombinedStreakHistoryForAllRings(
 			dailyDurationsMap: ringData.dailyDurationsMap,
 			customDailyFocusGoal: ring.customDailyFocusGoal || {},
 			restDays: ring.restDays || {},
-			selectedDaysOfWeek: ring.selectedDaysOfWeek
+			selectedDaysOfWeek: ring.selectedDaysOfWeek,
 		};
 	});
 
@@ -805,9 +799,9 @@ export async function getCombinedStreakHistoryForAllRings(
 		combinedStreaks: {
 			currentStreak,
 			longestStreak,
-			allStreaks
+			allStreaks,
 		},
 		combinedGoalMetMap,
-		rings
+		rings,
 	};
 }

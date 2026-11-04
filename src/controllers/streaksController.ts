@@ -3,7 +3,7 @@ import { CustomRequest } from '../interfaces/CustomRequest';
 import {
 	getTodayFocusDataForAllRings,
 	getStreakHistoryForAllRings,
-	getCombinedStreakHistoryForAllRings
+	getCombinedStreakHistoryForAllRings,
 } from '../services/streaksService';
 import { parseBaseQueryParams } from '../utils/queryParams.utils';
 import { getGuestRingsOverride } from '../utils/guestSettings.utils';

@@ -4,7 +4,10 @@ import { CustomRequest } from '../interfaces/CustomRequest';
 import { getGuestRingsOverride, GUEST_RINGS_HEADER, MAX_GUEST_RINGS } from './guestSettings.utils';
 
 const makeReq = (isGuest: boolean, header?: string) =>
-	({ user: { isGuest }, headers: header === undefined ? {} : { [GUEST_RINGS_HEADER]: header } }) as unknown as CustomRequest;
+	({
+		user: { isGuest },
+		headers: header === undefined ? {} : { [GUEST_RINGS_HEADER]: header },
+	}) as unknown as CustomRequest;
 
 const rings = [{ id: 'ring-1', isActive: true, goalSeconds: 7200 }];
 
@@ -36,7 +39,10 @@ test('getGuestRingsOverride turns away a list with anything in it that is not a 
 });
 
 test('getGuestRingsOverride keeps rings that are active or paused, and an empty list', () => {
-	const mixed = [{ id: 'a', isActive: true }, { id: 'b', isActive: false }];
+	const mixed = [
+		{ id: 'a', isActive: true },
+		{ id: 'b', isActive: false },
+	];
 	assert.deepStrictEqual(send(mixed), mixed);
 	assert.deepStrictEqual(send([]), []);
 });
@@ -58,10 +64,21 @@ const realisticRing = () => ({
 	goalDays: 7,
 	showStreakCount: true,
 	showGoalDays: true,
-	selectedDaysOfWeek: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
+	selectedDaysOfWeek: {
+		monday: true,
+		tuesday: true,
+		wednesday: true,
+		thursday: true,
+		friday: true,
+		saturday: false,
+		sunday: false,
+	},
 	restDays: { '2026-01-02': true },
 	customDailyFocusGoal: { '2026-01-03': 7200 },
-	inactivePeriods: [{ startDate: '2025-12-01', endDate: '2025-12-05' }, { startDate: '2026-01-10', endDate: null }],
+	inactivePeriods: [
+		{ startDate: '2025-12-01', endDate: '2025-12-05' },
+		{ startDate: '2026-01-10', endDate: null },
+	],
 	projects: { 'project-1': true, 'project-2': false },
 	createdAt: '2026-01-04T00:53:20.904Z',
 	updatedAt: '2026-01-04T00:53:20.904Z',
@@ -86,11 +103,18 @@ test('getGuestRingsOverride turns away a ring with a field of the wrong type', (
 	};
 
 	for (const [field, value] of Object.entries(wrong)) {
-		assert.strictEqual(send([{ ...realisticRing(), [field]: value }]), undefined, `${field} should not be accepted`);
+		assert.strictEqual(
+			send([{ ...realisticRing(), [field]: value }]),
+			undefined,
+			`${field} should not be accepted`
+		);
 	}
 	assert.strictEqual(send([{ ...realisticRing(), inactivePeriods: [null] }]), undefined);
 	assert.strictEqual(send([{ ...realisticRing(), inactivePeriods: [{ startDate: 5, endDate: null }] }]), undefined);
-	assert.strictEqual(send([{ ...realisticRing(), inactivePeriods: [{ startDate: '2026-01-01', endDate: 5 }] }]), undefined);
+	assert.strictEqual(
+		send([{ ...realisticRing(), inactivePeriods: [{ startDate: '2026-01-01', endDate: 5 }] }]),
+		undefined
+	);
 	assert.strictEqual(send([{ ...realisticRing(), goalSeconds: Infinity }]), undefined);
 	assert.strictEqual(send([{ ...realisticRing(), goalSeconds: null }]), undefined);
 });

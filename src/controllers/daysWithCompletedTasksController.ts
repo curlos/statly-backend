@@ -1,7 +1,10 @@
 import { Response } from 'express';
 import { CustomRequest } from '../interfaces/CustomRequest';
 import { getDaysWithCompletedTasks, exportDaysWithCompletedTasks } from '../services/daysWithCompletedTasksService';
-import { parseDaysWithCompletedTasksQueryParams, parseExportDaysWithCompletedTasksQueryParams } from '../utils/queryParams.utils';
+import {
+	parseDaysWithCompletedTasksQueryParams,
+	parseExportDaysWithCompletedTasksQueryParams,
+} from '../utils/queryParams.utils';
 
 /**
  * GET /days-with-completed-tasks - Returns completed tasks grouped by date with pagination

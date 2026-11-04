@@ -25,7 +25,7 @@ export async function getOverviewStatsHandler(req: CustomRequest, res: Response)
 			{
 				...baseParams,
 				skipTodayStats,
-				includeFirstData
+				includeFirstData,
 			},
 			userId
 		);
@@ -54,10 +54,21 @@ export async function getStatsFocusHandler(req: CustomRequest, res: Response) {
 		}
 
 		// Validate group-by parameter
-		const validGroupByValues = ['day', 'week', 'month', 'project', 'task', 'emotion', 'hour', 'timeline', 'year', 'record'];
+		const validGroupByValues = [
+			'day',
+			'week',
+			'month',
+			'project',
+			'task',
+			'emotion',
+			'hour',
+			'timeline',
+			'year',
+			'record',
+		];
 		if (!validGroupByValues.includes(groupBy)) {
 			return res.status(400).json({
-				message: `Invalid group-by parameter. Must be one of: ${validGroupByValues.join(', ')}`
+				message: `Invalid group-by parameter. Must be one of: ${validGroupByValues.join(', ')}`,
 			});
 		}
 
@@ -72,7 +83,7 @@ export async function getStatsFocusHandler(req: CustomRequest, res: Response) {
 			{
 				...baseParams,
 				groupBy,
-				nested
+				nested,
 			},
 			userId
 		);
@@ -104,7 +115,7 @@ export async function getStatsTasksHandler(req: CustomRequest, res: Response) {
 		const validGroupByValues = ['day', 'week', 'month', 'year', 'project', 'task'];
 		if (!validGroupByValues.includes(groupBy)) {
 			return res.status(400).json({
-				message: `Invalid group-by parameter. Must be one of: ${validGroupByValues.join(', ')}`
+				message: `Invalid group-by parameter. Must be one of: ${validGroupByValues.join(', ')}`,
 			});
 		}
 
@@ -129,7 +140,7 @@ export async function getStatsTasksHandler(req: CustomRequest, res: Response) {
 				timezone: baseParams.timezone,
 				yearAgnostic: baseParams.yearAgnostic,
 				groupBy,
-				nested
+				nested,
 			},
 			userId
 		);

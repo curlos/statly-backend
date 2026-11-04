@@ -32,7 +32,6 @@ interface ProcessedTaskData {
 	type: 'task';
 }
 
-
 interface StatsResponse {
 	summary: {
 		totalDuration: number;
@@ -63,9 +62,14 @@ export interface FocusRecordsStatsQueryParams {
 
 export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams, userId: Types.ObjectId) {
 	// Build complete filter pipeline using shared utility
-	const { pipeline: basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions } = buildFocusFilterPipeline({
+	const {
+		pipeline: basePipeline,
+		effectiveStartDate,
+		effectiveEndDate,
+		taskFilterConditions,
+	} = buildFocusFilterPipeline({
 		...params,
-		userId
+		userId,
 	});
 
 	// Apply grouping based on groupBy parameter
@@ -77,13 +81,41 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams,
 
 	switch (params.groupBy) {
 		case 'day':
-			return await groupByDay(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone, splitByDayStages);
+			return await groupByDay(
+				basePipeline,
+				effectiveStartDate,
+				effectiveEndDate,
+				taskFilterConditions,
+				params.timezone,
+				splitByDayStages
+			);
 		case 'week':
-			return await groupByWeek(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone, splitByDayStages);
+			return await groupByWeek(
+				basePipeline,
+				effectiveStartDate,
+				effectiveEndDate,
+				taskFilterConditions,
+				params.timezone,
+				splitByDayStages
+			);
 		case 'month':
-			return await groupByMonth(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone, splitByDayStages);
+			return await groupByMonth(
+				basePipeline,
+				effectiveStartDate,
+				effectiveEndDate,
+				taskFilterConditions,
+				params.timezone,
+				splitByDayStages
+			);
 		case 'year':
-			return await groupByYear(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone, splitByDayStages);
+			return await groupByYear(
+				basePipeline,
+				effectiveStartDate,
+				effectiveEndDate,
+				taskFilterConditions,
+				params.timezone,
+				splitByDayStages
+			);
 		case 'project':
 			return await groupByProject(basePipeline, taskFilterConditions, nested, userId);
 		case 'task':
@@ -95,7 +127,13 @@ export async function getFocusRecordsStats(params: FocusRecordsStatsQueryParams,
 		case 'timeline':
 			return await getTimeline(basePipeline, params.timezone);
 		case 'record':
-			return await groupByRecord(basePipeline, effectiveStartDate, effectiveEndDate, taskFilterConditions, params.timezone);
+			return await groupByRecord(
+				basePipeline,
+				effectiveStartDate,
+				effectiveEndDate,
+				taskFilterConditions,
+				params.timezone
+			);
 		default:
 			throw new Error(`Invalid group-by parameter: ${params.groupBy}`);
 	}
@@ -119,9 +157,9 @@ function buildTotalsPipelineStages(taskFilterConditions: MongooseFilter[] = []):
 				$group: {
 					_id: null,
 					total: { $sum: 1 },
-					totalDuration: { $sum: "$duration" }
-				}
-			}
+					totalDuration: { $sum: '$duration' },
+				},
+			},
 		];
 	} else {
 		// No filters: calculate tasks duration using $reduce
@@ -130,20 +168,20 @@ function buildTotalsPipelineStages(taskFilterConditions: MongooseFilter[] = []):
 				$addFields: {
 					tasksDurationSum: {
 						$reduce: {
-							input: "$tasks",
+							input: '$tasks',
 							initialValue: 0,
-							in: { $add: ["$$value", "$$this.duration"] }
-						}
-					}
-				}
+							in: { $add: ['$$value', '$$this.duration'] },
+						},
+					},
+				},
 			},
 			{
 				$group: {
 					_id: null,
 					total: { $sum: 1 },
-					totalDuration: { $sum: "$tasksDurationSum" }
-				}
-			}
+					totalDuration: { $sum: '$tasksDurationSum' },
+				},
+			},
 		];
 	}
 }
@@ -154,18 +192,18 @@ function buildTotalsPipelineStages(taskFilterConditions: MongooseFilter[] = []):
  */
 function getTaskAggregationStages() {
 	return [
-		{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+		{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 		{
 			$group: {
-				_id: "$tasks.taskId",
-				taskName: { $first: "$tasks.title" },
-				projectId: { $first: "$tasks.projectId" },
-				source: { $first: "$source" },
-				duration: { $sum: "$tasks.duration" },
-				count: { $sum: 1 }
-			}
+				_id: '$tasks.taskId',
+				taskName: { $first: '$tasks.title' },
+				projectId: { $first: '$tasks.projectId' },
+				source: { $first: '$source' },
+				duration: { $sum: '$tasks.duration' },
+				count: { $sum: 1 },
+			},
 		},
-		{ $sort: { duration: -1 } }
+		{ $sort: { duration: -1 } },
 	];
 }
 
@@ -175,9 +213,7 @@ function getTaskAggregationStages() {
  */
 async function processTaskData(taskResults: TaskAggregationResult[], totalDuration: number, userId: Types.ObjectId) {
 	// Fetch actual task data from MongoDB for TickTick tasks
-	const tickTickTaskIds = taskResults
-		.filter((r) => r.source === 'FocusRecordTickTick')
-		.map((r) => r._id);
+	const tickTickTaskIds = taskResults.filter((r) => r.source === 'FocusRecordTickTick').map((r) => r._id);
 
 	let actualTaskNames: Record<string, string> = {};
 	let ancestorTasksById: Record<string, TaskAncestorInfo> = {};
@@ -188,10 +224,13 @@ async function processTaskData(taskResults: TaskAggregationResult[], totalDurati
 			.lean();
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		actualTaskNames = (tasks as any[]).reduce((acc, task) => {
-			acc[task.id] = task.title;
-			return acc;
-		}, {} as Record<string, string>);
+		actualTaskNames = (tasks as any[]).reduce(
+			(acc, task) => {
+				acc[task.id] = task.title;
+				return acc;
+			},
+			{} as Record<string, string>
+		);
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const ancestorData = await buildAncestorData(tasks as any, userId);
@@ -203,16 +242,17 @@ async function processTaskData(taskResults: TaskAggregationResult[], totalDurati
 				title: task.title,
 				parentId: task.parentId ?? null,
 				ancestorIds: task.ancestorIds,
-				projectId: task.projectId ?? null
+				projectId: task.projectId ?? null,
 			};
 		});
 	}
 
 	// Map results to formatted task data
 	const byTask: ProcessedTaskData[] = taskResults.map((r) => {
-		const taskName = (r.source === 'FocusRecordTickTick' && actualTaskNames[r._id])
-			? actualTaskNames[r._id]
-			: r.taskName || 'Unknown Task';
+		const taskName =
+			r.source === 'FocusRecordTickTick' && actualTaskNames[r._id]
+				? actualTaskNames[r._id]
+				: r.taskName || 'Unknown Task';
 
 		const percentage = totalDuration > 0 ? (r.duration / totalDuration) * 100 : 0;
 
@@ -223,14 +263,21 @@ async function processTaskData(taskResults: TaskAggregationResult[], totalDurati
 			duration: r.duration,
 			percentage: Number(percentage.toFixed(2)),
 			count: r.count,
-			type: 'task'
+			type: 'task',
 		};
 	});
 
 	return { byTask, ancestorTasksById };
 }
 
-async function groupByDay(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC', splitByDayStages: PipelineStage[] = []) {
+async function groupByDay(
+	pipeline: PipelineStage[],
+	startDate?: string,
+	endDate?: string,
+	taskFilterConditions: MongooseFilter[] = [],
+	timezone: string = 'UTC',
+	splitByDayStages: PipelineStage[] = []
+) {
 	// Use $facet to calculate totals and group by day in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -239,19 +286,19 @@ async function groupByDay(pipeline: PipelineStage[], startDate?: string, endDate
 			byDay: [
 				// Split midnight-crossing records so each day only gets its own portion
 				...splitByDayStages,
-				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+				{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 				{
 					$group: {
 						_id: {
-							$dateToString: { format: "%Y-%m-%d", date: "$startTime", timezone: timezone }
+							$dateToString: { format: '%Y-%m-%d', date: '$startTime', timezone: timezone },
 						},
-						duration: { $sum: "$tasks.duration" },
-						uniqueRecords: { $addToSet: "$_id" }
-					}
+						duration: { $sum: '$tasks.duration' },
+						uniqueRecords: { $addToSet: '$_id' },
+					},
 				},
-				{ $sort: { _id: 1 } }
-			]
-		}
+				{ $sort: { _id: 1 } },
+			],
+		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any);
 
@@ -266,18 +313,25 @@ async function groupByDay(pipeline: PipelineStage[], startDate?: string, endDate
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: startDate || null, end: endDate || null }
+			dateRange: { start: startDate || null, end: endDate || null },
 		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		byDay: results.map((r: any) => ({
 			date: r._id,
 			duration: r.duration,
-			count: r.uniqueRecords.length
-		}))
+			count: r.uniqueRecords.length,
+		})),
 	};
 }
 
-async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC', splitByDayStages: PipelineStage[] = []) {
+async function groupByWeek(
+	pipeline: PipelineStage[],
+	startDate?: string,
+	endDate?: string,
+	taskFilterConditions: MongooseFilter[] = [],
+	timezone: string = 'UTC',
+	splitByDayStages: PipelineStage[] = []
+) {
 	// Use $facet to calculate totals and group by week in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -289,37 +343,34 @@ async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDat
 			byWeek: [
 				// Split midnight-crossing records so each day only gets its own portion
 				...splitByDayStages,
-				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+				{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 				// Add a field to get the Monday of the week for sorting purposes
 				{
 					$addFields: {
 						weekStartDate: {
 							$dateSubtract: {
-								startDate: "$startTime",
-								unit: "day",
+								startDate: '$startTime',
+								unit: 'day',
 								amount: {
-									$subtract: [
-										{ $isoDayOfWeek: { date: "$startTime", timezone: timezone } },
-										1
-									]
+									$subtract: [{ $isoDayOfWeek: { date: '$startTime', timezone: timezone } }, 1],
 								},
-								timezone: timezone
-							}
-						}
-					}
+								timezone: timezone,
+							},
+						},
+					},
 				},
 				{
 					$group: {
 						_id: getDateGroupingExpression('weekly', timezone),
-						weekStartDate: { $first: "$weekStartDate" }, // Keep for sorting
-						duration: { $sum: "$tasks.duration" },
-						uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
-					}
+						weekStartDate: { $first: '$weekStartDate' }, // Keep for sorting
+						duration: { $sum: '$tasks.duration' },
+						uniqueRecords: { $addToSet: '$_id' }, // Collect unique focus record IDs
+					},
 				},
 				// Sort by actual date, not the formatted string
-				{ $sort: { weekStartDate: 1 } }
-			]
-		}
+				{ $sort: { weekStartDate: 1 } },
+			],
+		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any);
 
@@ -334,18 +385,25 @@ async function groupByWeek(pipeline: PipelineStage[], startDate?: string, endDat
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: startDate || null, end: endDate || null }
+			dateRange: { start: startDate || null, end: endDate || null },
 		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		byWeek: results.map((r: any) => ({
 			date: r._id, // Format: "January 1, 2025" (Monday of the week)
 			duration: r.duration,
-			count: r.uniqueRecords.length // Count unique focus records
-		}))
+			count: r.uniqueRecords.length, // Count unique focus records
+		})),
 	};
 }
 
-async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC', splitByDayStages: PipelineStage[] = []) {
+async function groupByMonth(
+	pipeline: PipelineStage[],
+	startDate?: string,
+	endDate?: string,
+	taskFilterConditions: MongooseFilter[] = [],
+	timezone: string = 'UTC',
+	splitByDayStages: PipelineStage[] = []
+) {
 	// Use $facet to calculate totals and group by month in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -357,31 +415,31 @@ async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDa
 			byMonth: [
 				// Split midnight-crossing records so each day only gets its own portion
 				...splitByDayStages,
-				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+				{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 				// Add a field to get the first day of the month for sorting purposes
 				{
 					$addFields: {
 						monthStartDate: {
 							$dateTrunc: {
-								date: "$startTime",
-								unit: "month",
-								timezone: timezone
-							}
-						}
-					}
+								date: '$startTime',
+								unit: 'month',
+								timezone: timezone,
+							},
+						},
+					},
 				},
 				{
 					$group: {
 						_id: getDateGroupingExpression('monthly', timezone),
-						monthStartDate: { $first: "$monthStartDate" }, // Keep for sorting
-						duration: { $sum: "$tasks.duration" },
-						uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
-					}
+						monthStartDate: { $first: '$monthStartDate' }, // Keep for sorting
+						duration: { $sum: '$tasks.duration' },
+						uniqueRecords: { $addToSet: '$_id' }, // Collect unique focus record IDs
+					},
 				},
 				// Sort by actual date, not the formatted string
-				{ $sort: { monthStartDate: 1 } }
-			]
-		}
+				{ $sort: { monthStartDate: 1 } },
+			],
+		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any);
 
@@ -396,18 +454,25 @@ async function groupByMonth(pipeline: PipelineStage[], startDate?: string, endDa
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: startDate || null, end: endDate || null }
+			dateRange: { start: startDate || null, end: endDate || null },
 		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		byMonth: results.map((r: any) => ({
 			date: r._id, // Format: "January 2025"
 			duration: r.duration,
-			count: r.uniqueRecords.length // Count unique focus records
-		}))
+			count: r.uniqueRecords.length, // Count unique focus records
+		})),
 	};
 }
 
-async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC', splitByDayStages: PipelineStage[] = []) {
+async function groupByYear(
+	pipeline: PipelineStage[],
+	startDate?: string,
+	endDate?: string,
+	taskFilterConditions: MongooseFilter[] = [],
+	timezone: string = 'UTC',
+	splitByDayStages: PipelineStage[] = []
+) {
 	// Use $facet to calculate totals and group by year in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -419,33 +484,33 @@ async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDat
 			byYear: [
 				// Split midnight-crossing records so each day only gets its own portion
 				...splitByDayStages,
-				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+				{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 				// Add a field to get the first day of the year for sorting purposes
 				{
 					$addFields: {
 						yearStartDate: {
 							$dateTrunc: {
-								date: "$startTime",
-								unit: "year",
-								timezone: timezone
-							}
-						}
-					}
+								date: '$startTime',
+								unit: 'year',
+								timezone: timezone,
+							},
+						},
+					},
 				},
 				{
 					$group: {
 						_id: {
-							$dateToString: { format: "%Y", date: "$startTime", timezone: timezone }
+							$dateToString: { format: '%Y', date: '$startTime', timezone: timezone },
 						},
-						yearStartDate: { $first: "$yearStartDate" }, // Keep for sorting
-						duration: { $sum: "$tasks.duration" },
-						uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
-					}
+						yearStartDate: { $first: '$yearStartDate' }, // Keep for sorting
+						duration: { $sum: '$tasks.duration' },
+						uniqueRecords: { $addToSet: '$_id' }, // Collect unique focus record IDs
+					},
 				},
 				// Sort by actual date, not the formatted string
-				{ $sort: { yearStartDate: 1 } }
-			]
-		}
+				{ $sort: { yearStartDate: 1 } },
+			],
+		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any);
 
@@ -460,18 +525,23 @@ async function groupByYear(pipeline: PipelineStage[], startDate?: string, endDat
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: startDate || null, end: endDate || null }
+			dateRange: { start: startDate || null, end: endDate || null },
 		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		byYear: results.map((r: any) => ({
 			date: r._id, // Format: "2025"
 			duration: r.duration,
-			count: r.uniqueRecords.length // Count unique focus records
-		}))
+			count: r.uniqueRecords.length, // Count unique focus records
+		})),
 	};
 }
 
-async function groupByProject(pipeline: PipelineStage[], taskFilterConditions: MongooseFilter[] = [], nested: boolean = false, userId: Types.ObjectId) {
+async function groupByProject(
+	pipeline: PipelineStage[],
+	taskFilterConditions: MongooseFilter[] = [],
+	nested: boolean = false,
+	userId: Types.ObjectId
+) {
 	// Use $facet to calculate totals and group by project in a single query
 	const facetStages: Record<string, PipelineStage[]> = {
 		// Calculate totals using task-level durations
@@ -479,20 +549,20 @@ async function groupByProject(pipeline: PipelineStage[], taskFilterConditions: M
 
 		// Unwind tasks array to access project information
 		byProject: [
-			{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+			{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 			// Group by project for TickTick/Session, or by source for other apps
 			// Use a composite key: if projectId exists, use it; otherwise use source
 			{
 				$group: {
 					_id: {
-						projectId: "$tasks.projectId",
-						source: "$source"
+						projectId: '$tasks.projectId',
+						source: '$source',
 					},
-					duration: { $sum: "$tasks.duration" },
-				}
+					duration: { $sum: '$tasks.duration' },
+				},
 			},
-			{ $sort: { duration: -1 } }
-		]
+			{ $sort: { duration: -1 } },
+		],
 	};
 
 	// If nested, also fetch task-level data in the same query
@@ -515,20 +585,20 @@ async function groupByProject(pipeline: PipelineStage[], taskFilterConditions: M
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: null, end: null }
+			dateRange: { start: null, end: null },
 		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		byProject: results.map((r: any) => {
-			const percentage = totalDuration > 0 ? (r.duration / totalDuration) * 100 : 0
+			const percentage = totalDuration > 0 ? (r.duration / totalDuration) * 100 : 0;
 			const projectId = r._id.projectId || r._id.source;
 
 			return {
 				id: projectId,
 				duration: r.duration,
 				percentage: Number(percentage.toFixed(2)),
-				type: 'project'
+				type: 'project',
 			};
-		})
+		}),
 	};
 
 	// If nested, process the task results that were fetched in the same query
@@ -541,7 +611,12 @@ async function groupByProject(pipeline: PipelineStage[], taskFilterConditions: M
 	return response;
 }
 
-async function groupByTask(pipeline: PipelineStage[], taskFilterConditions: MongooseFilter[] = [], _nested: boolean = false, userId: Types.ObjectId) {
+async function groupByTask(
+	pipeline: PipelineStage[],
+	taskFilterConditions: MongooseFilter[] = [],
+	_nested: boolean = false,
+	userId: Types.ObjectId
+) {
 	// Use $facet to calculate totals and fetch task data in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -550,8 +625,8 @@ async function groupByTask(pipeline: PipelineStage[], taskFilterConditions: Mong
 			totals: buildTotalsPipelineStages(taskFilterConditions),
 			// Fetch task-level aggregation data
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			byTask: getTaskAggregationStages() as any
-		}
+			byTask: getTaskAggregationStages() as any,
+		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any);
 
@@ -568,16 +643,21 @@ async function groupByTask(pipeline: PipelineStage[], taskFilterConditions: Mong
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: null, end: null }
+			dateRange: { start: null, end: null },
 		},
 		byTask,
-		ancestorTasksById
+		ancestorTasksById,
 	};
 
 	return response;
 }
 
-async function aggregateProjectAndTaskDataByEmotion(basePipeline: PipelineStage[], emotions: string[], totalDuration: number, userId: Types.ObjectId) {
+async function aggregateProjectAndTaskDataByEmotion(
+	basePipeline: PipelineStage[],
+	emotions: string[],
+	totalDuration: number,
+	userId: Types.ObjectId
+) {
 	// Run all emotion queries in parallel for better performance
 	const emotionPromises = emotions.map(async (emotion) => {
 		// Create emotion-filtered pipeline
@@ -588,19 +668,15 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: PipelineStage[
 			// Match records with empty or null emotions array
 			emotionPipeline.push({
 				$match: {
-					$or: [
-						{ emotions: [] },
-						{ emotions: null },
-						{ emotions: { $exists: false } }
-					]
-				}
+					$or: [{ emotions: [] }, { emotions: null }, { emotions: { $exists: false } }],
+				},
 			});
 		} else {
 			// Match records containing this specific emotion
 			emotionPipeline.push({
 				$match: {
-					"emotions.emotion": emotion
-				}
+					'emotions.emotion': emotion,
+				},
 			});
 		}
 
@@ -609,21 +685,21 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: PipelineStage[
 		emotionPipeline.push({
 			$facet: {
 				byProject: [
-					{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+					{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 					{
 						$group: {
 							_id: {
-								projectId: "$tasks.projectId",
-								source: "$source"
+								projectId: '$tasks.projectId',
+								source: '$source',
 							},
-							duration: { $sum: "$tasks.duration" },
-						}
+							duration: { $sum: '$tasks.duration' },
+						},
 					},
-					{ $sort: { duration: -1 } }
+					{ $sort: { duration: -1 } },
 				],
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				byTask: getTaskAggregationStages() as any
-			}
+				byTask: getTaskAggregationStages() as any,
+			},
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any);
 
@@ -639,7 +715,7 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: PipelineStage[
 				id: projectId,
 				duration: r.duration,
 				percentage: Number(percentage.toFixed(2)),
-				type: 'project'
+				type: 'project',
 			};
 		});
 
@@ -651,8 +727,8 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: PipelineStage[
 			data: {
 				byProject,
 				byTask,
-				ancestorTasksById
-			}
+				ancestorTasksById,
+			},
 		};
 	});
 
@@ -668,7 +744,12 @@ async function aggregateProjectAndTaskDataByEmotion(basePipeline: PipelineStage[
 	return byEmotionWithTasks;
 }
 
-async function groupByEmotion(pipeline: PipelineStage[], taskFilterConditions: MongooseFilter[] = [], nested: boolean = false, userId: Types.ObjectId) {
+async function groupByEmotion(
+	pipeline: PipelineStage[],
+	taskFilterConditions: MongooseFilter[] = [],
+	nested: boolean = false,
+	userId: Types.ObjectId
+) {
 	// Save a clean copy of the pipeline before adding $facet (needed for nested queries)
 	const cleanPipeline = [...pipeline];
 
@@ -679,36 +760,36 @@ async function groupByEmotion(pipeline: PipelineStage[], taskFilterConditions: M
 			totals: buildTotalsPipelineStages(taskFilterConditions),
 			byEmotion: [
 				// Unwind tasks array first to use task-level durations
-				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+				{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 
 				// Add a field to handle empty emotions array
 				{
 					$addFields: {
 						emotionToGroup: {
 							$cond: {
-								if: { $or: [{ $eq: ["$emotions", []] }, { $eq: ["$emotions", null] }] },
-								then: [{ emotion: "none" }],
-								else: "$emotions"
-							}
-						}
-					}
+								if: { $or: [{ $eq: ['$emotions', []] }, { $eq: ['$emotions', null] }] },
+								then: [{ emotion: 'none' }],
+								else: '$emotions',
+							},
+						},
+					},
 				},
 
 				// Then unwind emotions array to access individual emotion objects
-				{ $unwind: { path: "$emotionToGroup", preserveNullAndEmptyArrays: false } },
+				{ $unwind: { path: '$emotionToGroup', preserveNullAndEmptyArrays: false } },
 
 				// Group by emotion name - sum task-level durations (not record-level)
 				{
 					$group: {
-						_id: "$emotionToGroup.emotion",
-						duration: { $sum: "$tasks.duration" },
-						count: { $sum: 1 }
-					}
+						_id: '$emotionToGroup.emotion',
+						duration: { $sum: '$tasks.duration' },
+						count: { $sum: 1 },
+					},
 				},
 
-				{ $sort: { duration: -1 } }
-			]
-		}
+				{ $sort: { duration: -1 } },
+			],
+		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any);
 
@@ -726,7 +807,7 @@ async function groupByEmotion(pipeline: PipelineStage[], taskFilterConditions: M
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: null, end: null }
+			dateRange: { start: null, end: null },
 		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		byEmotion: results.map((r: any) => {
@@ -738,9 +819,9 @@ async function groupByEmotion(pipeline: PipelineStage[], taskFilterConditions: M
 				duration: r.duration,
 				percentage: Number(percentage.toFixed(2)),
 				count: r.count,
-				type: 'emotion'
+				type: 'emotion',
 			};
-		})
+		}),
 	};
 
 	// If nested, fetch emotion-specific project and task data
@@ -748,14 +829,23 @@ async function groupByEmotion(pipeline: PipelineStage[], taskFilterConditions: M
 		const emotions = results.map((r: Record<string, unknown>) => r._id as string); // Get list of emotion names
 		// Note: Runs 1 query per emotion in parallel (projects + tasks via $facet, all emotions simultaneously)
 		// Pass the clean pipeline (without $facet) to allow further aggregation
-		const byEmotionWithTasks = await aggregateProjectAndTaskDataByEmotion(cleanPipeline, emotions, totalDuration, userId);
+		const byEmotionWithTasks = await aggregateProjectAndTaskDataByEmotion(
+			cleanPipeline,
+			emotions,
+			totalDuration,
+			userId
+		);
 		response.byEmotionWithTasks = byEmotionWithTasks;
 	}
 
 	return response;
 }
 
-async function groupByHour(pipeline: PipelineStage[], taskFilterConditions: MongooseFilter[] = [], timezone: string = 'UTC') {
+async function groupByHour(
+	pipeline: PipelineStage[],
+	taskFilterConditions: MongooseFilter[] = [],
+	timezone: string = 'UTC'
+) {
 	// Use $facet to run totals calculation and grouping in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -763,7 +853,7 @@ async function groupByHour(pipeline: PipelineStage[], taskFilterConditions: Mong
 			totals: buildTotalsPipelineStages(taskFilterConditions),
 			byHour: [
 				// Unwind tasks array to use task-level durations
-				{ $unwind: { path: "$tasks", preserveNullAndEmptyArrays: false } },
+				{ $unwind: { path: '$tasks', preserveNullAndEmptyArrays: false } },
 
 				// Split each task across the hours it spans
 				{
@@ -771,84 +861,93 @@ async function groupByHour(pipeline: PipelineStage[], taskFilterConditions: Mong
 						taskHourSplits: {
 							$let: {
 								vars: {
-									startHour: { $hour: { date: "$tasks.startTime", timezone: timezone } },
-									endHour: { $hour: { date: "$tasks.endTime", timezone: timezone } },
-									startMinute: { $minute: { date: "$tasks.startTime", timezone: timezone } },
-									endMinute: { $minute: { date: "$tasks.endTime", timezone: timezone } },
-									startSecond: { $second: { date: "$tasks.startTime", timezone: timezone } },
-									endSecond: { $second: { date: "$tasks.endTime", timezone: timezone } }
+									startHour: { $hour: { date: '$tasks.startTime', timezone: timezone } },
+									endHour: { $hour: { date: '$tasks.endTime', timezone: timezone } },
+									startMinute: { $minute: { date: '$tasks.startTime', timezone: timezone } },
+									endMinute: { $minute: { date: '$tasks.endTime', timezone: timezone } },
+									startSecond: { $second: { date: '$tasks.startTime', timezone: timezone } },
+									endSecond: { $second: { date: '$tasks.endTime', timezone: timezone } },
 								},
 								in: {
 									$cond: {
 										// If start and end are in the same hour
-										if: { $eq: ["$$startHour", "$$endHour"] },
-										then: [{
-											hour: "$$startHour",
-											duration: "$tasks.duration"
-										}],
+										if: { $eq: ['$$startHour', '$$endHour'] },
+										then: [
+											{
+												hour: '$$startHour',
+												duration: '$tasks.duration',
+											},
+										],
 										else: {
 											// Task spans multiple hours - need to split it
 											$map: {
 												input: {
-													$range: [
-														"$$startHour",
-														{ $add: ["$$endHour", 1] }
-													]
+													$range: ['$$startHour', { $add: ['$$endHour', 1] }],
 												},
-												as: "hour",
+												as: 'hour',
 												in: {
-													hour: "$$hour",
+													hour: '$$hour',
 													duration: {
 														$let: {
 															vars: {
 																// Seconds from start of current hour
 																hourStartSeconds: {
 																	$cond: {
-																		if: { $eq: ["$$hour", "$$startHour"] },
-																		then: { $add: [{ $multiply: ["$$startMinute", 60] }, "$$startSecond"] },
-																		else: 0
-																	}
+																		if: { $eq: ['$$hour', '$$startHour'] },
+																		then: {
+																			$add: [
+																				{ $multiply: ['$$startMinute', 60] },
+																				'$$startSecond',
+																			],
+																		},
+																		else: 0,
+																	},
 																},
 																// Seconds to end of current hour
 																hourEndSeconds: {
 																	$cond: {
-																		if: { $eq: ["$$hour", "$$endHour"] },
-																		then: { $add: [{ $multiply: ["$$endMinute", 60] }, "$$endSecond"] },
-																		else: 3600
-																	}
-																}
+																		if: { $eq: ['$$hour', '$$endHour'] },
+																		then: {
+																			$add: [
+																				{ $multiply: ['$$endMinute', 60] },
+																				'$$endSecond',
+																			],
+																		},
+																		else: 3600,
+																	},
+																},
 															},
 															in: {
 																// Duration for this hour = (end - start) seconds
-																$subtract: ["$$hourEndSeconds", "$$hourStartSeconds"]
-															}
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
+																$subtract: ['$$hourEndSeconds', '$$hourStartSeconds'],
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 
 				// Unwind the hour splits so each becomes a separate document
-				{ $unwind: { path: "$taskHourSplits", preserveNullAndEmptyArrays: false } },
+				{ $unwind: { path: '$taskHourSplits', preserveNullAndEmptyArrays: false } },
 
 				// Group by hour
 				{
 					$group: {
-						_id: "$taskHourSplits.hour",
-						duration: { $sum: "$taskHourSplits.duration" },
-						uniqueRecords: { $addToSet: "$_id" } // Collect unique focus record IDs
-					}
+						_id: '$taskHourSplits.hour',
+						duration: { $sum: '$taskHourSplits.duration' },
+						uniqueRecords: { $addToSet: '$_id' }, // Collect unique focus record IDs
+					},
 				},
 
-				{ $sort: { _id: 1 } }
-			]
-		}
+				{ $sort: { _id: 1 } },
+			],
+		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any);
 
@@ -869,7 +968,7 @@ async function groupByHour(pipeline: PipelineStage[], taskFilterConditions: Mong
 		return {
 			hour: i,
 			duration: hourData?.duration || 0,
-			count: hourData?.uniqueRecords?.length || 0 // Count unique focus records
+			count: hourData?.uniqueRecords?.length || 0, // Count unique focus records
 		};
 	});
 
@@ -877,13 +976,19 @@ async function groupByHour(pipeline: PipelineStage[], taskFilterConditions: Mong
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: null, end: null }
+			dateRange: { start: null, end: null },
 		},
-		byHour
+		byHour,
 	};
 }
 
-async function groupByRecord(pipeline: PipelineStage[], startDate?: string, endDate?: string, taskFilterConditions: MongooseFilter[] = [], _timezone: string = 'UTC') {
+async function groupByRecord(
+	pipeline: PipelineStage[],
+	startDate?: string,
+	endDate?: string,
+	taskFilterConditions: MongooseFilter[] = [],
+	_timezone: string = 'UTC'
+) {
 	// Use $facet to run totals calculation and sorting in a single query
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	pipeline.push({
@@ -891,9 +996,9 @@ async function groupByRecord(pipeline: PipelineStage[], startDate?: string, endD
 			totals: buildTotalsPipelineStages(taskFilterConditions),
 			byRecord: [
 				// Get individual records sorted by start time (oldest to newest)
-				{ $sort: { startTime: 1 } }
-			]
-		}
+				{ $sort: { startTime: 1 } },
+			],
+		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} as any);
 
@@ -911,15 +1016,15 @@ async function groupByRecord(pipeline: PipelineStage[], startDate?: string, endD
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: startDate || null, end: endDate || null }
+			dateRange: { start: startDate || null, end: endDate || null },
 		},
 		byRecord: results.map((r: Record<string, unknown>) => ({
 			date: r.startTime, // Use startTime as the date identifier
 			duration: r.duration,
 			count: 1, // Each record is its own group
 			startTime: r.startTime,
-			endTime: r.endTime
-		}))
+			endTime: r.endTime,
+		})),
 	};
 }
 
@@ -938,7 +1043,7 @@ async function getTimeline(pipeline: PipelineStage[], _timezone: string = 'UTC')
 	// Format records for timeline view
 	// Note: Times are already stored in UTC in the database and will be displayed
 	// according to the user's timezone on the frontend
-	const records = focusRecords.flatMap(record => {
+	const records = focusRecords.flatMap((record) => {
 		return (record.tasks || []).map((task: Record<string, unknown>) => ({
 			id: record.id || record._id.toString(),
 			taskId: task.taskId,
@@ -948,7 +1053,7 @@ async function getTimeline(pipeline: PipelineStage[], _timezone: string = 'UTC')
 			projectColor: '#808080', // Default color
 			startTime: task.startTime,
 			endTime: task.endTime,
-			duration: task.duration
+			duration: task.duration,
 		}));
 	});
 
@@ -956,8 +1061,8 @@ async function getTimeline(pipeline: PipelineStage[], _timezone: string = 'UTC')
 		summary: {
 			totalDuration,
 			totalRecords,
-			dateRange: { start: null, end: null }
+			dateRange: { start: null, end: null },
 		},
-		records
+		records,
 	};
 }

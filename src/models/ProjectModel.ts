@@ -44,83 +44,86 @@ export interface IProjectSession extends IProjectBase {
 export type IProject = IProjectTickTick | IProjectTodoist | IProjectSession;
 
 // Base schema with NORMALIZED shared fields for ALL projects (TickTick, Todoist, and Session)
-const BaseProjectSchema = new Schema({
-	id: {
-		type: String,
-		required: true,
-		index: true
-	},
-	userId: {
-		type: Schema.Types.ObjectId,
-		ref: 'User',
-		required: true,
-		index: true
-	},
-	source: {
-		type: String,
-		required: true,
-		index: true
-	},
-	name: {
-		type: String,
-		required: true
-	},
-	color: {
-		type: String
-	},
-	sortOrder: {
-		type: Number
-	},
-	viewMode: {
-		type: String
-	},
-	closed: {
-		type: Boolean,
-		index: true
-	},
-	groupId: {
-		type: String,
-		index: true
-	},
-	parentId: {
-		type: String,
-		index: true
-	},
-	sortType: {
-		type: String
-	},
-	sortOption: {
-		groupBy: {
-			type: String
+const BaseProjectSchema = new Schema(
+	{
+		id: {
+			type: String,
+			required: true,
+			index: true,
 		},
-		orderBy: {
-			type: String
-		}
-	},
-	teamId: {
-		type: String
-	},
-	timeline: {
-		range: {
-			type: String
+		userId: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
+			required: true,
+			index: true,
+		},
+		source: {
+			type: String,
+			required: true,
+			index: true,
+		},
+		name: {
+			type: String,
+			required: true,
+		},
+		color: {
+			type: String,
+		},
+		sortOrder: {
+			type: Number,
+		},
+		viewMode: {
+			type: String,
+		},
+		closed: {
+			type: Boolean,
+			index: true,
+		},
+		groupId: {
+			type: String,
+			index: true,
+		},
+		parentId: {
+			type: String,
+			index: true,
 		},
 		sortType: {
-			type: String
+			type: String,
 		},
 		sortOption: {
 			groupBy: {
-				type: String
+				type: String,
 			},
 			orderBy: {
-				type: String
-			}
-		}
+				type: String,
+			},
+		},
+		teamId: {
+			type: String,
+		},
+		timeline: {
+			range: {
+				type: String,
+			},
+			sortType: {
+				type: String,
+			},
+			sortOption: {
+				groupBy: {
+					type: String,
+				},
+				orderBy: {
+					type: String,
+				},
+			},
+		},
+	},
+	{
+		collection: 'projects',
+		discriminatorKey: 'source',
+		timestamps: false,
 	}
-}, {
-	collection: 'projects',
-	discriminatorKey: 'source',
-	timestamps: false
-});
+);
 
 // Add compound unique index to ensure id is unique per user (not globally unique)
 BaseProjectSchema.index({ id: 1, userId: 1 }, { unique: true });
@@ -139,114 +142,114 @@ const Project = mongoose.model('Project', BaseProjectSchema);
 const TickTickProjectSchema = new Schema({
 	isOwner: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	userCount: {
-		type: Number
+		type: Number,
 	},
 	etag: {
-		type: String
+		type: String,
 	},
 	modifiedTime: {
 		type: Date,
-		index: true
+		index: true,
 	},
 	inAll: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	showType: {
-		type: Number
+		type: Number,
 	},
 	muted: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	reminderType: {
-		type: Number
+		type: Number,
 	},
 	transferred: {
-		type: String
+		type: String,
 	},
 	notificationOptions: {
 		type: [Schema.Types.Mixed],
-		default: []
+		default: [],
 	},
 	permission: {
-		type: String
+		type: String,
 	},
 	kind: {
-		type: String
+		type: String,
 	},
 	needAudit: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	barcodeNeedAudit: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	openToTeam: {
-		type: Boolean
+		type: Boolean,
 	},
 	teamMemberPermission: {
-		type: String
-	}
+		type: String,
+	},
 });
 
 // Todoist-specific schema (discriminator for Todoist projects)
 const TodoistProjectSchema = new Schema({
 	description: {
 		type: String,
-		default: ''
+		default: '',
 	},
 	order: {
-		type: Number
+		type: Number,
 	},
 	isCollapsed: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	isShared: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	isFavorite: {
 		type: Boolean,
 		default: false,
-		index: true
+		index: true,
 	},
 	isArchived: {
 		type: Boolean,
 		default: false,
-		index: true
+		index: true,
 	},
 	canAssignTasks: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	viewStyle: {
-		type: String
+		type: String,
 	},
 	isInboxProject: {
 		type: Boolean,
 		default: false,
-		index: true
+		index: true,
 	},
 	workspaceId: {
-		type: String
+		type: String,
 	},
 	folderId: {
-		type: String
+		type: String,
 	},
 	createdAt: {
 		type: Date,
-		index: true
+		index: true,
 	},
 	updatedAt: {
 		type: Date,
-		index: true
-	}
+		index: true,
+	},
 });
 
 // Session-specific schema (discriminator for Session projects/categories)

@@ -1,10 +1,14 @@
 import { Types } from 'mongoose';
-import SyncMetadata from "../models/SyncMetadataModel";
-import UserSettings from "../models/UserSettingsModel";
-import { crossesMidnightInTimezone } from "./timezone.utils";
-import { decrypt } from "./encryption.utils";
+import SyncMetadata from '../models/SyncMetadataModel';
+import UserSettings from '../models/UserSettingsModel';
+import { crossesMidnightInTimezone } from './timezone.utils';
+import { decrypt } from './encryption.utils';
 
-export const sortArrayByProperty = <T extends Record<string, unknown>>(array: T[], property: string, type = 'descending') => {
+export const sortArrayByProperty = <T extends Record<string, unknown>>(
+	array: T[],
+	property: string,
+	type = 'descending'
+) => {
 	// Create a deep copy of the array to avoid modifying the original
 	const arrayCopy = array.map((item) => ({ ...item }));
 
@@ -62,14 +66,20 @@ export const getTodayTimeBounds = () => {
  * @param {string} keyProperty - The property of the objects to use as keys in the resulting object.
  * @returns {Object} An object with keys derived from each object's specified property and values as the objects themselves.
  */
-export function arrayToObjectByKey<T extends Record<string, unknown>>(array: T[], keyProperty: string): Record<string, T> {
-	return array.reduce((acc, obj) => {
-		// Use the value of the specified property as the key
-		const key = (keyProperty ? obj[keyProperty] : obj) as string;
-		// Assign the entire object as the value for this key
-		acc[key] = obj;
-		return acc;
-	}, {} as Record<string, T>);
+export function arrayToObjectByKey<T extends Record<string, unknown>>(
+	array: T[],
+	keyProperty: string
+): Record<string, T> {
+	return array.reduce(
+		(acc, obj) => {
+			// Use the value of the specified property as the key
+			const key = (keyProperty ? obj[keyProperty] : obj) as string;
+			// Assign the entire object as the value for this key
+			acc[key] = obj;
+			return acc;
+		},
+		{} as Record<string, T>
+	);
 }
 
 /**

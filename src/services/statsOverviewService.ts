@@ -2,7 +2,11 @@ import { Types } from 'mongoose';
 import Task from '../models/TaskModel';
 import Project from '../models/ProjectModel';
 import FocusRecordTickTick from '../models/FocusRecord';
-import { buildTaskSearchFilter, buildTaskMatchConditions, buildTaskMatchConditionsWithMultiFieldDate } from '../utils/taskFilterBuilders.utils';
+import {
+	buildTaskSearchFilter,
+	buildTaskMatchConditions,
+	buildTaskMatchConditionsWithMultiFieldDate,
+} from '../utils/taskFilterBuilders.utils';
 import { buildFocusMatchAndFilterConditions, buildFocusSearchFilter } from '../utils/focusFilterBuilders.utils';
 import { BaseQueryParams } from '../utils/queryParams.utils';
 import { PipelineStage } from 'mongoose';
@@ -44,7 +48,12 @@ export interface SourceCountsResponse {
 /**
  * Get task statistics using $facet to run all counts in parallel
  */
-async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean) {
+async function getTaskStats(
+	userId: Types.ObjectId,
+	params: OverviewStatsQueryParams,
+	todayDateString: string,
+	skipTodayStats: boolean
+) {
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
 
 	// Build filter for all tasks - checks ANY date field (completedTime, createdTime, modifiedTime, added_at, updated_at)
@@ -56,7 +65,7 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.toDoListAppSources,
-		undefined,  // No interval dates for total tasks
+		undefined, // No interval dates for total tasks
 		undefined,
 		params.timezone,
 		params.yearAgnostic
@@ -97,25 +106,18 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 	// Apply search filters
 	const allTasksQuery = searchFilter ? { $and: [searchFilter, allTasksFilter] } : allTasksFilter;
 	const completedTasksQuery = searchFilter ? { $and: [searchFilter, completedTasksFilter] } : completedTasksFilter;
-	const todayCompletedTasksQuery = searchFilter ? { $and: [searchFilter, todayCompletedTasksFilter] } : todayCompletedTasksFilter;
+	const todayCompletedTasksQuery = searchFilter
+		? { $and: [searchFilter, todayCompletedTasksFilter] }
+		: todayCompletedTasksFilter;
 
 	// Build facet stages based on skipTodayStats
 	const facetStages: Record<string, PipelineStage[]> = {
-		allTasks: [
-			{ $match: allTasksQuery },
-			{ $count: 'count' }
-		],
-		completedTasks: [
-			{ $match: completedTasksQuery },
-			{ $count: 'count' }
-		]
+		allTasks: [{ $match: allTasksQuery }, { $count: 'count' }],
+		completedTasks: [{ $match: completedTasksQuery }, { $count: 'count' }],
 	};
 
 	if (!skipTodayStats) {
-		facetStages.todayCompletedTasks = [
-			{ $match: todayCompletedTasksQuery },
-			{ $count: 'count' }
-		];
+		facetStages.todayCompletedTasks = [{ $match: todayCompletedTasksQuery }, { $count: 'count' }];
 	}
 
 	// Run all task counts in parallel using $facet
@@ -124,13 +126,13 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 	const [result] = await Task.aggregate([
 		{
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			$facet: facetStages as any
-		}
+			$facet: facetStages as any,
+		},
 	]);
 
 	const stats: Record<string, number> = {
 		totalTasksCount: result?.allTasks[0]?.count || 0,
-		totalCompletedTasksCount: result?.completedTasks[0]?.count || 0
+		totalCompletedTasksCount: result?.completedTasks[0]?.count || 0,
 	};
 
 	if (!skipTodayStats) {
@@ -143,7 +145,13 @@ async function getTaskStats(userId: Types.ObjectId, params: OverviewStatsQueryPa
 /**
  * Get focus record statistics using $facet to run today & all-time stats in parallel
  */
-async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryParams, todayDateString: string, skipTodayStats: boolean, tz: string) {
+async function getFocusStats(
+	userId: Types.ObjectId,
+	params: OverviewStatsQueryParams,
+	todayDateString: string,
+	skipTodayStats: boolean,
+	tz: string
+) {
 	// Build search filter
 	const searchFilter = buildFocusSearchFilter(params.searchQuery);
 
@@ -195,9 +203,7 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 	const totalFocusQuery = searchFilter ? { $and: [searchFilter, totalFocusMatch] } : totalFocusMatch;
 
 	// Build pipeline for total stats with midnight crossing adjustment
-	const totalStatsPipeline: PipelineStage[] = [
-		{ $match: totalFocusQuery }
-	];
+	const totalStatsPipeline: PipelineStage[] = [{ $match: totalFocusQuery }];
 
 	// Add midnight crossing duration adjustment if date boundaries exist
 	if (params.yearAgnostic && params.startDate && params.endDate) {
@@ -216,25 +222,23 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 			duration: {
 				$sum: {
 					$reduce: {
-						input: "$tasks",
+						input: '$tasks',
 						initialValue: 0,
-						in: { $add: ["$$value", "$$this.duration"] }
-					}
-				}
-			}
-		}
+						in: { $add: ['$$value', '$$this.duration'] },
+					},
+				},
+			},
+		},
 	});
 
 	// Build facet stages based on skipTodayStats
 	const facetStages: Record<string, PipelineStage[]> = {
-		totalStats: totalStatsPipeline
+		totalStats: totalStatsPipeline,
 	};
 
 	if (!skipTodayStats) {
 		// Build pipeline for today's stats with midnight crossing adjustment
-		const todayStatsPipeline: PipelineStage[] = [
-			{ $match: todayFocusQuery }
-		];
+		const todayStatsPipeline: PipelineStage[] = [{ $match: todayFocusQuery }];
 
 		// Always add midnight crossing adjustment for today
 		addMidnightRecordDurationAdjustment(todayStatsPipeline, todayStartBoundary, todayEndBoundary);
@@ -247,13 +251,13 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 				duration: {
 					$sum: {
 						$reduce: {
-							input: "$tasks",
+							input: '$tasks',
 							initialValue: 0,
-							in: { $add: ["$$value", "$$this.duration"] }
-						}
-					}
-				}
-			}
+							in: { $add: ['$$value', '$$this.duration'] },
+						},
+					},
+				},
+			},
 		});
 
 		facetStages.todayStats = todayStatsPipeline;
@@ -265,13 +269,13 @@ async function getFocusStats(userId: Types.ObjectId, params: OverviewStatsQueryP
 	const [result] = await FocusRecordTickTick.aggregate([
 		{
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			$facet: facetStages as any
-		}
+			$facet: facetStages as any,
+		},
 	]);
 
 	const stats: Record<string, number> = {
 		totalFocusRecordCount: result?.totalStats[0]?.count || 0,
-		totalFocusDuration: result?.totalStats[0]?.duration || 0
+		totalFocusDuration: result?.totalStats[0]?.duration || 0,
 	};
 
 	if (!skipTodayStats) {
@@ -314,7 +318,7 @@ async function getFirstData(userId: Types.ObjectId) {
 
 	return {
 		firstCompletedTaskDate: firstCompletedTask?.completedTime || null,
-		firstFocusRecordDate: firstFocusRecord?.startTime || null
+		firstFocusRecordDate: firstFocusRecord?.startTime || null,
 	};
 }
 
@@ -332,7 +336,7 @@ async function getActiveDays(userId: Types.ObjectId, params: OverviewStatsQueryP
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.toDoListAppSources,
 		'completedTime',
-		undefined,  // No interval dates
+		undefined, // No interval dates
 		undefined,
 		params.timezone,
 		params.yearAgnostic
@@ -340,14 +344,12 @@ async function getActiveDays(userId: Types.ObjectId, params: OverviewStatsQueryP
 
 	// Apply search filter if provided
 	const searchFilter = buildTaskSearchFilter(params.searchQuery);
-	const taskQuery = searchFilter
-		? { $and: [searchFilter, completedTasksFilter] }
-		: completedTasksFilter;
+	const taskQuery = searchFilter ? { $and: [searchFilter, completedTasksFilter] } : completedTasksFilter;
 
 	// Get all unique dates where tasks were completed
 	const completedTaskDates = await Task.aggregate([
 		{
-			$match: taskQuery
+			$match: taskQuery,
 		},
 		{
 			$project: {
@@ -355,16 +357,16 @@ async function getActiveDays(userId: Types.ObjectId, params: OverviewStatsQueryP
 					$dateToString: {
 						format: '%Y-%m-%d',
 						date: '$completedTime',
-						timezone
-					}
-				}
-			}
+						timezone,
+					},
+				},
+			},
 		},
 		{
 			$group: {
-				_id: '$date'
-			}
-		}
+				_id: '$date',
+			},
+		},
 	]);
 
 	// Build filters using existing builder function
@@ -376,7 +378,7 @@ async function getActiveDays(userId: Types.ObjectId, params: OverviewStatsQueryP
 		params.endDate,
 		params.taskIdIncludeFocusRecordsFromSubtasks,
 		params.focusAppSources,
-		null,  // No interval dates
+		null, // No interval dates
 		null,
 		params.emotions,
 		params.timezone,
@@ -393,7 +395,7 @@ async function getActiveDays(userId: Types.ObjectId, params: OverviewStatsQueryP
 	// Get all unique dates where focus records were added
 	const focusRecordDates = await FocusRecordTickTick.aggregate([
 		{
-			$match: focusQuery
+			$match: focusQuery,
 		},
 		{
 			$project: {
@@ -401,23 +403,20 @@ async function getActiveDays(userId: Types.ObjectId, params: OverviewStatsQueryP
 					$dateToString: {
 						format: '%Y-%m-%d',
 						date: '$startTime',
-						timezone
-					}
-				}
-			}
+						timezone,
+					},
+				},
+			},
 		},
 		{
 			$group: {
-				_id: '$date'
-			}
-		}
+				_id: '$date',
+			},
+		},
 	]);
 
 	// Combine both date sets and count unique dates
-	const uniqueDates = new Set([
-		...completedTaskDates.map((d) => d._id),
-		...focusRecordDates.map((d) => d._id)
-	]);
+	const uniqueDates = new Set([...completedTaskDates.map((d) => d._id), ...focusRecordDates.map((d) => d._id)]);
 
 	return uniqueDates.size;
 }
@@ -426,7 +425,10 @@ async function getActiveDays(userId: Types.ObjectId, params: OverviewStatsQueryP
  * Get overview statistics including task counts, project counts, and active days
  * Supports filtering by projects, date range, search query, task sources, and specific taskId
  */
-export async function getOverviewStats(params: OverviewStatsQueryParams, userId: Types.ObjectId): Promise<OverviewStats> {
+export async function getOverviewStats(
+	params: OverviewStatsQueryParams,
+	userId: Types.ObjectId
+): Promise<OverviewStats> {
 	// Calculate today's date in user's timezone
 	const tz = params.timezone || 'UTC';
 	const now = new Date();
@@ -434,7 +436,7 @@ export async function getOverviewStats(params: OverviewStatsQueryParams, userId:
 		timeZone: tz,
 		year: 'numeric',
 		month: 'long',
-		day: 'numeric'
+		day: 'numeric',
 	});
 
 	const skipTodayStats = params.skipTodayStats || false;
@@ -445,7 +447,7 @@ export async function getOverviewStats(params: OverviewStatsQueryParams, userId:
 		getTaskStats(userId, params, todayDateString, skipTodayStats),
 		getFocusStats(userId, params, todayDateString, skipTodayStats, tz),
 		getProjectStats(userId, params),
-		getActiveDays(userId, params, tz)
+		getActiveDays(userId, params, tz),
 	];
 
 	if (includeFirstData) {
@@ -459,13 +461,15 @@ export async function getOverviewStats(params: OverviewStatsQueryParams, userId:
 	const focusStats = results[1] as Record<string, number>;
 	const projectStats = results[2] as { totalProjectsCount: number };
 	const activeDays = results[3] as number;
-	const firstData = results[4] as { firstCompletedTaskDate: string | null; firstFocusRecordDate: string | null } | undefined;
+	const firstData = results[4] as
+		| { firstCompletedTaskDate: string | null; firstFocusRecordDate: string | null }
+		| undefined;
 
 	const overviewStats = {
 		...taskStats,
 		...focusStats,
 		...projectStats,
-		activeDays
+		activeDays,
 	} as OverviewStats;
 
 	if (includeFirstData && firstData) {
@@ -483,24 +487,18 @@ export async function getOverviewStats(params: OverviewStatsQueryParams, userId:
 export async function getSourceCounts(userId: Types.ObjectId): Promise<SourceCountsResponse> {
 	// Run parallel aggregations for FocusRecord and Task
 	const [focusResults, taskResults] = await Promise.all([
-		FocusRecordTickTick.aggregate([
-			{ $match: { userId } },
-			{ $group: { _id: '$source', count: { $sum: 1 } } }
-		]),
-		Task.aggregate([
-			{ $match: { userId } },
-			{ $group: { _id: '$source', count: { $sum: 1 } } }
-		])
+		FocusRecordTickTick.aggregate([{ $match: { userId } }, { $group: { _id: '$source', count: { $sum: 1 } } }]),
+		Task.aggregate([{ $match: { userId } }, { $group: { _id: '$source', count: { $sum: 1 } } }]),
 	]);
 
 	// Merge results into single object
 	const sourceCounts: SourceCountsResponse = {};
 
-	focusResults.forEach(item => {
+	focusResults.forEach((item) => {
 		sourceCounts[item._id] = item.count;
 	});
 
-	taskResults.forEach(item => {
+	taskResults.forEach((item) => {
 		sourceCounts[item._id] = item.count;
 	});
 

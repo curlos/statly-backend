@@ -29,78 +29,81 @@ export interface IProjectGroup extends Document {
 }
 
 // TickTick Project Group Schema
-const ProjectGroupTickTickSchema = new Schema({
-	id: {
-		type: String,
-		required: true,
-		index: true
-	},
-	source: {
-		type: String,
-		required: true,
-		default: 'ProjectGroupTickTick'
-	},
-	etag: {
-		type: String
-	},
-	name: {
-		type: String,
-		required: true
-	},
-	showAll: {
-		type: Boolean,
-		default: false
-	},
-	sortOrder: {
-		type: Number
-	},
-	viewMode: {
-		type: String
-	},
-	deleted: {
-		type: Number,
-		default: 0
-	},
-	userId: {
-		type: Schema.Types.ObjectId,
-		ref: 'User',
-		required: true,
-		index: true
-	},
-	sortType: {
-		type: String
-	},
-	sortOption: {
-		groupBy: {
-			type: String
+const ProjectGroupTickTickSchema = new Schema(
+	{
+		id: {
+			type: String,
+			required: true,
+			index: true,
 		},
-		orderBy: {
-			type: String
-		}
-	},
-	teamId: {
-		type: String
-	},
-	timeline: {
-		range: {
-			type: String
+		source: {
+			type: String,
+			required: true,
+			default: 'ProjectGroupTickTick',
+		},
+		etag: {
+			type: String,
+		},
+		name: {
+			type: String,
+			required: true,
+		},
+		showAll: {
+			type: Boolean,
+			default: false,
+		},
+		sortOrder: {
+			type: Number,
+		},
+		viewMode: {
+			type: String,
+		},
+		deleted: {
+			type: Number,
+			default: 0,
+		},
+		userId: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
+			required: true,
+			index: true,
 		},
 		sortType: {
-			type: String
+			type: String,
 		},
 		sortOption: {
 			groupBy: {
-				type: String
+				type: String,
 			},
 			orderBy: {
-				type: String
-			}
-		}
+				type: String,
+			},
+		},
+		teamId: {
+			type: String,
+		},
+		timeline: {
+			range: {
+				type: String,
+			},
+			sortType: {
+				type: String,
+			},
+			sortOption: {
+				groupBy: {
+					type: String,
+				},
+				orderBy: {
+					type: String,
+				},
+			},
+		},
+	},
+	{
+		collection: 'projectGroups',
+		timestamps: false,
 	}
-}, {
-	collection: 'projectGroups',
-	timestamps: false
-});
+);
 
 // Add compound unique index to ensure id is unique per user (not globally unique)
 ProjectGroupTickTickSchema.index({ id: 1, userId: 1 }, { unique: true });

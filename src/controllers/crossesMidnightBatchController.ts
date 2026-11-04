@@ -27,9 +27,7 @@ export async function revalidateCrossesMidnightCore(
 	}
 
 	// Fetch all records with necessary fields
-	const records = await FocusRecord.find({ userId })
-		.select('_id startTime endTime crossesMidnight')
-		.lean();
+	const records = await FocusRecord.find({ userId }).select('_id startTime endTime crossesMidnight').lean();
 
 	if (records.length === 0) {
 		throw new Error('No records found');
@@ -62,10 +60,10 @@ export async function revalidateCrossesMidnightCore(
 						filter: { _id: new mongoose.Types.ObjectId(record._id) },
 						update: {
 							$set: {
-								crossesMidnight: newValue
-							}
-						}
-					}
+								crossesMidnight: newValue,
+							},
+						},
+					},
 				});
 
 				// Track transition type
@@ -109,7 +107,7 @@ export async function revalidateCrossesMidnightCore(
 		unchanged,
 		failed: failedCount,
 		falseToTrue,
-		trueToFalse
+		trueToFalse,
 	};
 }
 
@@ -125,7 +123,7 @@ export async function revalidateCrossesMidnightHandler(req: CustomRequest, res: 
 
 		if (!timezone) {
 			return res.status(400).json({
-				message: 'timezone is required'
+				message: 'timezone is required',
 			});
 		}
 
@@ -143,7 +141,7 @@ export async function revalidateCrossesMidnightHandler(req: CustomRequest, res: 
 			unchanged: 0,
 			failed: 0,
 			falseToTrue: 0,
-			trueToFalse: 0
+			trueToFalse: 0,
 		});
 	}
 }

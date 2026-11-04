@@ -6,14 +6,18 @@ export const GUEST_RINGS_HEADER = 'x-guest-focus-goal-rings';
 const MAX_HEADER_LENGTH = 14000;
 export const MAX_GUEST_RINGS = 10;
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+	typeof value === 'object' && value !== null && !Array.isArray(value);
 const isMissingOr = (value: unknown, isValid: (value: unknown) => boolean) => value === undefined || isValid(value);
-const isRecordOf = (isValid: (value: unknown) => boolean) => (value: unknown) => isPlainObject(value) && Object.values(value).every(isValid);
+const isRecordOf = (isValid: (value: unknown) => boolean) => (value: unknown) =>
+	isPlainObject(value) && Object.values(value).every(isValid);
 const isBoolean = (value: unknown) => typeof value === 'boolean';
 const isString = (value: unknown) => typeof value === 'string';
 const isNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value);
 const isInactivePeriod = (period: unknown) =>
-	isPlainObject(period) && isString(period.startDate) && (period.endDate === undefined || period.endDate === null || isString(period.endDate));
+	isPlainObject(period) &&
+	isString(period.startDate) &&
+	(period.endDate === undefined || period.endDate === null || isString(period.endDate));
 
 // The streaks code reads the rings as they are, so a list with anything in it that isn't shaped like a real ring is turned away rather than risk it failing partway or giving odd numbers. Fields a ring doesn't have are fine.
 const isValidRing = (ring: unknown) =>

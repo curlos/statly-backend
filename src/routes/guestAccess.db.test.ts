@@ -34,14 +34,19 @@ const makeRing = (id: string, goalSeconds: number, isActive = true) => ({
 	updatedAt: new Date().toISOString(),
 });
 
-const guestToken = (userId: Types.ObjectId, options: jwt.SignOptions = { expiresIn: '24h' }) => jwt.sign({ userId, isGuest: true }, SECRET, options);
+const guestToken = (userId: Types.ObjectId, options: jwt.SignOptions = { expiresIn: '24h' }) =>
+	jwt.sign({ userId, isGuest: true }, SECRET, options);
 const normalToken = (userId: Types.ObjectId) => jwt.sign({ userId }, SECRET, { expiresIn: '30d' });
 const ringsHeader = (rings: object[]) => encodeURIComponent(JSON.stringify(rings));
 
 const call = async (method: string, path: string, token?: string, headers: Record<string, string> = {}) => {
 	const response = await fetch(`${baseUrl}${path}`, {
 		method,
-		headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...headers },
+		headers: {
+			'content-type': 'application/json',
+			...(token ? { authorization: `Bearer ${token}` } : {}),
+			...headers,
+		},
 		body: method === 'GET' ? undefined : '{}',
 	});
 	const text = await response.text();
@@ -146,7 +151,15 @@ describe('guest mode on the server', () => {
 			if (!hasDb(t)) return;
 			const oldNewest = new Date(Date.now() - 30 * DAY - 60 * 60 * 1000);
 			const demo = await createDemoAccount(oldNewest);
-			await FocusRecord.collection.insertOne({ id: 'r', userId: demo._id, source: 'FocusRecordTickTick', startTime: oldNewest, endTime: oldNewest, duration: 0, tasks: [] });
+			await FocusRecord.collection.insertOne({
+				id: 'r',
+				userId: demo._id,
+				source: 'FocusRecordTickTick',
+				startTime: oldNewest,
+				endTime: oldNewest,
+				duration: 0,
+				tasks: [],
+			});
 
 			await call('POST', '/users/guest');
 
@@ -158,7 +171,15 @@ describe('guest mode on the server', () => {
 			if (!hasDb(t)) return;
 			const oldNewest = new Date(Date.now() - 30 * DAY - 60 * 60 * 1000);
 			const demo = await createDemoAccount(oldNewest);
-			await FocusRecord.collection.insertOne({ id: 'r', userId: demo._id, source: 'FocusRecordTickTick', startTime: oldNewest, endTime: oldNewest, duration: 0, tasks: [] });
+			await FocusRecord.collection.insertOne({
+				id: 'r',
+				userId: demo._id,
+				source: 'FocusRecordTickTick',
+				startTime: oldNewest,
+				endTime: oldNewest,
+				duration: 0,
+				tasks: [],
+			});
 
 			mock.method(console, 'error', () => undefined);
 			const failing = mock.method(Task.collection, 'updateMany', (async () => {
@@ -171,13 +192,19 @@ describe('guest mode on the server', () => {
 			assert.strictEqual(refused.status, 503);
 			assert.ok(!('token' in refused.body), 'no token is given out');
 			assert.strictEqual((await User.findById(demo._id))?.demoDaysShifted, 0);
-			assert.strictEqual((await FocusRecord.collection.findOne({ userId: demo._id }))?.startTime.getTime(), oldNewest.getTime());
+			assert.strictEqual(
+				(await FocusRecord.collection.findOne({ userId: demo._id }))?.startTime.getTime(),
+				oldNewest.getTime()
+			);
 
 			const retried = await call('POST', '/users/guest');
 
 			assert.strictEqual(retried.status, 200);
 			assert.ok(retried.body.token);
-			assert.strictEqual((await FocusRecord.collection.findOne({ userId: demo._id }))?.startTime.getTime(), oldNewest.getTime() + 30 * DAY);
+			assert.strictEqual(
+				(await FocusRecord.collection.findOne({ userId: demo._id }))?.startTime.getTime(),
+				oldNewest.getTime() + 30 * DAY
+			);
 		});
 
 		test('is what makes /users/logged-in-user report a guest', async (t) => {
@@ -224,7 +251,11 @@ describe('guest mode on the server', () => {
 				assert.strictEqual(body.message, 'Not available in guest mode');
 			}
 
-			assert.strictEqual(await FocusRecord.collection.countDocuments({ userId: demo._id }), 3, 'nothing was deleted');
+			assert.strictEqual(
+				await FocusRecord.collection.countDocuments({ userId: demo._id }),
+				3,
+				'nothing was deleted'
+			);
 			const settings = await UserSettings.findOne({ userId: demo._id });
 			assert.strictEqual(settings?.tickTickCookie, 'a-secret-encrypted-cookie');
 		});
@@ -235,7 +266,15 @@ describe('guest mode on the server', () => {
 			await seedFocusRecords(demo._id);
 			const token = guestToken(demo._id);
 
-			for (const path of ['/focus-records', '/tasks/all', '/projects', '/stats/overview', '/streaks/today', '/streaks/history', '/focus-records/medals']) {
+			for (const path of [
+				'/focus-records',
+				'/tasks/all',
+				'/projects',
+				'/stats/overview',
+				'/streaks/today',
+				'/streaks/history',
+				'/focus-records/medals',
+			]) {
 				const { status } = await call('GET', path, token);
 				assert.strictEqual(status, 200, `GET ${path} should work`);
 			}
@@ -252,8 +291,15 @@ describe('guest mode on the server', () => {
 			const asGuest = await call('GET', '/custom-image-folders', guestToken(demo._id));
 
 			assert.strictEqual(asGuest.status, 200);
-			assert.deepStrictEqual(asGuest.body.map((folder: { name: string }) => folder.name), ['GENERAL']);
-			assert.strictEqual(await CustomImageFolder.countDocuments({ userId: demo._id }), 0, 'nothing was saved for the guest');
+			assert.deepStrictEqual(
+				asGuest.body.map((folder: { name: string }) => folder.name),
+				['GENERAL']
+			);
+			assert.strictEqual(
+				await CustomImageFolder.countDocuments({ userId: demo._id }),
+				0,
+				'nothing was saved for the guest'
+			);
 
 			// Anyone else still gets it made the first time
 			await call('GET', '/custom-image-folders', normalToken(demo._id));
@@ -292,7 +338,9 @@ describe('guest mode on the server', () => {
 			const longestStreak = (body: Record<string, any>) => body.rings[0].longestStreak.days; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 			const saved = await call('GET', '/streaks/history', token);
-			const withHardGoal = await call('GET', '/streaks/history', token, { [RINGS_HEADER]: ringsHeader([makeRing('ring-1', 4 * 3600)]) });
+			const withHardGoal = await call('GET', '/streaks/history', token, {
+				[RINGS_HEADER]: ringsHeader([makeRing('ring-1', 4 * 3600)]),
+			});
 			const savedAgain = await call('GET', '/streaks/history', token);
 
 			assert.strictEqual(longestStreak(saved.body), 3, 'a 1 hour goal is met on all 3 days');
@@ -308,8 +356,12 @@ describe('guest mode on the server', () => {
 			const token = guestToken(demo._id);
 			const ringIds = (body: Record<string, any>) => body.rings.map((ring: any) => ring.todayData.ringId); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-			const twoActive = await call('GET', '/streaks/today', token, { [RINGS_HEADER]: ringsHeader([makeRing('a', 3600), makeRing('b', 3600), makeRing('c', 3600, false)]) });
-			const nonActive = await call('GET', '/streaks/today', token, { [RINGS_HEADER]: ringsHeader([makeRing('a', 3600, false)]) });
+			const twoActive = await call('GET', '/streaks/today', token, {
+				[RINGS_HEADER]: ringsHeader([makeRing('a', 3600), makeRing('b', 3600), makeRing('c', 3600, false)]),
+			});
+			const nonActive = await call('GET', '/streaks/today', token, {
+				[RINGS_HEADER]: ringsHeader([makeRing('a', 3600, false)]),
+			});
 
 			assert.deepStrictEqual(ringIds(twoActive.body), ['a', 'b']);
 			assert.deepStrictEqual(nonActive.body.rings, []);
@@ -322,10 +374,15 @@ describe('guest mode on the server', () => {
 			const token = guestToken(demo._id);
 
 			const without = await call('GET', '/streaks/combined', token);
-			const withRings = await call('GET', '/streaks/combined', token, { [RINGS_HEADER]: ringsHeader([makeRing('a', 3600), makeRing('b', 3600)]) });
+			const withRings = await call('GET', '/streaks/combined', token, {
+				[RINGS_HEADER]: ringsHeader([makeRing('a', 3600), makeRing('b', 3600)]),
+			});
 
 			assert.deepStrictEqual(without.body.rings, []);
-			assert.deepStrictEqual(withRings.body.rings.map((ring: { ringId: string }) => ring.ringId), ['a', 'b']);
+			assert.deepStrictEqual(
+				withRings.body.rings.map((ring: { ringId: string }) => ring.ringId),
+				['a', 'b']
+			);
 		});
 
 		test('are ignored when any entry is not a ring', async (t) => {
@@ -334,9 +391,14 @@ describe('guest mode on the server', () => {
 			const token = guestToken(demo._id);
 
 			for (const rings of [[null], [makeRing('a', 3600), 'ring'], [{ id: 'a' }]]) {
-				const { status, body } = await call('GET', '/streaks/today', token, { [RINGS_HEADER]: encodeURIComponent(JSON.stringify(rings)) });
+				const { status, body } = await call('GET', '/streaks/today', token, {
+					[RINGS_HEADER]: encodeURIComponent(JSON.stringify(rings)),
+				});
 				assert.strictEqual(status, 200);
-				assert.deepStrictEqual(body.rings.map((ring: { todayData: { ringId: string } }) => ring.todayData.ringId), ['ring-1']);
+				assert.deepStrictEqual(
+					body.rings.map((ring: { todayData: { ringId: string } }) => ring.todayData.ringId),
+					['ring-1']
+				);
 			}
 		});
 
@@ -347,8 +409,12 @@ describe('guest mode on the server', () => {
 			const otherRings = ringsHeader([makeRing('other', 3600)]);
 
 			const normal = await call('GET', '/streaks/today', normalToken(demo._id), { [RINGS_HEADER]: otherRings });
-			const brokenJson = await call('GET', '/streaks/today', guestToken(demo._id), { [RINGS_HEADER]: '%7Bnot-json' });
-			const notAList = await call('GET', '/streaks/today', guestToken(demo._id), { [RINGS_HEADER]: encodeURIComponent('{"id":"x"}') });
+			const brokenJson = await call('GET', '/streaks/today', guestToken(demo._id), {
+				[RINGS_HEADER]: '%7Bnot-json',
+			});
+			const notAList = await call('GET', '/streaks/today', guestToken(demo._id), {
+				[RINGS_HEADER]: encodeURIComponent('{"id":"x"}'),
+			});
 
 			assert.deepStrictEqual(ringIds(normal.body), ['ring-1']);
 			assert.deepStrictEqual(ringIds(brokenJson.body), ['ring-1']);

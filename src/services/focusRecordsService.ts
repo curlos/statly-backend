@@ -1,7 +1,11 @@
 import { Types } from 'mongoose';
 import FocusRecord from '../models/FocusRecord';
 import Project from '../models/ProjectModel';
-import { addAncestorAndCompletedTasks, addMidnightRecordDurationAdjustment, addYearAgnosticMidnightAdjustment } from '../utils/focus.utils';
+import {
+	addAncestorAndCompletedTasks,
+	addMidnightRecordDurationAdjustment,
+	addYearAgnosticMidnightAdjustment,
+} from '../utils/focus.utils';
 import {
 	buildFocusSearchFilter,
 	buildFocusMatchAndFilterConditions,
@@ -130,10 +134,10 @@ async function executeQuery(
 				$group: {
 					_id: null,
 					total: { $sum: 1 },
-					totalDuration: { $sum: "$originalDuration" },
-					onlyTasksTotalDuration: { $sum: "$duration" }
-				}
-			}
+					totalDuration: { $sum: '$originalDuration' },
+					onlyTasksTotalDuration: { $sum: '$duration' },
+				},
+			},
 		];
 	} else {
 		// No filters: need to calculate base duration AND tasks duration
@@ -143,21 +147,21 @@ async function executeQuery(
 				$addFields: {
 					tasksDurationSum: {
 						$reduce: {
-							input: "$tasks",
+							input: '$tasks',
 							initialValue: 0,
-							in: { $add: ["$$value", "$$this.duration"] }
-						}
-					}
-				}
+							in: { $add: ['$$value', '$$this.duration'] },
+						},
+					},
+				},
 			},
 			{
 				$group: {
 					_id: null,
 					total: { $sum: 1 },
-					totalDuration: { $sum: "$duration" },
-					onlyTasksTotalDuration: { $sum: "$tasksDurationSum" }
-				}
-			}
+					totalDuration: { $sum: '$duration' },
+					onlyTasksTotalDuration: { $sum: '$tasksDurationSum' },
+				},
+			},
 		];
 	}
 
@@ -170,12 +174,9 @@ async function executeQuery(
 		paginatedRecordsPipeline.push({
 			$addFields: {
 				firstEmotionScore: {
-					$ifNull: [
-						{ $arrayElemAt: ["$emotions.score", 0] },
-						0
-					]
-				}
-			}
+					$ifNull: [{ $arrayElemAt: ['$emotions.score', 0] }, 0],
+				},
+			},
 		});
 	}
 
@@ -197,8 +198,8 @@ async function executeQuery(
 				emotions: 1,
 				tasks: 1,
 				pauseDuration: 1,
-				source: 1
-			}
+				source: 1,
+			},
 		}
 	);
 
@@ -218,29 +219,25 @@ async function executeQuery(
 			{
 				$group: {
 					_id: '$emotions.emotion',
-					count: { $sum: 1 }
-				}
+					count: { $sum: 1 },
+				},
 			},
 			{
 				$project: {
 					_id: 0,
 					emotion: '$_id',
-					count: 1
-				}
-			}
+					count: 1,
+				},
+			},
 		];
 
 		facetStages.noEmotionCount = [
 			{
 				$match: {
-					$or: [
-						{ emotions: [] },
-						{ emotions: null },
-						{ emotions: { $exists: false } }
-					]
-				}
+					$or: [{ emotions: [] }, { emotions: null }, { emotions: { $exists: false } }],
+				},
 			},
-			{ $count: 'count' }
+			{ $count: 'count' },
 		];
 	}
 
@@ -249,12 +246,8 @@ async function executeQuery(
 		facetStages.noteStats = [
 			{
 				$match: {
-					$and: [
-						{ note: { $exists: true } },
-						{ note: { $ne: null } },
-						{ note: { $ne: '' } }
-					]
-				}
+					$and: [{ note: { $exists: true } }, { note: { $ne: null } }, { note: { $ne: '' } }],
+				},
 			},
 			{
 				$project: {
@@ -265,20 +258,20 @@ async function executeQuery(
 							then: 0,
 							else: {
 								$size: {
-									$split: [{ $trim: { input: '$note' } }, ' ']
-								}
-							}
-						}
-					}
-				}
+									$split: [{ $trim: { input: '$note' } }, ' '],
+								},
+							},
+						},
+					},
+				},
 			},
 			{
 				$group: {
 					_id: null,
 					totalCharacters: { $sum: '$noteCharCount' },
-					totalWords: { $sum: '$noteWordCount' }
-				}
-			}
+					totalWords: { $sum: '$noteWordCount' },
+				},
+			},
 		];
 	}
 
@@ -287,7 +280,7 @@ async function executeQuery(
 	// Our stages are valid for $facet, so we cast to any to bypass the type check.
 	basePipeline.push({
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		$facet: facetStages as any
+		$facet: facetStages as any,
 	});
 
 	// Execute the combined query (1 database call instead of 4)
@@ -307,10 +300,13 @@ async function executeQuery(
 	let emotionCounts: Record<string, number> = {};
 	if (needEmotionCalculations) {
 		const emotionCountResult = facetResult.emotionCounts || [];
-		emotionCounts = emotionCountResult.reduce((acc: Record<string, number>, item: EmotionCountItem) => {
-			acc[item.emotion] = item.count;
-			return acc;
-		}, {} as Record<string, number>);
+		emotionCounts = emotionCountResult.reduce(
+			(acc: Record<string, number>, item: EmotionCountItem) => {
+				acc[item.emotion] = item.count;
+				return acc;
+			},
+			{} as Record<string, number>
+		);
 
 		// Add no emotion count if exists
 		const noEmotionCountResult = facetResult.noEmotionCount || [];
@@ -326,7 +322,7 @@ async function executeQuery(
 		if (noteStatsResult.length > 0) {
 			noteStats = {
 				totalCharacters: noteStatsResult[0].totalCharacters || 0,
-				totalWords: noteStatsResult[0].totalWords || 0
+				totalWords: noteStatsResult[0].totalWords || 0,
 			};
 		}
 	}
@@ -337,7 +333,7 @@ async function executeQuery(
 		totalDuration,
 		onlyTasksTotalDuration,
 		emotionCounts,
-		noteStats
+		noteStats,
 	};
 }
 
@@ -457,7 +453,10 @@ export async function getFocusRecords(params: FocusRecordsQueryParams, userId: T
 	);
 
 	// Add ancestor tasks and completed tasks
-	const { focusRecordsWithCompletedTasks, ancestorTasksById } = await addAncestorAndCompletedTasks(focusRecords, userId);
+	const { focusRecordsWithCompletedTasks, ancestorTasksById } = await addAncestorAndCompletedTasks(
+		focusRecords,
+		userId
+	);
 
 	// Calculate pagination metadata
 	const totalPages = Math.ceil(total / params.limit);
@@ -504,10 +503,10 @@ export interface ExportFocusRecordsQueryParams {
 export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, userId: Types.ObjectId) {
 	// Map special focus app source IDs to friendly names
 	const sourceToAppName: Record<string, string> = {
-		'FocusRecordSession': 'Session',
-		'FocusRecordBeFocused': 'Be Focused',
-		'FocusRecordForest': 'Forest',
-		'FocusRecordTide': 'Tide'
+		FocusRecordSession: 'Session',
+		FocusRecordBeFocused: 'Be Focused',
+		FocusRecordForest: 'Forest',
+		FocusRecordTide: 'Tide',
 	};
 
 	// Fetch all projects and create lookup by ID for current project names
@@ -540,7 +539,14 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 	const { startDateBoundary, endDateBoundary } = calculateEffectiveDateBoundaries(params);
 
 	// Execute query without pagination (get all records)
-	const { focusRecords, total, totalDuration: _totalDuration, onlyTasksTotalDuration, emotionCounts, noteStats } = await executeQuery(
+	const {
+		focusRecords,
+		total,
+		totalDuration: _totalDuration,
+		onlyTasksTotalDuration,
+		emotionCounts,
+		noteStats,
+	} = await executeQuery(
 		searchFilter,
 		focusRecordMatchConditions,
 		taskFilterConditions,
@@ -558,7 +564,10 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 	);
 
 	// Add ancestor tasks and completed tasks
-	const { focusRecordsWithCompletedTasks, ancestorTasksById } = await addAncestorAndCompletedTasks(focusRecords, userId);
+	const { focusRecordsWithCompletedTasks, ancestorTasksById } = await addAncestorAndCompletedTasks(
+		focusRecords,
+		userId
+	);
 
 	// Build a lookup for tasks not in ancestorTasksById (deleted tasks)
 	// Store the last occurrence of each task from focus records
@@ -614,7 +623,8 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 					const currentProjectName = currentProject?.name;
 
 					// Map special source IDs to friendly app names, or use current project name, or fall back to old project name
-					const displayName = sourceToAppName[taskProjectId] || currentProjectName || task.projectName || taskProjectId;
+					const displayName =
+						sourceToAppName[taskProjectId] || currentProjectName || task.projectName || taskProjectId;
 					fullTaskTitle += ` - (${displayName})`;
 				}
 
@@ -730,14 +740,21 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				filteredTasks = (focusRecord.tasks || []) as any[];
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				duration = (filteredTasks as any[]).reduce((sum: number, task: FocusRecordTask) => sum + (task.duration || 0), 0);
+				duration = (filteredTasks as any[]).reduce(
+					(sum: number, task: FocusRecordTask) => sum + (task.duration || 0),
+					0
+				);
 			} else if (params.groupBy === 'project') {
 				// For project grouping, only include tasks in this project
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				filteredTasks = (focusRecord.tasks?.filter((task: any) => (task.projectId || 'no-project-id') === id) || []) as any[];
+				filteredTasks = (focusRecord.tasks?.filter((task: any) => (task.projectId || 'no-project-id') === id) ||
+					[]) as any[];
 				// Calculate duration for this specific group
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				duration = (filteredTasks as any[]).reduce((sum: number, task: FocusRecordTask) => sum + task.duration, 0);
+				duration = (filteredTasks as any[]).reduce(
+					(sum: number, task: FocusRecordTask) => sum + task.duration,
+					0
+				);
 			} else {
 				// For task grouping, only include tasks matching this task ID
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -747,11 +764,14 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 						return true;
 					}
 					return false;
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				}) || []) as any[];
 				// Calculate duration for this specific group
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				duration = (filteredTasks as any[]).reduce((sum: number, task: FocusRecordTask) => sum + task.duration, 0);
+				duration = (filteredTasks as any[]).reduce(
+					(sum: number, task: FocusRecordTask) => sum + task.duration,
+					0
+				);
 			}
 
 			// Skip this focus record if no tasks match after filtering (not applicable for emotion grouping)
@@ -762,7 +782,7 @@ export async function exportFocusRecords(params: ExportFocusRecordsQueryParams, 
 			// Create a filtered copy of the focus record with only matching tasks
 			const filteredFocusRecord = {
 				...focusRecord,
-				tasks: filteredTasks
+				tasks: filteredTasks,
 			} as FocusRecordWithTasks;
 
 			grouped[id].records.push(filteredFocusRecord);

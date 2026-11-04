@@ -1,13 +1,17 @@
 import { Types, Model } from 'mongoose';
-import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/ProjectModel";
-import type { ImportCategoryResult } from "./importBackup.utils";
+import { ProjectTickTick, ProjectTodoist, ProjectSession } from '../../models/ProjectModel';
+import type { ImportCategoryResult } from './importBackup.utils';
 import { ImportableProjectDocument } from '../../types/import';
 import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 /**
  * Validates a project document against required fields
  */
-export function validateProject(doc: ImportableProjectDocument, requiredFields: string[], validSourcesSet: Set<string>): { valid: boolean; error?: string } {
+export function validateProject(
+	doc: ImportableProjectDocument,
+	requiredFields: string[],
+	validSourcesSet: Set<string>
+): { valid: boolean; error?: string } {
 	for (const field of requiredFields) {
 		if (!(field in doc)) {
 			return { valid: false, error: `Missing required field: ${field}` };
@@ -24,79 +28,82 @@ export function validateProject(doc: ImportableProjectDocument, requiredFields: 
 /**
  * Imports projects with validation
  */
-export async function importProjects(projects: ImportableProjectDocument[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
-    const errors: string[] = [];
+export async function importProjects(
+	projects: ImportableProjectDocument[],
+	userId: Types.ObjectId
+): Promise<ImportCategoryResult> {
+	const errors: string[] = [];
 
-    // Declare validation constants once for all projects
-    const requiredFields = ['id', 'source', 'name'];
-    const validSourcesSet = new Set(['ProjectTickTick', 'ProjectTodoist', 'ProjectSession']);
+	// Declare validation constants once for all projects
+	const requiredFields = ['id', 'source', 'name'];
+	const validSourcesSet = new Set(['ProjectTickTick', 'ProjectTodoist', 'ProjectSession']);
 
-    // Group projects by source to use the correct discriminator model
-    const projectsBySource: Record<string, ImportableProjectDocument[]> = {
-        ProjectTickTick: [],
-        ProjectTodoist: [],
-        ProjectSession: [],
-    };
+	// Group projects by source to use the correct discriminator model
+	const projectsBySource: Record<string, ImportableProjectDocument[]> = {
+		ProjectTickTick: [],
+		ProjectTodoist: [],
+		ProjectSession: [],
+	};
 
-    // Validate and categorize projects
-    for (const project of projects) {
-        const validation = validateProject(project, requiredFields, validSourcesSet);
+	// Validate and categorize projects
+	for (const project of projects) {
+		const validation = validateProject(project, requiredFields, validSourcesSet);
 
-        if (!validation.valid) {
-            errors.push(`Project ${project.id || 'unknown'}: ${validation.error}`);
-            continue;
-        }
+		if (!validation.valid) {
+			errors.push(`Project ${project.id || 'unknown'}: ${validation.error}`);
+			continue;
+		}
 
-        const source = project.source;
-        if (projectsBySource[source]) {
-            // Remove _id and old userId, then add the current user's userId
-            const { _id, userId: _oldUserId, ...projectWithoutIds } = project;
-            projectsBySource[source].push({ ...projectWithoutIds, userId });
-        } else {
-            errors.push(`Project ${project.id}: Unknown source ${source}`);
-        }
-    }
+		const source = project.source;
+		if (projectsBySource[source]) {
+			// Remove _id and old userId, then add the current user's userId
+			const { _id, userId: _oldUserId, ...projectWithoutIds } = project;
+			projectsBySource[source].push({ ...projectWithoutIds, userId });
+		} else {
+			errors.push(`Project ${project.id}: Unknown source ${source}`);
+		}
+	}
 
-    // Map source names to their corresponding discriminator models
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const modelMap: Record<string, Model<any>> = {
-        ProjectTickTick,
-        ProjectTodoist,
-        ProjectSession,
-    };
+	// Map source names to their corresponding discriminator models
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const modelMap: Record<string, Model<any>> = {
+		ProjectTickTick,
+		ProjectTodoist,
+		ProjectSession,
+	};
 
-    let totalCreated = 0;
-    let totalModified = 0;
-    let totalMatched = 0;
+	let totalCreated = 0;
+	let totalModified = 0;
+	let totalMatched = 0;
 
-    // Import each source separately using the correct discriminator model
-    for (const [source, sourceProjects] of Object.entries(projectsBySource)) {
-        if (sourceProjects.length === 0) continue;
+	// Import each source separately using the correct discriminator model
+	for (const [source, sourceProjects] of Object.entries(projectsBySource)) {
+		if (sourceProjects.length === 0) continue;
 
-        const bulkOps = sourceProjects.map(project => ({
-            updateOne: {
-                filter: { id: project.id, userId },
-                update: { $set: project },
-                upsert: true,
-            },
-        }));
+		const bulkOps = sourceProjects.map((project) => ({
+			updateOne: {
+				filter: { id: project.id, userId },
+				update: { $set: project },
+				upsert: true,
+			},
+		}));
 
-        try {
-            const model = modelMap[source];
-            const result = await executeBatchedBulkWrite(bulkOps, model);
-            totalCreated += result.upsertedCount;
-            totalModified += result.modifiedCount;
-            totalMatched += result.matchedCount - result.modifiedCount;
-        } catch (error) {
-            errors.push(`Bulk insert error for ${source}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }
+		try {
+			const model = modelMap[source];
+			const result = await executeBatchedBulkWrite(bulkOps, model);
+			totalCreated += result.upsertedCount;
+			totalModified += result.modifiedCount;
+			totalMatched += result.matchedCount - result.modifiedCount;
+		} catch (error) {
+			errors.push(`Bulk insert error for ${source}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+		}
+	}
 
-    return {
-        created: totalCreated,
-        modified: totalModified,
-        matched: totalMatched,
-        failed: errors.length,
-        errors,
-    };
+	return {
+		created: totalCreated,
+		modified: totalModified,
+		matched: totalMatched,
+		failed: errors.length,
+		errors,
+	};
 }

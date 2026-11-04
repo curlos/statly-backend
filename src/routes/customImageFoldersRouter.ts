@@ -19,11 +19,11 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 		const folders = await CustomImageFolder.find({ userId }).sort({ sortOrder: 1, createdAt: 1 });
 
 		// Ensure GENERAL folder always exists
-		if (!folders.find(f => f.name === 'GENERAL')) {
+		if (!folders.find((f) => f.name === 'GENERAL')) {
 			const generalFolder = new CustomImageFolder({
 				userId,
 				name: 'GENERAL',
-				sortOrder: 0
+				sortOrder: 0,
 			});
 			// A guest shares the demo account, so looking at the folders never saves anything for them. The folder is just included in what they get back.
 			if (!req.user?.isGuest) {
@@ -69,14 +69,12 @@ router.post('/', verifyToken, async (req: CustomRequest, res) => {
 		}
 
 		// Get max sortOrder
-		const maxSortOrderDoc = await CustomImageFolder.findOne({ userId })
-			.sort({ sortOrder: -1 })
-			.select('sortOrder');
+		const maxSortOrderDoc = await CustomImageFolder.findOne({ userId }).sort({ sortOrder: -1 }).select('sortOrder');
 
 		const folder = new CustomImageFolder({
 			userId,
 			name: normalizedName,
-			sortOrder: maxSortOrderDoc ? maxSortOrderDoc.sortOrder + 1 : 1 // GENERAL is 0, new folders start at 1
+			sortOrder: maxSortOrderDoc ? maxSortOrderDoc.sortOrder + 1 : 1, // GENERAL is 0, new folders start at 1
 		});
 
 		await folder.save();
@@ -134,10 +132,7 @@ router.put('/:id', verifyToken, async (req: CustomRequest, res) => {
 		await folder.save();
 
 		// Update all images that reference the old folder name
-		await CustomImage.updateMany(
-			{ userId, folder: oldName },
-			{ $set: { folder: normalizedName } }
-		);
+		await CustomImage.updateMany({ userId, folder: oldName }, { $set: { folder: normalizedName } });
 
 		res.json(folder);
 	} catch (error) {
@@ -191,8 +186,8 @@ router.delete('/:id', verifyToken, async (req: CustomRequest, res) => {
 						{
 							$set: {
 								folder: 'GENERAL',
-								sortOrder: startingSortOrder + index
-							}
+								sortOrder: startingSortOrder + index,
+							},
 						}
 					);
 				});
@@ -220,7 +215,7 @@ router.delete('/:id', verifyToken, async (req: CustomRequest, res) => {
 			const imageCount = await CustomImage.countDocuments({ userId, folder: folderName });
 			if (imageCount > 0) {
 				return res.status(400).json({
-					message: `Cannot delete folder with ${imageCount} image(s). Please delete or move the images first.`
+					message: `Cannot delete folder with ${imageCount} image(s). Please delete or move the images first.`,
 				});
 			}
 		}

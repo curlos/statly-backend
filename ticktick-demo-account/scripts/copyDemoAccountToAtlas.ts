@@ -5,7 +5,16 @@ import { assertNoSavedCookie, replaceUserDocuments } from '../../src/utils/demoD
 
 // Copies only the demo account from local MongoDB to Atlas, replacing just that account's documents there. Atlas never loses the demo's documents while this runs: new ones go in first and only the ones that are gone are removed after.
 // Run: npx ts-node ticktick-demo-account/scripts/copyDemoAccountToAtlas.ts
-const COLLECTIONS = ['focusRecords', 'tasks', 'projects', 'projectGroups', 'user-settings', 'syncMetaDatas', 'customImages', 'customImageFolders'];
+const COLLECTIONS = [
+	'focusRecords',
+	'tasks',
+	'projects',
+	'projectGroups',
+	'user-settings',
+	'syncMetaDatas',
+	'customImages',
+	'customImageFolders',
+];
 const DEMO_EMAIL = 'statly.demo@gmail.com';
 
 const getUri = (envFile: string) => dotenv.parse(fs.readFileSync(envFile)).ATLAS_URI;

@@ -23,7 +23,7 @@ router.delete('/focus-record/:id', verifyToken, async (req: CustomRequest, res) 
 
 		res.json({
 			deletedCount: result.deletedCount,
-			message: 'Focus record deleted successfully'
+			message: 'Focus record deleted successfully',
 		});
 	} catch (error) {
 		res.status(500).json({ message: error instanceof Error ? error.message : error });
@@ -32,7 +32,7 @@ router.delete('/focus-record/:id', verifyToken, async (req: CustomRequest, res) 
 
 // Delete multiple tasks by IDs for logged in user (bulk delete)
 router.post('/tasks/bulk-delete', verifyToken, async (req: CustomRequest, res) => {
-	const userId = req.user!.userId
+	const userId = req.user!.userId;
 	const { taskIds } = req.body;
 
 	if (!Array.isArray(taskIds) || taskIds.length === 0) {
@@ -43,16 +43,16 @@ router.post('/tasks/bulk-delete', verifyToken, async (req: CustomRequest, res) =
 		// Delete all tasks that belong to this user and match the provided IDs
 		const result = await Task.deleteMany({
 			id: { $in: taskIds },
-			userId
+			userId,
 		});
 
 		res.json({
 			deletedCount: result.deletedCount,
-			message: `${result.deletedCount} task(s) deleted successfully`
+			message: `${result.deletedCount} task(s) deleted successfully`,
 		});
 	} catch (error) {
 		res.status(500).json({
-			message: error instanceof Error ? error.message : error
+			message: error instanceof Error ? error.message : error,
 		});
 	}
 });
@@ -68,14 +68,20 @@ router.delete('/focus-records', verifyToken, async (req: CustomRequest, res) => 
 			SyncMetadata.deleteMany({
 				userId,
 				syncType: {
-					$in: ['tickTickFocusRecords', 'beFocusedFocusRecords', 'forestFocusRecords', 'tideFocusRecords', 'sessionFocusRecords']
-				}
-			})
+					$in: [
+						'tickTickFocusRecords',
+						'beFocusedFocusRecords',
+						'forestFocusRecords',
+						'tideFocusRecords',
+						'sessionFocusRecords',
+					],
+				},
+			}),
 		]);
 		res.json({
 			deletedCount: focusRecordsResult.deletedCount,
 			syncMetadataDeleted: syncMetadataResult.deletedCount,
-			message: 'Focus records deleted successfully'
+			message: 'Focus records deleted successfully',
 		});
 	} catch (error) {
 		res.status(500).json({ message: error instanceof Error ? error.message : error });
@@ -93,14 +99,14 @@ router.delete('/tasks', verifyToken, async (req: CustomRequest, res) => {
 			SyncMetadata.deleteMany({
 				userId,
 				syncType: {
-					$in: ['tickTickTasks', 'todoistTasks']
-				}
-			})
+					$in: ['tickTickTasks', 'todoistTasks'],
+				},
+			}),
 		]);
 		res.json({
 			deletedCount: tasksResult.deletedCount,
 			syncMetadataDeleted: syncMetadataResult.deletedCount,
-			message: 'Tasks deleted successfully'
+			message: 'Tasks deleted successfully',
 		});
 	} catch (error) {
 		res.status(500).json({ message: error instanceof Error ? error.message : error });
@@ -118,14 +124,14 @@ router.delete('/projects', verifyToken, async (req: CustomRequest, res) => {
 			SyncMetadata.deleteMany({
 				userId,
 				syncType: {
-					$in: ['tickTickProjects', 'todoistProjects', 'sessionProjects']
-				}
-			})
+					$in: ['tickTickProjects', 'todoistProjects', 'sessionProjects'],
+				},
+			}),
 		]);
 		res.json({
 			deletedCount: projectsResult.deletedCount,
 			syncMetadataDeleted: syncMetadataResult.deletedCount,
-			message: 'Projects deleted successfully'
+			message: 'Projects deleted successfully',
 		});
 	} catch (error) {
 		res.status(500).json({ message: error instanceof Error ? error.message : error });
@@ -142,13 +148,13 @@ router.delete('/project-groups', verifyToken, async (req: CustomRequest, res) =>
 			ProjectGroupTickTick.deleteMany({ userId }),
 			SyncMetadata.deleteMany({
 				userId,
-				syncType: 'tickTickProjectGroups'
-			})
+				syncType: 'tickTickProjectGroups',
+			}),
 		]);
 		res.json({
 			deletedCount: projectGroupsResult.deletedCount,
 			syncMetadataDeleted: syncMetadataResult.deletedCount,
-			message: 'Project groups deleted successfully'
+			message: 'Project groups deleted successfully',
 		});
 	} catch (error) {
 		res.status(500).json({ message: error instanceof Error ? error.message : error });
@@ -161,13 +167,14 @@ router.delete('/all', verifyToken, async (req: CustomRequest, res) => {
 
 	try {
 		// Delete all documents AND all sync metadata for this user
-		const [focusRecordsResult, tasksResult, projectsResult, projectGroupsResult, syncMetadataResult] = await Promise.all([
-			FocusRecord.deleteMany({ userId }),
-			Task.deleteMany({ userId }),
-			Project.deleteMany({ userId }),
-			ProjectGroupTickTick.deleteMany({ userId }),
-			SyncMetadata.deleteMany({ userId }) // Delete ALL sync metadata for this user
-		]);
+		const [focusRecordsResult, tasksResult, projectsResult, projectGroupsResult, syncMetadataResult] =
+			await Promise.all([
+				FocusRecord.deleteMany({ userId }),
+				Task.deleteMany({ userId }),
+				Project.deleteMany({ userId }),
+				ProjectGroupTickTick.deleteMany({ userId }),
+				SyncMetadata.deleteMany({ userId }), // Delete ALL sync metadata for this user
+			]);
 
 		res.json({
 			deletedCounts: {
@@ -175,9 +182,9 @@ router.delete('/all', verifyToken, async (req: CustomRequest, res) => {
 				tasks: tasksResult.deletedCount,
 				projects: projectsResult.deletedCount,
 				projectGroups: projectGroupsResult.deletedCount,
-				syncMetadata: syncMetadataResult.deletedCount
+				syncMetadata: syncMetadataResult.deletedCount,
 			},
-			message: 'All documents deleted successfully'
+			message: 'All documents deleted successfully',
 		});
 	} catch (error) {
 		res.status(500).json({ message: error instanceof Error ? error.message : error });

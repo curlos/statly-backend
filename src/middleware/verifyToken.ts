@@ -24,7 +24,7 @@ export const verifyToken = (req: CustomRequest, res: Response, next: NextFunctio
 		// Convert userId string to ObjectId for MongoDB queries
 		req.user = {
 			...decoded,
-			userId: mongoose.Types.ObjectId.createFromHexString(decoded.userId)
+			userId: mongoose.Types.ObjectId.createFromHexString(decoded.userId),
 		};
 		next();
 	} catch (error) {

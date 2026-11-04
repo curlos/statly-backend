@@ -106,7 +106,7 @@ export const DEFAULT_WEEKLY_FOCUS_HOURS_MEDALS = [
 		name: 'Focus 1h',
 		requiredDuration: 3600, // 1 hour * 3600 = 3600 seconds
 		interval: 'weekly',
-	}
+	},
 ];
 
 export const DEFAULT_MONTHLY_FOCUS_HOURS_MEDALS = [
@@ -229,7 +229,7 @@ export const DEFAULT_MONTHLY_FOCUS_HOURS_MEDALS = [
 		name: 'Focus 1h',
 		requiredDuration: 3600, // 1 hour * 3600 = 3600 seconds
 		interval: 'monthly',
-	}
+	},
 ];
 
 export const DEFAULT_YEARLY_FOCUS_HOURS_MEDALS = [
@@ -407,7 +407,7 @@ export const DEFAULT_YEARLY_FOCUS_HOURS_MEDALS = [
 		name: 'Focus 1h',
 		requiredDuration: 3600, // 1 hour * 3600 = 3600 seconds
 		interval: 'yearly',
-	}
+	},
 ];
 
 export const DEFAULT_DAILY_COMPLETED_TASKS_MEDALS = [
@@ -578,7 +578,7 @@ export const DEFAULT_WEEKLY_COMPLETED_TASKS_MEDALS = [
 		name: 'Complete 1 Task',
 		requiredCompletedTasks: 1,
 		interval: 'weekly',
-	}
+	},
 ];
 
 export const DEFAULT_MONTHLY_COMPLETED_TASKS_MEDALS = [

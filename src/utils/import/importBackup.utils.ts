@@ -16,7 +16,15 @@ export interface ImportResult {
 	customImageFolders: ImportCategoryResult;
 }
 
-type DocumentType = 'focusRecord' | 'task' | 'project' | 'projectGroup' | 'userSettings' | 'customImage' | 'customImageFolder' | 'unknown';
+type DocumentType =
+	| 'focusRecord'
+	| 'task'
+	| 'project'
+	| 'projectGroup'
+	| 'userSettings'
+	| 'customImage'
+	| 'customImageFolder'
+	| 'unknown';
 
 // O(1) lookup map for document type detection - declared outside function for efficiency
 const SOURCE_TYPE_MAP: Record<string, DocumentType> = {

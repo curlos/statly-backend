@@ -6,7 +6,6 @@
 // import { notCompletedTasksFromArchivedProjects } from '../focus-data/archivedTasks/notCompletedTasksFromArchivedProjects';
 // import { sortedAllFocusData } from '../focus-data/sortedAllFocusData';
 
-
 // TODO: New TODOIST SYNC DATA 2025
 // import { todoistAllPersonalActiveTasks } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistAllPersonalActiveTasks";
 // import { todoistAllPersonalActiveTasksById } from "../focus-data/Todoist/new-sync-data-2025/personal/todoistAllPersonalActiveTasksById";
@@ -104,7 +103,6 @@
 // 	{ name: 'todoist-qlink-active-projects', data: todoistQLinkActiveProjects },
 // 	{ name: 'todoist-qlink-archived-projects', data: todoistQLinkArchivedProjects },
 // ];
-
 
 // TODO:NEW SYNC DATA AFTER 2025 UPDATE.
 // export const TODOIST_NEW_2025_SYNC_TASKS_DATASETS = [

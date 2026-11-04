@@ -12,30 +12,33 @@ export interface ICustomImageFolder extends Document {
 }
 
 // Schema definition
-const CustomImageFolderSchema = new Schema({
-	userId: {
-		type: Schema.Types.ObjectId,
-		ref: 'User',
-		required: true,
-		index: true
+const CustomImageFolderSchema = new Schema(
+	{
+		userId: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
+			required: true,
+			index: true,
+		},
+		source: { type: String, default: 'CustomImageFolder', required: true, immutable: true },
+		name: {
+			type: String,
+			required: true,
+			uppercase: true, // Automatically convert to uppercase
+			trim: true,
+			maxlength: 50,
+		},
+		sortOrder: {
+			type: Number,
+			default: 0,
+			index: true,
+		},
 	},
-	source: { type: String, default: 'CustomImageFolder', required: true, immutable: true },
-	name: {
-		type: String,
-		required: true,
-		uppercase: true, // Automatically convert to uppercase
-		trim: true,
-		maxlength: 50
-	},
-	sortOrder: {
-		type: Number,
-		default: 0,
-		index: true
-	},
-}, {
-	timestamps: true, // Automatically adds createdAt and updatedAt
-	collection: 'customImageFolders'
-});
+	{
+		timestamps: true, // Automatically adds createdAt and updatedAt
+		collection: 'customImageFolders',
+	}
+);
 
 // Add compound unique index to prevent duplicate folder names per user
 CustomImageFolderSchema.index({ userId: 1, name: 1 }, { unique: true });

@@ -127,8 +127,8 @@ const UserSettingsSchema = new Schema(
 		tickTickCookie: { type: String, default: '' },
 		tickTickInboxProjectId: { type: String, default: '' },
 		autoSyncEnabled: { type: Boolean, default: false },
-		defaultDateRangeInterval: { type: String, default: "All" },
-		defaultCustomStartDate: { type: String, default: "" },
+		defaultDateRangeInterval: { type: String, default: 'All' },
+		defaultCustomStartDate: { type: String, default: '' },
 		pages: {
 			focusRecords: {
 				showFocusNotes: { type: Boolean, default: true },
@@ -142,7 +142,11 @@ const UserSettingsSchema = new Schema(
 				maxFocusRecordsPerPage: { type: Number, default: 25 },
 				onlyExportTasksWithNoParent: { type: Boolean, default: true },
 				showMedals: { type: Boolean, default: false },
-				selectedMedalImage: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007663/Statly/battlefield-1-medals/weapons/28_5HFD732.webp" },
+				selectedMedalImage: {
+					type: String,
+					default:
+						'https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007663/Statly/battlefield-1-medals/weapons/28_5HFD732.webp',
+				},
 				medalImageSizePx: { type: Number, default: 100 },
 				showMedalGlow: { type: Boolean, default: false },
 				showFocusRecordEmotions: { type: Boolean, default: false },
@@ -152,20 +156,24 @@ const UserSettingsSchema = new Schema(
 				analyzeNoteEmotionsWhileSyncingFocusRecords: { type: Boolean, default: false },
 				customDisplay: {
 					useBackgroundImage: { type: Boolean, default: false },
-					backgroundImage: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1766609482/Statly/mw2019-weapon-camos/TIGER/Blue_Tiger_Camo_Icon_MW2019.webp" },
+					backgroundImage: {
+						type: String,
+						default:
+							'https://res.cloudinary.com/dvsuz3v37/image/upload/v1766609482/Statly/mw2019-weapon-camos/TIGER/Blue_Tiger_Camo_Icon_MW2019.webp',
+					},
 					backgroundImageOpacity: { type: Number, default: 1 },
 					useBackgroundColor: { type: Boolean, default: false },
-					backgroundColor: { type: String, default: "#3b82f6" },
+					backgroundColor: { type: String, default: '#3b82f6' },
 					useTextColor: { type: Boolean, default: false },
-					textColor: { type: String, default: "#ffffff" }
-				}
+					textColor: { type: String, default: '#ffffff' },
+				},
 			},
 			completedTasks: {
 				taskIdIncludeCompletedTasksFromSubtasks: { type: Boolean, default: true },
 				groupedTasksCollapsedByDefault: { type: Boolean, default: true },
 				showIndentedTasks: { type: Boolean, default: true },
 				onlyExportTasksWithNoParent: { type: Boolean, default: true },
-				maxDaysPerPage: { type: Number, default: 7 }
+				maxDaysPerPage: { type: Number, default: 7 },
 			},
 			focusHoursGoal: {
 				rings: {
@@ -188,7 +196,7 @@ const UserSettingsSchema = new Schema(
 								thursday: { type: Boolean, default: true },
 								friday: { type: Boolean, default: true },
 								saturday: { type: Boolean, default: true },
-								sunday: { type: Boolean, default: true }
+								sunday: { type: Boolean, default: true },
 							},
 							restDays: { type: Object, default: {} },
 							customDailyFocusGoal: { type: Object, default: {} },
@@ -196,41 +204,57 @@ const UserSettingsSchema = new Schema(
 								type: [
 									{
 										startDate: { type: String, required: true },
-										endDate: { type: String, default: null }
-									}
+										endDate: { type: String, default: null },
+									},
 								],
-								default: []
+								default: [],
 							},
 							createdAt: { type: String, required: true },
-							updatedAt: { type: String, required: true }
-						}
+							updatedAt: { type: String, required: true },
+						},
 					],
-					default: []
+					default: [],
 				},
 				showMultiRingViewForOneActiveRing: { type: Boolean, default: false },
 				combinedRingsSettings: {
 					showStreakCount: { type: Boolean, default: true },
 					showGoalDays: { type: Boolean, default: true },
-					goalDays: { type: Number, default: 7, min: 1, max: 36524 }
-				}
+					goalDays: { type: Number, default: 7, min: 1, max: 36524 },
+				},
 			},
 			challenges: {
 				selectedChallengeCardImage: {
-					focus: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007839/Statly/black-ops-2-calling-cards/general/432_6xLKg5k.webp" },
-					tasks: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007840/Statly/black-ops-2-calling-cards/general/436_x084PtQ.webp" },
-				}
+					focus: {
+						type: String,
+						default:
+							'https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007839/Statly/black-ops-2-calling-cards/general/432_6xLKg5k.webp',
+					},
+					tasks: {
+						type: String,
+						default:
+							'https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007840/Statly/black-ops-2-calling-cards/general/436_x084PtQ.webp',
+					},
+				},
 			},
 			medals: {
 				selectedMedalCardImage: {
-					focus: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007663/Statly/battlefield-1-medals/weapons/28_5HFD732.webp" },
-					tasks: { type: String, default: "https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007766/Statly/battlefield-1-medals/combat/56_91AMzBS.webp" },
-				}
+					focus: {
+						type: String,
+						default:
+							'https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007663/Statly/battlefield-1-medals/weapons/28_5HFD732.webp',
+					},
+					tasks: {
+						type: String,
+						default:
+							'https://res.cloudinary.com/dvsuz3v37/image/upload/v1762007766/Statly/battlefield-1-medals/combat/56_91AMzBS.webp',
+					},
+				},
 			},
 			forest: {
 				landStyle: { type: String, default: 'auto' },
 				hemisphere: { type: String, default: 'auto' },
 				projectTrees: { type: Map, of: String, default: {} },
-			}
+			},
 		},
 	},
 	{

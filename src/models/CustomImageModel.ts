@@ -14,39 +14,42 @@ export interface ICustomImage extends Document {
 }
 
 // Schema definition
-const CustomImageSchema = new Schema({
-	userId: {
-		type: Schema.Types.ObjectId,
-		ref: 'User',
-		required: true,
-		index: true
+const CustomImageSchema = new Schema(
+	{
+		userId: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
+			required: true,
+			index: true,
+		},
+		source: { type: String, default: 'CustomImage', required: true, immutable: true },
+		imageUrl: {
+			type: String,
+			required: true,
+		},
+		cloudinaryPublicId: {
+			type: String,
+			required: true,
+		},
+		folder: {
+			type: String,
+			default: 'GENERAL',
+			uppercase: true,
+			trim: true,
+			required: true,
+			index: true,
+		},
+		sortOrder: {
+			type: Number,
+			default: 0,
+			index: true,
+		},
 	},
-	source: { type: String, default: 'CustomImage', required: true, immutable: true },
-	imageUrl: {
-		type: String,
-		required: true,
-	},
-	cloudinaryPublicId: {
-		type: String,
-		required: true,
-	},
-	folder: {
-		type: String,
-		default: 'GENERAL',
-		uppercase: true,
-		trim: true,
-		required: true,
-		index: true
-	},
-	sortOrder: {
-		type: Number,
-		default: 0,
-		index: true
-	},
-}, {
-	timestamps: true, // Automatically adds createdAt and updatedAt
-	collection: 'customImages'
-});
+	{
+		timestamps: true, // Automatically adds createdAt and updatedAt
+		collection: 'customImages',
+	}
+);
 
 // Add compound index for efficient retrieval by folder (userId + folder, ordered by sortOrder then creation time)
 CustomImageSchema.index({ userId: 1, folder: 1, sortOrder: 1, createdAt: -1 });

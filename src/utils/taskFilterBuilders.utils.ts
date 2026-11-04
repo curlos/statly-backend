@@ -7,8 +7,8 @@ import { MongooseFilter } from '../types/aggregation';
 // ============================================================================
 
 export const TASK_APP_SOURCE_MAPPING: Record<string, string> = {
-	'TickTick': 'TaskTickTick',
-	'Todoist': 'TaskTodoist'
+	TickTick: 'TaskTickTick',
+	Todoist: 'TaskTodoist',
 };
 
 // ============================================================================
@@ -22,12 +22,9 @@ export function buildTaskSearchFilter(searchQuery?: string[]) {
 	}
 
 	return {
-		$and: searchQuery.map(pattern => ({
-			$or: [
-				{ title: { $regex: pattern } },
-				{ content: { $regex: pattern } },
-			]
-		}))
+		$and: searchQuery.map((pattern) => ({
+			$or: [{ title: { $regex: pattern } }, { content: { $regex: pattern } }],
+		})),
 	};
 }
 
@@ -59,8 +56,8 @@ function buildMonthDayFilter(
 	const parseMonthDay = (dateString: string) => {
 		const date = new Date(dateString + ' 00:00:00 UTC');
 		return {
-			month: date.getUTCMonth() + 1,  // 1 through 12
-			day: date.getUTCDate()           // 1 through 31
+			month: date.getUTCMonth() + 1, // 1 through 12
+			day: date.getUTCDate(), // 1 through 31
 		};
 	};
 
@@ -76,10 +73,10 @@ function buildMonthDayFilter(
 				{
 					$and: [
 						{ $eq: [{ $month: { date: '$' + fieldName, timezone: tz } }, month] },
-						{ $gte: [{ $dayOfMonth: { date: '$' + fieldName, timezone: tz } }, day] }
-					]
-				}
-			]
+						{ $gte: [{ $dayOfMonth: { date: '$' + fieldName, timezone: tz } }, day] },
+					],
+				},
+			],
 		};
 	};
 
@@ -91,17 +88,16 @@ function buildMonthDayFilter(
 				{
 					$and: [
 						{ $eq: [{ $month: { date: '$' + fieldName, timezone: tz } }, month] },
-						{ $lte: [{ $dayOfMonth: { date: '$' + fieldName, timezone: tz } }, day] }
-					]
-				}
-			]
+						{ $lte: [{ $dayOfMonth: { date: '$' + fieldName, timezone: tz } }, day] },
+					],
+				},
+			],
 		};
 	};
 
 	if (start && end) {
 		// Check if range crosses year boundary (e.g., Dec 25 to Jan 5)
-		const crossesYear = start.month > end.month ||
-			(start.month === end.month && start.day > end.day);
+		const crossesYear = start.month > end.month || (start.month === end.month && start.day > end.day);
 
 		if (crossesYear) {
 			// Range crosses year boundary: Dec 25-31 OR Jan 1-5
@@ -109,9 +105,9 @@ function buildMonthDayFilter(
 				$expr: {
 					$or: [
 						buildOnOrAfterCondition(start.month, start.day),
-						buildOnOrBeforeCondition(end.month, end.day)
-					]
-				}
+						buildOnOrBeforeCondition(end.month, end.day),
+					],
+				},
 			};
 		} else {
 			// Normal range within calendar year: month-day >= start AND month-day <= end
@@ -119,20 +115,20 @@ function buildMonthDayFilter(
 				$expr: {
 					$and: [
 						buildOnOrAfterCondition(start.month, start.day),
-						buildOnOrBeforeCondition(end.month, end.day)
-					]
-				}
+						buildOnOrBeforeCondition(end.month, end.day),
+					],
+				},
 			};
 		}
 	} else if (start) {
 		// Only start date specified: month-day >= start
 		return {
-			$expr: buildOnOrAfterCondition(start.month, start.day)
+			$expr: buildOnOrAfterCondition(start.month, start.day),
 		};
 	} else if (end) {
 		// Only end date specified: month-day <= end
 		return {
-			$expr: buildOnOrBeforeCondition(end.month, end.day)
+			$expr: buildOnOrBeforeCondition(end.month, end.day),
 		};
 	}
 
@@ -158,13 +154,7 @@ function buildMultiFieldDateFilter(
 		return null;
 	}
 
-	const dateFieldsToCheck = [
-		'completedTime',
-		'createdTime',
-		'modifiedTime',
-		'added_at',
-		'updated_at'
-	];
+	const dateFieldsToCheck = ['completedTime', 'createdTime', 'modifiedTime', 'added_at', 'updated_at'];
 
 	const orConditions: MongooseFilter[] = [];
 
@@ -182,7 +172,7 @@ function buildMultiFieldDateFilter(
 		if (dateFilter) {
 			for (const field of dateFieldsToCheck) {
 				orConditions.push({
-					[field]: { $exists: true, $ne: null, ...dateFilter }
+					[field]: { $exists: true, $ne: null, ...dateFilter },
 				});
 			}
 		}
@@ -299,7 +289,7 @@ export function buildTaskMatchConditions(
 			// Regular filter can be merged into the timeField
 			matchFilter[timeField] = {
 				...(matchFilter[timeField] as Record<string, unknown>),
-				...(dateConditions[0][timeField] as Record<string, unknown>)
+				...(dateConditions[0][timeField] as Record<string, unknown>),
 			};
 		}
 	} else if (dateConditions.length === 2) {
@@ -319,10 +309,7 @@ export function buildTaskMatchConditions(
 			matchFilter[`ancestorSet.${taskId}`] = true;
 		} else {
 			// Only include tasks where id matches taskId OR parentId matches taskId
-			matchFilter.$or = [
-				{ id: taskId },
-				{ parentId: taskId }
-			];
+			matchFilter.$or = [{ id: taskId }, { parentId: taskId }];
 		}
 	}
 
@@ -362,12 +349,7 @@ export function buildTaskMatchConditionsWithMultiFieldDate(
 	const andConditions: MongooseFilter[] = [];
 
 	// Build multi-field date filter for first tier (sidebar dates)
-	const firstTierFilter = buildMultiFieldDateFilter(
-		startDate,
-		endDate,
-		timezone || 'UTC',
-		yearAgnostic || false
-	);
+	const firstTierFilter = buildMultiFieldDateFilter(startDate, endDate, timezone || 'UTC', yearAgnostic || false);
 	if (firstTierFilter) {
 		andConditions.push(firstTierFilter);
 	}
@@ -393,10 +375,7 @@ export function buildTaskMatchConditionsWithMultiFieldDate(
 		if (taskIdIncludeSubtasks) {
 			matchFilter[`ancestorSet.${taskId}`] = true;
 		} else {
-			matchFilter.$or = [
-				{ id: taskId },
-				{ parentId: taskId }
-			];
+			matchFilter.$or = [{ id: taskId }, { parentId: taskId }];
 		}
 	}
 

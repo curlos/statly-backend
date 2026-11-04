@@ -64,108 +64,122 @@ export type IFocusRecord =
 	| IFocusRecordSession;
 
 // Base embedded schema for tasks within a focus record (common fields for all apps)
-const BaseFocusRecordTaskSchema = new Schema({
-	taskId: {
-		type: String,
-		required: true,
-		index: true, // Index for fast lookup when updating focus records during task sync
+const BaseFocusRecordTaskSchema = new Schema(
+	{
+		taskId: {
+			type: String,
+			required: true,
+			index: true, // Index for fast lookup when updating focus records during task sync
+		},
+		title: {
+			type: String,
+			required: true,
+		},
+		startTime: {
+			type: Date,
+			required: true,
+		},
+		endTime: {
+			type: Date,
+			required: true,
+		},
+		duration: {
+			type: Number,
+			required: true,
+		},
+		projectId: {
+			type: String,
+			required: true,
+			index: true, // Index for fast filtering
+		},
+		projectName: {
+			type: String,
+			required: true,
+		},
 	},
-	title: {
-		type: String,
-		required: true,
-	},
-	startTime: {
-		type: Date,
-		required: true,
-	},
-	endTime: {
-		type: Date,
-		required: true,
-	},
-	duration: {
-		type: Number,
-		required: true,
-	},
-	projectId: {
-		type: String,
-		required: true,
-		index: true, // Index for fast filtering
-	},
-	projectName: {
-		type: String,
-		required: true,
-	},
-}, { _id: false }); // Disable _id for embedded documents
+	{ _id: false }
+); // Disable _id for embedded documents
 
 // Extended schema for TickTick tasks (inherits base fields and adds project-related fields)
-const TickTickFocusRecordTaskSchema = new Schema({
-	...BaseFocusRecordTaskSchema.obj,
-	ancestorIds: {
-		type: [String],
-		default: [],
-		index: true, // Index for fast filtering by ancestors
+const TickTickFocusRecordTaskSchema = new Schema(
+	{
+		...BaseFocusRecordTaskSchema.obj,
+		ancestorIds: {
+			type: [String],
+			default: [],
+			index: true, // Index for fast filtering by ancestors
+		},
 	},
-}, { _id: false });
+	{ _id: false }
+);
 
 // Extended schema for Session tasks (inherits base fields and adds project-related fields)
-const SessionFocusRecordTaskSchema = new Schema({
-	...BaseFocusRecordTaskSchema.obj,
-}, { _id: false });
+const SessionFocusRecordTaskSchema = new Schema(
+	{
+		...BaseFocusRecordTaskSchema.obj,
+	},
+	{ _id: false }
+);
 
 // Base schema with shared fields for ALL focus records
-const BaseFocusRecordSchema = new Schema({
-	id: {
-		type: String,
-		required: true,
-		index: true,
+const BaseFocusRecordSchema = new Schema(
+	{
+		id: {
+			type: String,
+			required: true,
+			index: true,
+		},
+		userId: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
+			required: true,
+			index: true,
+		},
+		source: {
+			type: String,
+			required: true,
+			index: true,
+		},
+		startTime: {
+			type: Date,
+			required: true,
+			index: true,
+		},
+		endTime: {
+			type: Date,
+			required: true,
+		},
+		duration: {
+			type: Number,
+			required: true,
+		},
+		trackingMode: {
+			type: String,
+			enum: ['pomodoro', 'stopwatch'],
+			default: 'pomodoro',
+			index: true, // Index for fast filtering
+		},
+		crossesMidnight: {
+			type: Boolean,
+			default: false,
+			index: true, // Index for fast filtering
+		},
+		emotions: {
+			type: [
+				{
+					emotion: String, // 'joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust', 'neutral'
+					score: Number, // confidence 0-1
+				},
+			],
+			_id: false, // Disable _id for emotion array items
+		},
 	},
-	userId: {
-		type: Schema.Types.ObjectId,
-		ref: 'User',
-		required: true,
-		index: true
-	},
-	source: {
-		type: String,
-		required: true,
-		index: true
-	},
-	startTime: {
-		type: Date,
-		required: true,
-		index: true,
-	},
-	endTime: {
-		type: Date,
-		required: true,
-	},
-	duration: {
-		type: Number,
-		required: true,
-	},
-	trackingMode: {
-		type: String,
-		enum: ['pomodoro', 'stopwatch'],
-		default: 'pomodoro',
-		index: true, // Index for fast filtering
-	},
-	crossesMidnight: {
-		type: Boolean,
-		default: false,
-		index: true, // Index for fast filtering
-	},
-	emotions: {
-		type: [{
-			emotion: String,  // 'joy', 'sadness', 'anger', 'fear', 'surprise', 'disgust', 'neutral'
-			score: Number     // confidence 0-1
-		}],
-		_id: false  // Disable _id for emotion array items
-	},
-}, {
-	collection: 'focusRecords',
-	discriminatorKey: 'source',
-	timestamps: false
-});
+	{
+		collection: 'focusRecords',
+		discriminatorKey: 'source',
+		timestamps: false,
+	}
+);
 
 // Add compound unique index to ensure id is unique per user (not globally unique)
 BaseFocusRecordSchema.index({ id: 1, userId: 1 }, { unique: true });
@@ -192,7 +206,7 @@ const TickTickFocusRecordSchema = new Schema({
 	pauseDuration: {
 		type: Number,
 		default: 0,
-	}
+	},
 });
 
 // Create TickTick discriminator
@@ -250,5 +264,12 @@ const SessionFocusRecordSchema = new Schema({
 // Create Session discriminator
 const FocusRecordSession = FocusRecord.discriminator('FocusRecordSession', SessionFocusRecordSchema);
 
-export { FocusRecord, FocusRecordTickTick, FocusRecordBeFocused, FocusRecordForest, FocusRecordTide, FocusRecordSession };
+export {
+	FocusRecord,
+	FocusRecordTickTick,
+	FocusRecordBeFocused,
+	FocusRecordForest,
+	FocusRecordTide,
+	FocusRecordSession,
+};
 export default FocusRecord;

@@ -122,7 +122,7 @@ router.post('/register', async (req, res) => {
 			name: trimmedName,
 			email: trimmedEmail,
 			displayEmail: displayEmail,
-			password // Will be hashed by pre-save hook
+			password, // Will be hashed by pre-save hook
 		});
 		await user.save();
 
@@ -143,18 +143,17 @@ router.post('/register', async (req, res) => {
 				thursday: true,
 				friday: true,
 				saturday: true,
-				sunday: true
+				sunday: true,
 			},
 			restDays: {},
 			customDailyFocusGoal: {},
 			inactivePeriods: [],
 			createdAt: now,
-			updatedAt: now
+			updatedAt: now,
 		};
 
-		const ringColors = colorMode === 'light'
-			? ['#dc2626', '#16a34a', '#0891b2']
-			: ['#fa114f', '#a6ff00', '#00fff6'];
+		const ringColors =
+			colorMode === 'light' ? ['#dc2626', '#16a34a', '#0891b2'] : ['#fa114f', '#a6ff00', '#00fff6'];
 
 		const userSettings = new UserSettings({
 			userId: user._id,
@@ -170,25 +169,25 @@ router.post('/register', async (req, res) => {
 							id: `ring-1-${user._id}`,
 							name: 'Ring 1',
 							color: ringColors[0],
-							isActive: true
+							isActive: true,
 						},
 						{
 							...baseRingDefaults,
 							id: `ring-2-${user._id}`,
 							name: 'Ring 2',
 							color: ringColors[1],
-							isActive: false
+							isActive: false,
 						},
 						{
 							...baseRingDefaults,
 							id: `ring-3-${user._id}`,
 							name: 'Ring 3',
 							color: ringColors[2],
-							isActive: false
-						}
-					]
-				}
-			}
+							isActive: false,
+						},
+					],
+				},
+			},
 		});
 		await userSettings.save();
 
@@ -267,11 +266,7 @@ router.post('/guest', async (req, res) => {
 			return res.status(503).json({ message: 'The demo is updating right now. Please try again in a moment.' });
 		}
 
-		const token = jwt.sign(
-			{ userId: user._id, isGuest: true },
-			process.env.JWT_SECRET || '',
-			{ expiresIn: '24h' }
-		);
+		const token = jwt.sign({ userId: user._id, isGuest: true }, process.env.JWT_SECRET || '', { expiresIn: '24h' });
 
 		res.json({
 			token,

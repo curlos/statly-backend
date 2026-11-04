@@ -1,12 +1,12 @@
 import { Types } from 'mongoose';
-import ProjectGroupTickTick from "../../models/ProjectGroupModel";
-import { ProjectTickTick, ProjectTodoist, ProjectSession } from "../../models/ProjectModel";
-import { fetchSessionFocusRecordsWithNoBreaks } from "../focus.utils";
-import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
-import { getAllTodoistProjects } from "../task.utils";
-import { fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from "../ticktick.utils";
-import UserSettings from "../../models/UserSettingsModel";
-import { executeBatchedBulkWrite } from "../bulkWrite.utils";
+import ProjectGroupTickTick from '../../models/ProjectGroupModel';
+import { ProjectTickTick, ProjectTodoist, ProjectSession } from '../../models/ProjectModel';
+import { fetchSessionFocusRecordsWithNoBreaks } from '../focus.utils';
+import { getOrCreateSyncMetadata, getTickTickCookie } from '../helpers.utils';
+import { getAllTodoistProjects } from '../task.utils';
+import { fetchAllTickTickProjects, fetchAllTickTickProjectGroups } from '../ticktick.utils';
+import UserSettings from '../../models/UserSettingsModel';
+import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 export async function syncTickTickProjects(userId: Types.ObjectId) {
 	// Get or create sync metadata for projects
@@ -43,11 +43,7 @@ export async function syncTickTickProjects(userId: Types.ObjectId) {
 
 	// Update inboxId in user settings if it has changed
 	if (inboxId) {
-		await UserSettings.findOneAndUpdate(
-			{ userId },
-			{ tickTickInboxProjectId: inboxId },
-			{ new: true }
-		);
+		await UserSettings.findOneAndUpdate({ userId }, { tickTickInboxProjectId: inboxId }, { new: true });
 	}
 
 	// Update sync metadata with current time

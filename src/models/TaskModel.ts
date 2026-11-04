@@ -62,63 +62,66 @@ export interface ITaskTodoist extends ITaskBase {
 export type ITask = ITaskTickTick | ITaskTodoist;
 
 // Base schema with NORMALIZED shared fields for ALL tasks (TickTick and Todoist)
-const BaseTaskSchema = new Schema({
-	id: {
-		type: String,
-		required: true,
-		index: true
+const BaseTaskSchema = new Schema(
+	{
+		id: {
+			type: String,
+			required: true,
+			index: true,
+		},
+		userId: {
+			type: Schema.Types.ObjectId,
+			ref: 'User',
+			required: true,
+			index: true,
+		},
+		source: {
+			type: String,
+			required: true,
+			index: true,
+		},
+		title: {
+			type: String,
+			required: true,
+		},
+		description: {
+			type: String,
+			default: '',
+		},
+		projectId: {
+			type: String,
+			index: true,
+		},
+		parentId: {
+			type: String,
+			index: true,
+		},
+		completedTime: {
+			type: Date,
+			index: true,
+		},
+		sortOrder: {
+			type: Number,
+		},
+		timeZone: {
+			type: String,
+		},
+		ancestorIds: {
+			type: [String],
+			default: [],
+		},
+		ancestorSet: {
+			type: Map,
+			of: Boolean,
+			default: {},
+		},
 	},
-	userId: {
-		type: Schema.Types.ObjectId,
-		ref: 'User',
-		required: true,
-		index: true
-	},
-	source: {
-		type: String,
-		required: true,
-		index: true
-	},
-	title: {
-		type: String,
-		required: true
-	},
-	description: {
-		type: String,
-		default: ''
-	},
-	projectId: {
-		type: String,
-		index: true
-	},
-	parentId: {
-		type: String,
-		index: true
-	},
-	completedTime: {
-		type: Date,
-		index: true
-	},
-	sortOrder: {
-		type: Number
-	},
-	timeZone: {
-		type: String
-	},
-	ancestorIds: {
-		type: [String],
-		default: []
-	},
-	ancestorSet: {
-		type: Map,
-		of: Boolean,
-		default: {}
+	{
+		collection: 'tasks',
+		discriminatorKey: 'source',
+		timestamps: false,
 	}
-}, {
-	collection: 'tasks',
-	discriminatorKey: 'source',
-	timestamps: false
-});
+);
 
 // Add compound unique index to ensure id is unique per user (not globally unique)
 BaseTaskSchema.index({ id: 1, userId: 1 }, { unique: true });
@@ -139,121 +142,121 @@ const TickTickTaskSchema = new Schema({
 		type: String,
 		required: true,
 		enum: ['full', 'item'],
-		index: true
+		index: true,
 	},
 	content: {
 		type: String,
-		default: ''
+		default: '',
 	},
 	desc: {
 		type: String,
-		default: ''
+		default: '',
 	},
 	completedUserId: {
-		type: Number
+		type: Number,
 	},
 	modifiedTime: {
 		type: Date,
-		index: true
+		index: true,
 	},
 	createdTime: {
 		type: Date,
-		index: true
+		index: true,
 	},
 	creator: {
-		type: Number
+		type: Number,
 	},
 	startDate: {
-		type: Date
+		type: Date,
 	},
 	status: {
-		type: Number
-	}
+		type: Number,
+	},
 });
 
 // Todoist-specific schema (discriminator for Todoist tasks)
 const TodoistTaskSchema = new Schema({
 	added_at: {
 		type: Date,
-		index: true
+		index: true,
 	},
 	added_by_uid: {
-		type: String
+		type: String,
 	},
 	assigned_by_uid: {
-		type: String
+		type: String,
 	},
 	checked: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	child_order: {
-		type: Number
+		type: Number,
 	},
 	collapsed: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	day_order: {
-		type: Number
+		type: Number,
 	},
 	deadline: {
-		type: Date
+		type: Date,
 	},
 	due: {
-		type: Schema.Types.Mixed
+		type: Schema.Types.Mixed,
 	},
 	duration: {
-		type: Schema.Types.Mixed
+		type: Schema.Types.Mixed,
 	},
 	is_deleted: {
 		type: Boolean,
-		default: false
+		default: false,
 	},
 	labels: {
 		type: [String],
-		default: []
+		default: [],
 	},
 	note_count: {
 		type: Number,
-		default: 0
+		default: 0,
 	},
 	priority: {
 		type: Number,
 		default: 1,
-		index: true
+		index: true,
 	},
 	responsible_uid: {
-		type: String
+		type: String,
 	},
 	section_id: {
-		type: String
+		type: String,
 	},
 	sync_id: {
-		type: String
+		type: String,
 	},
 	updated_at: {
-		type: Date
+		type: Date,
 	},
 	user_id: {
 		type: String,
-		required: true
+		required: true,
 	},
 	v2_id: {
 		type: String,
-		index: true
+		index: true,
 	},
 	v2_parent_id: {
 		type: String,
-		index: true
+		index: true,
 	},
 	v2_project_id: {
 		type: String,
-		index: true
+		index: true,
 	},
 	v2_section_id: {
-		type: String
-	}
+		type: String,
+	},
 });
 
 // Create discriminators

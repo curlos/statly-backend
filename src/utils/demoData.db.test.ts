@@ -5,7 +5,13 @@ import FocusRecord from '../models/FocusRecord';
 import Task from '../models/TaskModel';
 import User from '../models/UserModel';
 import { clearTestDb, connectTestDb, disconnectTestDb } from '../test-utils/testDb';
-import { assertNoSavedCookie, replaceUserDocuments, restoreDemoDates, shiftDemoDataIfStale, shiftUserDates } from './demoData.utils';
+import {
+	assertNoSavedCookie,
+	replaceUserDocuments,
+	restoreDemoDates,
+	shiftDemoDataIfStale,
+	shiftUserDates,
+} from './demoData.utils';
 
 const DAY = 24 * 60 * 60 * 1000;
 const DAYS_BEHIND = 10;
@@ -40,13 +46,27 @@ const seedData = async (userId: Types.ObjectId) => {
 		startTime: start,
 		endTime: new Date(start.getTime() + 30 * 60 * 1000),
 		duration: 1800,
-		tasks: taskTimes ? [{ taskId: 't1', title: 'T', startTime: start, endTime: new Date(start.getTime() + 30 * 60 * 1000) }] : [],
+		tasks: taskTimes
+			? [{ taskId: 't1', title: 'T', startTime: start, endTime: new Date(start.getTime() + 30 * 60 * 1000) }]
+			: [],
 	});
 
-	await FocusRecord.collection.insertMany([record('newest', daysFromNewest(0), true), record('older', daysFromNewest(-40), true), record('no-tasks', daysFromNewest(-3), false)]);
+	await FocusRecord.collection.insertMany([
+		record('newest', daysFromNewest(0), true),
+		record('older', daysFromNewest(-40), true),
+		record('no-tasks', daysFromNewest(-3), false),
+	]);
 
 	await Task.collection.insertMany([
-		{ id: 'done', userId, source: 'TaskTickTick', completedTime: daysFromNewest(-1), createdTime: daysFromNewest(-50), modifiedTime: daysFromNewest(-1), startDate: daysFromNewest(-2) },
+		{
+			id: 'done',
+			userId,
+			source: 'TaskTickTick',
+			completedTime: daysFromNewest(-1),
+			createdTime: daysFromNewest(-50),
+			modifiedTime: daysFromNewest(-1),
+			startDate: daysFromNewest(-2),
+		},
 		// Never completed, and without a start date at all
 		{ id: 'open', userId, source: 'TaskTickTick', completedTime: null, createdTime: daysFromNewest(-5) },
 	]);
@@ -158,7 +178,10 @@ describe('demo account dates', () => {
 		// Every guest starts from the same stale copy of the user, which is exactly the race
 		const results = await Promise.all(Array.from({ length: 8 }, () => shiftDemoDataIfStale(user)));
 
-		assert.ok(results.every((result) => result === true), 'every one of them is fine, since the others just find it already done');
+		assert.ok(
+			results.every((result) => result === true),
+			'every one of them is fine, since the others just find it already done'
+		);
 		const newest = await getFocusRecord(user._id, 'newest');
 		assert.strictEqual(newest?.startTime.getTime(), daysFromNewest(DAYS_BEHIND).getTime());
 		assert.strictEqual((await User.findById(user._id))?.demoDaysShifted, DAYS_BEHIND);
@@ -216,7 +239,11 @@ describe('demo account dates', () => {
 		assert.strictEqual(failed, false);
 		assert.strictEqual((await User.findById(user._id))?.demoDaysShifted, 0, 'the days are not counted as shifted');
 		const unmoved = await getFocusRecord(user._id, 'newest');
-		assert.strictEqual(unmoved?.startTime.getTime(), daysFromNewest(0).getTime(), 'the focus records that were moved are back');
+		assert.strictEqual(
+			unmoved?.startTime.getTime(),
+			daysFromNewest(0).getTime(),
+			'the focus records that were moved are back'
+		);
 		assert.strictEqual(unmoved?.tasks[0].startTime.getTime(), daysFromNewest(0).getTime());
 
 		const retried = await shiftDemoDataIfStale(user);
@@ -224,40 +251,52 @@ describe('demo account dates', () => {
 		assert.strictEqual(retried, true);
 		const newest = await getFocusRecord(user._id, 'newest');
 		assert.strictEqual(newest?.startTime.getTime(), daysFromNewest(DAYS_BEHIND).getTime());
-		assert.strictEqual((await getTask(user._id, 'done'))?.completedTime.getTime(), daysFromNewest(DAYS_BEHIND - 1).getTime());
+		assert.strictEqual(
+			(await getTask(user._id, 'done'))?.completedTime.getTime(),
+			daysFromNewest(DAYS_BEHIND - 1).getTime()
+		);
 		assert.strictEqual((await User.findById(user._id))?.demoDaysShifted, DAYS_BEHIND);
 	});
 
 	describe('restoring the demo account', () => {
-	test('puts the original dates back and turns the demo off so nothing shifts them again', async (t) => {
-		if (!hasDb(t)) return;
-		const user = await createUser('demo@example.com', true);
-		await seedData(user._id);
-		await shiftDemoDataIfStale(user);
+		test('puts the original dates back and turns the demo off so nothing shifts them again', async (t) => {
+			if (!hasDb(t)) return;
+			const user = await createUser('demo@example.com', true);
+			await seedData(user._id);
+			await shiftDemoDataIfStale(user);
 
-		const days = await restoreDemoDates('demo@example.com');
+			const days = await restoreDemoDates('demo@example.com');
 
-		assert.strictEqual(days, DAYS_BEHIND);
-		const restored = await User.findById(user._id);
-		assert.strictEqual(restored?.isDemo, false);
-		assert.strictEqual(restored?.demoDaysShifted, 0);
-		assert.strictEqual((await getFocusRecord(user._id, 'newest'))?.startTime.getTime(), daysFromNewest(0).getTime());
-		assert.strictEqual((await getTask(user._id, 'done'))?.completedTime.getTime(), daysFromNewest(-1).getTime());
+			assert.strictEqual(days, DAYS_BEHIND);
+			const restored = await User.findById(user._id);
+			assert.strictEqual(restored?.isDemo, false);
+			assert.strictEqual(restored?.demoDaysShifted, 0);
+			assert.strictEqual(
+				(await getFocusRecord(user._id, 'newest'))?.startTime.getTime(),
+				daysFromNewest(0).getTime()
+			);
+			assert.strictEqual(
+				(await getTask(user._id, 'done'))?.completedTime.getTime(),
+				daysFromNewest(-1).getTime()
+			);
 
-		// A guest arriving now, or one that was already part way in with an out of date copy of the user, changes nothing
-		await shiftDemoDataIfStale(restored!);
-		await shiftDemoDataIfStale(user);
-		assert.strictEqual((await getFocusRecord(user._id, 'newest'))?.startTime.getTime(), daysFromNewest(0).getTime());
-	});
+			// A guest arriving now, or one that was already part way in with an out of date copy of the user, changes nothing
+			await shiftDemoDataIfStale(restored!);
+			await shiftDemoDataIfStale(user);
+			assert.strictEqual(
+				(await getFocusRecord(user._id, 'newest'))?.startTime.getTime(),
+				daysFromNewest(0).getTime()
+			);
+		});
 
-	test('is found by email, so it works after the demo has been turned off', async (t) => {
-		if (!hasDb(t)) return;
-		const user = await createUser('demo@example.com', false);
-		await seedData(user._id);
+		test('is found by email, so it works after the demo has been turned off', async (t) => {
+			if (!hasDb(t)) return;
+			const user = await createUser('demo@example.com', false);
+			await seedData(user._id);
 
-		assert.strictEqual(await restoreDemoDates('demo@example.com'), 0);
-		await assert.rejects(restoreDemoDates('nobody@example.com'), /No user found/);
-	});
+			assert.strictEqual(await restoreDemoDates('demo@example.com'), 0);
+			await assert.rejects(restoreDemoDates('nobody@example.com'), /No user found/);
+		});
 
 		test('a restore that fails halfway changes nothing, so it can just be run again', async (t) => {
 			if (!hasDb(t)) return;
@@ -274,10 +313,17 @@ describe('demo account dates', () => {
 			const untouched = await User.findById(user._id);
 			assert.strictEqual(untouched?.isDemo, true, 'the demo is still on');
 			assert.strictEqual(untouched?.demoDaysShifted, DAYS_BEHIND);
-			assert.strictEqual((await getFocusRecord(user._id, 'newest'))?.startTime.getTime(), daysFromNewest(DAYS_BEHIND).getTime(), 'the focus records are still where they were');
+			assert.strictEqual(
+				(await getFocusRecord(user._id, 'newest'))?.startTime.getTime(),
+				daysFromNewest(DAYS_BEHIND).getTime(),
+				'the focus records are still where they were'
+			);
 
 			assert.strictEqual(await restoreDemoDates('demo@example.com'), DAYS_BEHIND);
-			assert.strictEqual((await getFocusRecord(user._id, 'newest'))?.startTime.getTime(), daysFromNewest(0).getTime());
+			assert.strictEqual(
+				(await getFocusRecord(user._id, 'newest'))?.startTime.getTime(),
+				daysFromNewest(0).getTime()
+			);
 		});
 
 		test('waits for a shift that is part way through, then restores everything it moved', async (t) => {
@@ -312,55 +358,74 @@ describe('demo account dates', () => {
 			const saved = await User.findById(user._id);
 			assert.strictEqual(saved?.isDemo, false);
 			assert.strictEqual(saved?.demoDaysShifted, 0);
-			assert.strictEqual((await getFocusRecord(user._id, 'newest'))?.startTime.getTime(), daysFromNewest(0).getTime(), 'the focus records are the originals');
-			assert.strictEqual((await getTask(user._id, 'done'))?.completedTime.getTime(), daysFromNewest(-1).getTime(), 'the tasks are the originals');
+			assert.strictEqual(
+				(await getFocusRecord(user._id, 'newest'))?.startTime.getTime(),
+				daysFromNewest(0).getTime(),
+				'the focus records are the originals'
+			);
+			assert.strictEqual(
+				(await getTask(user._id, 'done'))?.completedTime.getTime(),
+				daysFromNewest(-1).getTime(),
+				'the tasks are the originals'
+			);
 		});
 	});
 
 	describe('copying the demo account', () => {
-	const source = () => mongoose.connection.collection('copySource');
-	const target = () => mongoose.connection.collection('copyTarget');
-	const targetIds = async (userId: Types.ObjectId) => (await target().find({ userId }).toArray()).map((document) => document.name).sort();
+		const source = () => mongoose.connection.collection('copySource');
+		const target = () => mongoose.connection.collection('copyTarget');
+		const targetIds = async (userId: Types.ObjectId) =>
+			(await target().find({ userId }).toArray()).map((document) => document.name).sort();
 
-	test('makes the target match the source, keeping other users and removing what the demo no longer has', async (t) => {
-		if (!hasDb(t)) return;
-		const userId = new Types.ObjectId();
-		const otherUserId = new Types.ObjectId();
-		const [a, b, c] = [new Types.ObjectId(), new Types.ObjectId(), new Types.ObjectId()];
-		await source().insertMany([{ _id: a, userId, name: 'a-new' }, { _id: b, userId, name: 'b-new' }]);
-		// "a" is already there but out of date, "c" is gone from the source, and someone else's document must stay
-		await target().insertMany([{ _id: a, userId, name: 'a-old' }, { _id: c, userId, name: 'c-old' }, { _id: new Types.ObjectId(), userId: otherUserId, name: 'someone-else' }]);
+		test('makes the target match the source, keeping other users and removing what the demo no longer has', async (t) => {
+			if (!hasDb(t)) return;
+			const userId = new Types.ObjectId();
+			const otherUserId = new Types.ObjectId();
+			const [a, b, c] = [new Types.ObjectId(), new Types.ObjectId(), new Types.ObjectId()];
+			await source().insertMany([
+				{ _id: a, userId, name: 'a-new' },
+				{ _id: b, userId, name: 'b-new' },
+			]);
+			// "a" is already there but out of date, "c" is gone from the source, and someone else's document must stay
+			await target().insertMany([
+				{ _id: a, userId, name: 'a-old' },
+				{ _id: c, userId, name: 'c-old' },
+				{ _id: new Types.ObjectId(), userId: otherUserId, name: 'someone-else' },
+			]);
 
-		const count = await replaceUserDocuments(source(), target(), userId);
+			const count = await replaceUserDocuments(source(), target(), userId);
 
-		assert.strictEqual(count, 2);
-		assert.deepStrictEqual(await targetIds(userId), ['a-new', 'b-new']);
-		assert.deepStrictEqual(await targetIds(otherUserId), ['someone-else']);
-	});
+			assert.strictEqual(count, 2);
+			assert.deepStrictEqual(await targetIds(userId), ['a-new', 'b-new']);
+			assert.deepStrictEqual(await targetIds(otherUserId), ['someone-else']);
+		});
 
-	test('leaves what the target has alone when putting the new documents in fails', async (t) => {
-		if (!hasDb(t)) return;
-		const userId = new Types.ObjectId();
-		await source().insertMany([{ _id: new Types.ObjectId(), userId, name: 'new' }]);
-		await target().insertMany([{ _id: new Types.ObjectId(), userId, name: 'old-1' }, { _id: new Types.ObjectId(), userId, name: 'old-2' }]);
+		test('leaves what the target has alone when putting the new documents in fails', async (t) => {
+			if (!hasDb(t)) return;
+			const userId = new Types.ObjectId();
+			await source().insertMany([{ _id: new Types.ObjectId(), userId, name: 'new' }]);
+			await target().insertMany([
+				{ _id: new Types.ObjectId(), userId, name: 'old-1' },
+				{ _id: new Types.ObjectId(), userId, name: 'old-2' },
+			]);
 
-		const failing = mock.method(target(), 'bulkWrite', (async () => {
-			throw new Error('could not write');
-		}) as never);
-		await assert.rejects(replaceUserDocuments(source(), target(), userId), /could not write/);
-		failing.mock.restore();
+			const failing = mock.method(target(), 'bulkWrite', (async () => {
+				throw new Error('could not write');
+			}) as never);
+			await assert.rejects(replaceUserDocuments(source(), target(), userId), /could not write/);
+			failing.mock.restore();
 
-		assert.deepStrictEqual(await targetIds(userId), ['old-1', 'old-2']);
-	});
+			assert.deepStrictEqual(await targetIds(userId), ['old-1', 'old-2']);
+		});
 
-	test('copies nothing and clears nothing it should keep when the source has no documents for the user', async (t) => {
-		if (!hasDb(t)) return;
-		const userId = new Types.ObjectId();
-		await target().insertMany([{ _id: new Types.ObjectId(), userId, name: 'old' }]);
+		test('copies nothing and clears nothing it should keep when the source has no documents for the user', async (t) => {
+			if (!hasDb(t)) return;
+			const userId = new Types.ObjectId();
+			await target().insertMany([{ _id: new Types.ObjectId(), userId, name: 'old' }]);
 
-		assert.strictEqual(await replaceUserDocuments(source(), target(), userId), 0);
-		assert.deepStrictEqual(await targetIds(userId), []);
-	});
+			assert.strictEqual(await replaceUserDocuments(source(), target(), userId), 0);
+			assert.deepStrictEqual(await targetIds(userId), []);
+		});
 	});
 
 	describe('checking the demo account has no TickTick cookie', () => {
@@ -378,7 +443,10 @@ describe('demo account dates', () => {
 			await settings().updateOne({ userId }, { $set: { tickTickCookie: 'abcdef0123' } });
 			await assert.rejects(assertNoSavedCookie(settings(), userId), /still has a TickTick cookie/);
 
-			await assert.doesNotReject(assertNoSavedCookie(settings(), new Types.ObjectId()), "someone else's cookie doesn't count");
+			await assert.doesNotReject(
+				assertNoSavedCookie(settings(), new Types.ObjectId()),
+				"someone else's cookie doesn't count"
+			);
 		});
 	});
 });

@@ -61,11 +61,13 @@ function calculateChallengesFromDailyTotals(
 	});
 
 	// Clone and sort challenges by threshold (smallest first)
-	const sortedChallenges: ChallengeWithThreshold[] = challenges.map(challenge => ({
-		...challenge,
-		completedDate: null,
-		threshold: 'requiredDuration' in challenge ? challenge.requiredDuration : challenge.requiredCompletedTasks
-	})).sort((a, b) => a.threshold - b.threshold);
+	const sortedChallenges: ChallengeWithThreshold[] = challenges
+		.map((challenge) => ({
+			...challenge,
+			completedDate: null,
+			threshold: 'requiredDuration' in challenge ? challenge.requiredDuration : challenge.requiredCompletedTasks,
+		}))
+		.sort((a, b) => a.threshold - b.threshold);
 
 	// Track which challenge we're currently trying to complete
 	let currentChallengeIndex = 0;
@@ -85,7 +87,7 @@ function calculateChallengesFromDailyTotals(
 				const formattedDate = dateObj.toLocaleDateString('en-US', {
 					month: 'long',
 					day: 'numeric',
-					year: 'numeric'
+					year: 'numeric',
 				});
 				challenge.completedDate = formatDateWithoutLeadingZero(formattedDate);
 
@@ -104,12 +106,12 @@ function calculateChallengesFromDailyTotals(
 	}
 
 	// Remove the temporary threshold field and return in original order
-	return challenges.map(challenge => {
-		const completedChallenge = sortedChallenges.find(sc => sc.name === challenge.name);
+	return challenges.map((challenge) => {
+		const completedChallenge = sortedChallenges.find((sc) => sc.name === challenge.name);
 		return {
 			...challenge,
 			type: type,
-			completedDate: completedChallenge?.completedDate || null
+			completedDate: completedChallenge?.completedDate || null,
 		};
 	});
 }
@@ -160,25 +162,21 @@ export async function getFocusHoursChallenges(params: ChallengesQueryParams, use
 	pipeline.push({
 		$group: {
 			_id: getDateGroupingExpression('daily', params.timezone),
-			totalDuration: { $sum: "$tasksDuration" }
-		}
+			totalDuration: { $sum: '$tasksDuration' },
+		},
 	});
 
 	// Execute aggregation
 	const results = await FocusRecord.aggregate(pipeline);
 
 	// Convert results to daily totals array
-	const dailyTotals = results.map(result => ({
+	const dailyTotals = results.map((result) => ({
 		date: result._id,
-		total: result.totalDuration
+		total: result.totalDuration,
 	}));
 
 	// Calculate challenges
-	return calculateChallengesFromDailyTotals(
-		dailyTotals,
-		DEFAULT_TOTAL_FOCUS_HOURS_CHALLENGES,
-		'focus'
-	);
+	return calculateChallengesFromDailyTotals(dailyTotals, DEFAULT_TOTAL_FOCUS_HOURS_CHALLENGES, 'focus');
 }
 
 export async function getCompletedTasksChallenges(params: ChallengesQueryParams, userId: Types.ObjectId) {
@@ -213,28 +211,24 @@ export async function getCompletedTasksChallenges(params: ChallengesQueryParams,
 		$group: {
 			_id: {
 				$dateToString: {
-					format: "%B %d, %Y",
-					date: "$completedTime",
-					timezone: params.timezone
-				}
+					format: '%B %d, %Y',
+					date: '$completedTime',
+					timezone: params.timezone,
+				},
 			},
-			taskCount: { $sum: 1 }
-		}
+			taskCount: { $sum: 1 },
+		},
 	});
 
 	// Execute aggregation
 	const results = await Task.aggregate(pipeline);
 
 	// Convert results to daily totals array
-	const dailyTotals = results.map(result => ({
+	const dailyTotals = results.map((result) => ({
 		date: result._id,
-		total: result.taskCount
+		total: result.taskCount,
 	}));
 
 	// Calculate challenges
-	return calculateChallengesFromDailyTotals(
-		dailyTotals,
-		DEFAULT_TOTAL_COMPLETED_TASKS_CHALLENGES,
-		'tasks'
-	);
+	return calculateChallengesFromDailyTotals(dailyTotals, DEFAULT_TOTAL_COMPLETED_TASKS_CHALLENGES, 'tasks');
 }

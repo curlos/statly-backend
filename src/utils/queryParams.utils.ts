@@ -86,7 +86,11 @@ export function buildSearchPatterns(req: Request): string[] | undefined {
 		? [searchText]
 		: useRegex
 			? [escapeRegex(searchText)]
-			: searchText.split(',').map(term => term.trim()).filter(Boolean).map(escapeRegex);
+			: searchText
+					.split(',')
+					.map((term) => term.trim())
+					.filter(Boolean)
+					.map(escapeRegex);
 
 	if (terms.length === 0) {
 		return undefined;
@@ -94,7 +98,7 @@ export function buildSearchPatterns(req: Request): string[] | undefined {
 
 	const patterns = matchAll ? terms : [terms.join('|')];
 
-	return patterns.map(pattern => {
+	return patterns.map((pattern) => {
 		const withWholeWord = wholeWord ? `\\b(?:${pattern})\\b` : pattern;
 		return caseSensitive ? withWholeWord : `(?i)${withWholeWord}`;
 	});
@@ -109,23 +113,25 @@ export function buildSearchPatterns(req: Request): string[] | undefined {
  */
 export function parseBaseQueryParams(req: Request): BaseQueryParams {
 	// Combine projects from both TickTick and Todoist, plus categories
-	const ticktickProjects = req.query['projects-ticktick'] as string || '';
-	const todoistProjects = req.query['projects-todoist'] as string || '';
-	const categories = req.query['categories'] as string || '';
+	const ticktickProjects = (req.query['projects-ticktick'] as string) || '';
+	const todoistProjects = (req.query['projects-todoist'] as string) || '';
+	const categories = (req.query['categories'] as string) || '';
 
 	// Combine all project IDs (projects-ticktick, projects-todoist, and categories) and split into array
-	const allProjectIdsString = [ticktickProjects, todoistProjects, categories]
-		.filter(p => p && p.trim())
-		.join(',');
+	const allProjectIdsString = [ticktickProjects, todoistProjects, categories].filter((p) => p && p.trim()).join(',');
 
 	const projectIds = allProjectIdsString ? allProjectIdsString.split(',') : [];
 
 	// Map frontend app names to database source discriminators
 	const focusAppNames: string[] = req.query['focus-apps'] ? (req.query['focus-apps'] as string).split(',') : [];
-	const focusAppSources: string[] = focusAppNames.map(appName => APP_SOURCE_MAPPING[appName]).filter(Boolean);
+	const focusAppSources: string[] = focusAppNames.map((appName) => APP_SOURCE_MAPPING[appName]).filter(Boolean);
 
-	const toDoListAppNames: string[] = req.query['to-do-list-apps'] ? (req.query['to-do-list-apps'] as string).split(',') : [];
-	const toDoListAppSources: string[] = toDoListAppNames.map(appName => TASK_APP_SOURCE_MAPPING[appName]).filter(Boolean);
+	const toDoListAppNames: string[] = req.query['to-do-list-apps']
+		? (req.query['to-do-list-apps'] as string).split(',')
+		: [];
+	const toDoListAppSources: string[] = toDoListAppNames
+		.map((appName) => TASK_APP_SOURCE_MAPPING[appName])
+		.filter(Boolean);
 
 	// Parse emotions query param
 	const emotions: string[] = req.query['emotions'] ? (req.query['emotions'] as string).split(',') : [];

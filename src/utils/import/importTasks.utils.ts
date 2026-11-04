@@ -1,13 +1,17 @@
 import { Types, Model } from 'mongoose';
-import { TaskTickTick, TaskTodoist } from "../../models/TaskModel";
-import type { ImportCategoryResult } from "./importBackup.utils";
+import { TaskTickTick, TaskTodoist } from '../../models/TaskModel';
+import type { ImportCategoryResult } from './importBackup.utils';
 import { ImportableTaskDocument } from '../../types/import';
 import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 /**
  * Validates a task document against required fields
  */
-export function validateTask(doc: ImportableTaskDocument, requiredFields: string[], validSourcesSet: Set<string>): { valid: boolean; error?: string } {
+export function validateTask(
+	doc: ImportableTaskDocument,
+	requiredFields: string[],
+	validSourcesSet: Set<string>
+): { valid: boolean; error?: string } {
 	for (const field of requiredFields) {
 		if (!(field in doc)) {
 			return { valid: false, error: `Missing required field: ${field}` };
@@ -29,7 +33,10 @@ export function validateTask(doc: ImportableTaskDocument, requiredFields: string
 /**
  * Imports tasks with validation
  */
-export async function importTasks(tasks: ImportableTaskDocument[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
+export async function importTasks(
+	tasks: ImportableTaskDocument[],
+	userId: Types.ObjectId
+): Promise<ImportCategoryResult> {
 	const errors: string[] = [];
 
 	// Declare validation constants once for all tasks
@@ -76,7 +83,7 @@ export async function importTasks(tasks: ImportableTaskDocument[], userId: Types
 	for (const [source, sourceTasks] of Object.entries(tasksBySource)) {
 		if (sourceTasks.length === 0) continue;
 
-		const bulkOps = sourceTasks.map(task => ({
+		const bulkOps = sourceTasks.map((task) => ({
 			updateOne: {
 				filter: { id: task.id, userId },
 				update: { $set: task },
@@ -94,7 +101,9 @@ export async function importTasks(tasks: ImportableTaskDocument[], userId: Types
 
 			// Warn if duplicate task IDs were found
 			if (matchedNotModified > 0) {
-				errors.push(`Warning: ${matchedNotModified} duplicate task IDs found in ${source} - only unique tasks imported. Consider re-exporting your data to get a clean backup.`);
+				errors.push(
+					`Warning: ${matchedNotModified} duplicate task IDs found in ${source} - only unique tasks imported. Consider re-exporting your data to get a clean backup.`
+				);
 			}
 		} catch (error) {
 			errors.push(`Bulk insert error for ${source}: ${error instanceof Error ? error.message : 'Unknown error'}`);

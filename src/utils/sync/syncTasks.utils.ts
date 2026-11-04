@@ -1,16 +1,19 @@
 import { Types } from 'mongoose';
-import { FocusRecordTickTick } from "../../models/FocusRecord";
-import { TaskTickTick, TaskTodoist } from "../../models/TaskModel";
-import { getOrCreateSyncMetadata, getTickTickCookie } from "../helpers.utils";
-import { fetchAllTickTickTasks } from "../ticktick.utils";
-import { getAllTodoistTasks } from "../task.utils";
-import { TickTickTaskRaw } from "../../types/externalApis";
-import { executeBatchedBulkWrite } from "../bulkWrite.utils";
+import { FocusRecordTickTick } from '../../models/FocusRecord';
+import { TaskTickTick, TaskTodoist } from '../../models/TaskModel';
+import { getOrCreateSyncMetadata, getTickTickCookie } from '../helpers.utils';
+import { fetchAllTickTickTasks } from '../ticktick.utils';
+import { getAllTodoistTasks } from '../task.utils';
+import { TickTickTaskRaw } from '../../types/externalApis';
+import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
-export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
-	archivedProjectIds?: string[];
-	getTasksFromNonArchivedProjects?: boolean;
-}) {
+export async function syncTickTickTasks(
+	userId: Types.ObjectId,
+	options?: {
+		archivedProjectIds?: string[];
+		getTasksFromNonArchivedProjects?: boolean;
+	}
+) {
 	// Get or create sync metadata
 	const syncMetadata = await getOrCreateSyncMetadata(userId, 'tickTickTasks');
 
@@ -19,11 +22,11 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 
 	const lastSyncTime = syncMetadata.lastSyncTime;
 	// fetchAllTickTickTasks returns ITask[] but we know they're all ITaskTickTick
-	const tickTickTasks = await fetchAllTickTickTasks(cookie, {
+	const tickTickTasks = (await fetchAllTickTickTasks(cookie, {
 		archivedProjectIds: options?.archivedProjectIds,
-		getTasksFromNonArchivedProjects: options?.getTasksFromNonArchivedProjects
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	}) as any[];
+		getTasksFromNonArchivedProjects: options?.getTasksFromNonArchivedProjects,
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	})) as any[];
 
 	// Calculate threshold for recently completed tasks (1 week ago)
 	const oneWeekAgo = new Date();
@@ -33,7 +36,7 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 	const taskIdsToCheck = tickTickTasks.map((t) => t.id);
 	const existingTaskIds = await TaskTickTick.distinct('id', {
 		userId,
-		id: { $in: taskIdsToCheck }
+		id: { $in: taskIdsToCheck },
 	});
 	const existingTaskIdsSet = new Set(existingTaskIds);
 
@@ -74,7 +77,7 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 
 	const bulkOps = [];
 	// Track modified tasks for focus record updates
-	const modifiedTasksMap: Record<string, { projectId: string, ancestorIds: string[], title: string }> = {};
+	const modifiedTasksMap: Record<string, { projectId: string; ancestorIds: string[]; title: string }> = {};
 
 	for (const task of tickTickTasks) {
 		// Check if task needs updating based on modifiedTime
@@ -103,7 +106,7 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 			modifiedTasksMap[task.id as string] = {
 				projectId: task.projectId as string,
 				ancestorIds: ancestorIds,
-				title: task.title as string
+				title: task.title as string,
 			};
 
 			// Normalize the FULL task
@@ -186,12 +189,12 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 
 		// Find all focus records that contain any of the modified tasks
 		// Only fetch fields we need (id and tasks) for better performance
-		const focusRecordsToUpdate = await FocusRecordTickTick.find({
+		const focusRecordsToUpdate = (await FocusRecordTickTick.find({
 			userId,
-			'tasks.taskId': { $in: modifiedTaskIds }
+			'tasks.taskId': { $in: modifiedTaskIds },
 		})
-		.select('id tasks')
-		.lean() as Array<{
+			.select('id tasks')
+			.lean()) as Array<{
 			id: string;
 			tasks?: Array<{ taskId: string; projectId?: string; ancestorIds?: string[]; title?: string }>;
 		}>;
@@ -209,7 +212,8 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 
 				// Compare projectId, ancestorIds, and title
 				const projectIdChanged = task.projectId !== modifiedTask.projectId;
-				const ancestorIdsChanged = JSON.stringify(task.ancestorIds || []) !== JSON.stringify(modifiedTask.ancestorIds);
+				const ancestorIdsChanged =
+					JSON.stringify(task.ancestorIds || []) !== JSON.stringify(modifiedTask.ancestorIds);
 				const titleChanged = task.title !== modifiedTask.title;
 
 				if (projectIdChanged || ancestorIdsChanged || titleChanged) {
@@ -225,8 +229,8 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 				focusRecordBulkOps.push({
 					updateOne: {
 						filter: { id: focusRecord.id, userId },
-						update: { $set: updateFields }
-					}
+						update: { $set: updateFields },
+					},
 				});
 			}
 		}
@@ -248,10 +252,12 @@ export async function syncTickTickTasks(userId: Types.ObjectId, options?: {
 		matchedCount: result.matchedCount,
 		totalOperations: bulkOps.length,
 		lastSyncTime: syncMetadata.lastSyncTime,
-		focusRecordsUpdated: focusRecordResult ? {
-			modifiedCount: focusRecordResult.modifiedCount,
-			matchedCount: focusRecordResult.matchedCount
-		} : null
+		focusRecordsUpdated: focusRecordResult
+			? {
+					modifiedCount: focusRecordResult.modifiedCount,
+					matchedCount: focusRecordResult.matchedCount,
+				}
+			: null,
 	};
 }
 
@@ -288,7 +294,9 @@ export async function syncTodoistTasks(userId: Types.ObjectId) {
 
 		while (currentParentId && tasksById[currentParentId]) {
 			chain.push(currentParentId);
-			currentParentId = (tasksById[currentParentId].v2_parent_id as string | undefined) || (tasksById[currentParentId].parent_id as string | undefined);
+			currentParentId =
+				(tasksById[currentParentId].v2_parent_id as string | undefined) ||
+				(tasksById[currentParentId].parent_id as string | undefined);
 		}
 
 		// Cache the chain for this parent (excluding the task itself)

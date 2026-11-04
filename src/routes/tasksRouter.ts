@@ -1,6 +1,9 @@
 import express from 'express';
 import { getTasksChallengesHandler } from '../controllers/challengesController';
-import { getDaysWithCompletedTasksHandler, exportDaysWithCompletedTasksHandler } from '../controllers/daysWithCompletedTasksController';
+import {
+	getDaysWithCompletedTasksHandler,
+	exportDaysWithCompletedTasksHandler,
+} from '../controllers/daysWithCompletedTasksController';
 import { getTasksMedalsHandler } from '../controllers/medalsController';
 import { CustomRequest } from '../interfaces/CustomRequest';
 import { verifyToken } from '../middleware/verifyToken';
@@ -39,7 +42,7 @@ router.get('/all', verifyToken, async (req: CustomRequest, res) => {
 			total,
 			page,
 			totalPages,
-			limit
+			limit,
 		});
 	} catch (error) {
 		res.status(500).json({

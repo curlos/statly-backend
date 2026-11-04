@@ -27,7 +27,10 @@ export const connectTestDb = async () => {
 
 	try {
 		// The name is an option so it replaces any database named in the URI, along with keeping its other options
-		await mongoose.connect(configuredUri || 'mongodb://localhost:27017', { dbName, serverSelectionTimeoutMS: 2000 });
+		await mongoose.connect(configuredUri || 'mongodb://localhost:27017', {
+			dbName,
+			serverSelectionTimeoutMS: 2000,
+		});
 		await dropStaleTestDbs();
 		return true;
 	} catch (error) {

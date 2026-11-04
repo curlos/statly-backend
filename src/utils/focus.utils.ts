@@ -13,7 +13,7 @@ import { parseDateInTimezone } from './timezone.utils';
 const farAwayDateInMs = 2705792451783;
 
 export const fetchTickTickFocusRecords = async (cookie: string, userId: Types.ObjectId) => {
-	const localFocusData = await FocusRecordTickTick.find({ userId }).sort({ startTime: -1 }).limit(21).lean()
+	const localFocusData = await FocusRecordTickTick.find({ userId }).sort({ startTime: -1 }).limit(21).lean();
 
 	let fromMs = 0;
 	let toMs = farAwayDateInMs;
@@ -36,28 +36,30 @@ export const fetchTickTickFocusRecords = async (cookie: string, userId: Types.Ob
 		toMs = farAwayDateInMs;
 	}
 
-	const [focusDataPomos, focusDataStopwatch] = await handleTickTickApiCall(() => Promise.all([
-		axios.get(`https://api.ticktick.com/api/v2/pomodoros?from=${fromMs}&to=${toMs}`, {
-			headers: {
-				Cookie: cookie,
-			},
-		}),
-		axios.get(`https://api.ticktick.com/api/v2/pomodoros/timing?from=${fromMs}&to=${toMs}`, {
-			headers: {
-				Cookie: cookie,
-			},
-		})
-	]));
+	const [focusDataPomos, focusDataStopwatch] = await handleTickTickApiCall(() =>
+		Promise.all([
+			axios.get(`https://api.ticktick.com/api/v2/pomodoros?from=${fromMs}&to=${toMs}`, {
+				headers: {
+					Cookie: cookie,
+				},
+			}),
+			axios.get(`https://api.ticktick.com/api/v2/pomodoros/timing?from=${fromMs}&to=${toMs}`, {
+				headers: {
+					Cookie: cookie,
+				},
+			}),
+		])
+	);
 
 	// Add trackingMode to each record before combining
 	const pomodorosWithTrackingMode = focusDataPomos.data.map((record: Record<string, unknown>) => ({
 		...record,
-		trackingMode: 'pomodoro' as const
+		trackingMode: 'pomodoro' as const,
 	}));
 
 	const stopwatchesWithTrackingMode = focusDataStopwatch.data.map((record: Record<string, unknown>) => ({
 		...record,
-		trackingMode: 'stopwatch' as const
+		trackingMode: 'stopwatch' as const,
 	}));
 
 	const tickTickOneApiFocusData = [...pomodorosWithTrackingMode, ...stopwatchesWithTrackingMode];
@@ -131,7 +133,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: FocusRecordWith
 			title: task.title,
 			parentId: task.parentId ?? null,
 			ancestorIds: task.ancestorIds,
-			projectId: task.projectId ?? null
+			projectId: task.projectId ?? null,
 		};
 	});
 
@@ -147,14 +149,14 @@ export const addAncestorAndCompletedTasks = async (focusRecords: FocusRecordWith
 	// Create time ranges with buffer for each focus record
 	const timeRanges = focusRecords.map((r) => ({
 		start: new Date(r.startTime).getTime() - offsetMs,
-		end: new Date(r.endTime).getTime() + offsetMs
+		end: new Date(r.endTime).getTime() + offsetMs,
 	}));
 
 	// Sort by start time
 	timeRanges.sort((a, b) => a.start - b.start);
 
 	// Merge ranges if gap is less than 1 day
-	const mergedRanges: { start: number, end: number }[] = [];
+	const mergedRanges: { start: number; end: number }[] = [];
 	let currentRange = { start: timeRanges[0].start, end: timeRanges[0].end };
 
 	for (let i = 1; i < timeRanges.length; i++) {
@@ -192,22 +194,22 @@ export const addAncestorAndCompletedTasks = async (focusRecords: FocusRecordWith
 				$exists: true,
 				$ne: null,
 				$gte: new Date(mergedRanges[0].start),
-				$lte: new Date(mergedRanges[0].end)
-			}
+				$lte: new Date(mergedRanges[0].end),
+			},
 		})
-		.sort({ completedTime: 1 })
-		.select('title completedTime status -_id')
-		.lean();
+			.sort({ completedTime: 1 })
+			.select('title completedTime status -_id')
+			.lean();
 		allCompletedTasks = tasks as CompletedTask[];
 	} else {
 		// Multiple ranges - use $or to query all at once (single network roundtrip)
-		const orConditions = mergedRanges.map(range => ({
+		const orConditions = mergedRanges.map((range) => ({
 			completedTime: {
 				$exists: true,
 				$ne: null,
 				$gte: new Date(range.start),
-				$lte: new Date(range.end)
-			}
+				$lte: new Date(range.end),
+			},
 		}));
 
 		const tasks = await Task.find({ userId, $or: orConditions })
@@ -250,7 +252,7 @@ export const addAncestorAndCompletedTasks = async (focusRecords: FocusRecordWith
 		// Collect tasks only from relevant dates and filter by time
 		// Note: Tasks are already sorted by completedTime from the DB query
 		const completedTasks: CompletedTask[] = [];
-		relevantDates.forEach(dateKey => {
+		relevantDates.forEach((dateKey) => {
 			const tasksForDate = tasksByDate.get(dateKey) || [];
 			tasksForDate.forEach((task) => {
 				const taskTime = new Date(task.completedTime).getTime();
@@ -261,40 +263,38 @@ export const addAncestorAndCompletedTasks = async (focusRecords: FocusRecordWith
 		});
 
 		// Remove completedTime from tasks before adding to focus record (frontend only needs title and status)
-		const completedTasksForResponse = completedTasks.map(task => ({
+		const completedTasksForResponse = completedTasks.map((task) => ({
 			title: task.title,
-			status: task.status
+			status: task.status,
 		}));
 
 		return {
 			...record,
-			completedTasks: completedTasksForResponse
+			completedTasks: completedTasksForResponse,
 		};
 	});
 
 	return { focusRecordsWithCompletedTasks, ancestorTasksById };
-}
+};
 
 // Helper function to fetch session app focus records with no breaks
 export const fetchSessionFocusRecordsWithNoBreaks = async (): Promise<SessionRecordRaw[]> => {
-	const sessionAppFocusData = await getJsonData('session-app-data') as SessionRecordRaw[];
+	const sessionAppFocusData = (await getJsonData('session-app-data')) as SessionRecordRaw[];
 
-	const focusRecordsWithNoBreaks = sessionAppFocusData.filter(
-		(focusRecord) => focusRecord['type'] === 'fullFocus'
-	);
+	const focusRecordsWithNoBreaks = sessionAppFocusData.filter((focusRecord) => focusRecord['type'] === 'fullFocus');
 
 	return focusRecordsWithNoBreaks;
-}
+};
 
 // Helper function to fetch be-focused app focus records
 export const fetchBeFocusedAppFocusRecords = async (): Promise<BeFocusedRecordRaw[]> => {
-	const beFocusedAppFocusData = await getJsonData('be-focused-app-data') as BeFocusedRecordRaw[];
+	const beFocusedAppFocusData = (await getJsonData('be-focused-app-data')) as BeFocusedRecordRaw[];
 	return beFocusedAppFocusData;
-}
+};
 
 // Helper function to fetch forest app focus records with optional date filter
 export const fetchForestAppFocusRecords = async (beforeSessionApp?: boolean): Promise<ForestRecordRaw[]> => {
-	const forestAppFocusData = await getJsonData('forest-app-data') as ForestRecordRaw[];
+	const forestAppFocusData = (await getJsonData('forest-app-data')) as ForestRecordRaw[];
 
 	if (beforeSessionApp) {
 		const cutoffDate = new Date('April 14, 2021');
@@ -309,13 +309,13 @@ export const fetchForestAppFocusRecords = async (beforeSessionApp?: boolean): Pr
 	}
 
 	return forestAppFocusData;
-}
+};
 
 // Helper function to fetch tide app focus records
 export const fetchTideAppFocusRecords = async (): Promise<TideRecordRaw[]> => {
-	const tideAppFocusData = await getJsonData('tide-ios-app-focus-records') as TideRecordRaw[];
+	const tideAppFocusData = (await getJsonData('tide-ios-app-focus-records')) as TideRecordRaw[];
 	return tideAppFocusData;
-}
+};
 
 // ============================================================================
 // Duration Adjustment Helper for Midnight-Crossing Records
@@ -325,7 +325,11 @@ export const fetchTideAppFocusRecords = async (): Promise<TideRecordRaw[]> => {
  * Adds duration adjustment stages to a pipeline for records that cross midnight beyond date boundaries.
  * Only adjusts records where crossesMidnight === true.
  */
-export function addMidnightRecordDurationAdjustment(pipeline: PipelineStage[], startDateBoundary: Date | null, endDateBoundary: Date | null) {
+export function addMidnightRecordDurationAdjustment(
+	pipeline: PipelineStage[],
+	startDateBoundary: Date | null,
+	endDateBoundary: Date | null
+) {
 	// Only process records that cross midnight - everything inside uses conditional logic
 	// based on the crossesMidnight field
 	pipeline.push({
@@ -333,23 +337,19 @@ export function addMidnightRecordDurationAdjustment(pipeline: PipelineStage[], s
 			// Calculate effective start and end times (only for crossesMidnight records)
 			effectiveStartTime: {
 				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
-					then: startDateBoundary
-						? { $max: ["$startTime", startDateBoundary] }
-						: "$startTime",
-					else: "$startTime"
-				}
+					if: { $eq: ['$crossesMidnight', true] },
+					then: startDateBoundary ? { $max: ['$startTime', startDateBoundary] } : '$startTime',
+					else: '$startTime',
+				},
 			},
 			effectiveEndTime: {
 				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
-					then: endDateBoundary
-						? { $min: ["$endTime", endDateBoundary] }
-						: "$endTime",
-					else: "$endTime"
-				}
-			}
-		}
+					if: { $eq: ['$crossesMidnight', true] },
+					then: endDateBoundary ? { $min: ['$endTime', endDateBoundary] } : '$endTime',
+					else: '$endTime',
+				},
+			},
+		},
 	});
 
 	pipeline.push({
@@ -357,50 +357,55 @@ export function addMidnightRecordDurationAdjustment(pipeline: PipelineStage[], s
 			// First, adjust each task's duration using its actual start/end times
 			adjustedTasks: {
 				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
+					if: { $eq: ['$crossesMidnight', true] },
 					then: {
 						$map: {
-							input: "$tasks",
-							as: "task",
+							input: '$tasks',
+							as: 'task',
 							in: {
 								$mergeObjects: [
-									"$$task",
+									'$$task',
 									{
 										duration: {
 											// Calculate task's effective time range within the date boundaries
 											$let: {
 												vars: {
 													taskEffectiveStart: startDateBoundary
-														? { $max: ["$$task.startTime", startDateBoundary] }
-														: "$$task.startTime",
+														? { $max: ['$$task.startTime', startDateBoundary] }
+														: '$$task.startTime',
 													taskEffectiveEnd: endDateBoundary
-														? { $min: ["$$task.endTime", endDateBoundary] }
-														: "$$task.endTime"
+														? { $min: ['$$task.endTime', endDateBoundary] }
+														: '$$task.endTime',
 												},
 												in: {
 													// Only count duration if task overlaps with the date range
 													$cond: {
-														if: { $gte: ["$$taskEffectiveEnd", "$$taskEffectiveStart"] },
+														if: { $gte: ['$$taskEffectiveEnd', '$$taskEffectiveStart'] },
 														then: {
 															$divide: [
-																{ $subtract: ["$$taskEffectiveEnd", "$$taskEffectiveStart"] },
-																1000
-															]
+																{
+																	$subtract: [
+																		'$$taskEffectiveEnd',
+																		'$$taskEffectiveStart',
+																	],
+																},
+																1000,
+															],
 														},
-														else: 0
-													}
-												}
-											}
-										}
-									}
-								]
-							}
-						}
+														else: 0,
+													},
+												},
+											},
+										},
+									},
+								],
+							},
+						},
 					},
-					else: "$tasks"
-				}
-			}
-		}
+					else: '$tasks',
+				},
+			},
+		},
 	});
 
 	pipeline.push({
@@ -411,26 +416,26 @@ export function addMidnightRecordDurationAdjustment(pipeline: PipelineStage[], s
 			// 2. Tasks may not span the entire clipped time range
 			adjustedDuration: {
 				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
+					if: { $eq: ['$crossesMidnight', true] },
 					then: {
 						$reduce: {
-							input: "$adjustedTasks",
+							input: '$adjustedTasks',
 							initialValue: 0,
-							in: { $add: ["$$value", "$$this.duration"] }
-						}
+							in: { $add: ['$$value', '$$this.duration'] },
+						},
 					},
-					else: "$duration"
-				}
-			}
-		}
+					else: '$duration',
+				},
+			},
+		},
 	});
 
 	// Replace duration and tasks with adjusted versions
 	pipeline.push({
 		$addFields: {
-			duration: "$adjustedDuration",
-			tasks: "$adjustedTasks"
-		}
+			duration: '$adjustedDuration',
+			tasks: '$adjustedTasks',
+		},
 	});
 }
 
@@ -470,32 +475,36 @@ export function addYearAgnosticMidnightAdjustment(
 		$addFields: {
 			adjustedTasks: {
 				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
+					if: { $eq: ['$crossesMidnight', true] },
 					then: {
 						$map: {
-							input: "$tasks",
-							as: "task",
+							input: '$tasks',
+							as: 'task',
 							in: {
 								$mergeObjects: [
-									"$$task",
+									'$$task',
 									{
 										duration: {
 											$let: {
 												vars: {
 													// Extract task's year, month, day from its start time
-													taskStartYear: { $year: { date: "$$task.startTime", timezone } },
-													taskStartMonth: { $month: { date: "$$task.startTime", timezone } },
-													taskStartDay: { $dayOfMonth: { date: "$$task.startTime", timezone } },
-													taskEndYear: { $year: { date: "$$task.endTime", timezone } },
-													taskEndMonth: { $month: { date: "$$task.endTime", timezone } },
-													taskEndDay: { $dayOfMonth: { date: "$$task.endTime", timezone } },
+													taskStartYear: { $year: { date: '$$task.startTime', timezone } },
+													taskStartMonth: { $month: { date: '$$task.startTime', timezone } },
+													taskStartDay: {
+														$dayOfMonth: { date: '$$task.startTime', timezone },
+													},
+													taskEndYear: { $year: { date: '$$task.endTime', timezone } },
+													taskEndMonth: { $month: { date: '$$task.endTime', timezone } },
+													taskEndDay: { $dayOfMonth: { date: '$$task.endTime', timezone } },
 												},
 												in: {
 													$let: {
 														vars: {
 															// Detect if task wraps around year boundary in year-agnostic terms
 															// This happens when task month > query month (e.g., Dec > Jan means task is from "previous year")
-															taskWrapsYearBoundary: { $gt: ["$$taskStartMonth", startMonth] }
+															taskWrapsYearBoundary: {
+																$gt: ['$$taskStartMonth', startMonth],
+															},
 														},
 														in: {
 															$let: {
@@ -504,20 +513,23 @@ export function addYearAgnosticMidnightAdjustment(
 																	// If task wraps year boundary, query occurs in next year
 																	clipStartYear: {
 																		$cond: {
-																			if: "$$taskWrapsYearBoundary",
-																			then: { $add: ["$$taskStartYear", 1] },  // Next year
-																			else: "$$taskStartYear"                   // Same year
-																		}
+																			if: '$$taskWrapsYearBoundary',
+																			then: { $add: ['$$taskStartYear', 1] }, // Next year
+																			else: '$$taskStartYear', // Same year
+																		},
 																	},
 																	clipEndYear: {
 																		$cond: {
 																			if: {
-																				$or: ["$$taskWrapsYearBoundary", queryFilterCrossesYearBoundary]
+																				$or: [
+																					'$$taskWrapsYearBoundary',
+																					queryFilterCrossesYearBoundary,
+																				],
 																			},
-																			then: { $add: ["$$taskStartYear", 1] },  // Next year if task wraps OR query crosses year
-																			else: "$$taskStartYear"                   // Same year
-																		}
-																	}
+																			then: { $add: ['$$taskStartYear', 1] }, // Next year if task wraps OR query crosses year
+																			else: '$$taskStartYear', // Same year
+																		},
+																	},
 																},
 																in: {
 																	$let: {
@@ -525,88 +537,108 @@ export function addYearAgnosticMidnightAdjustment(
 																			// Construct actual Date boundaries
 																			clipStart: {
 																				$dateFromParts: {
-																					year: "$$clipStartYear",
+																					year: '$$clipStartYear',
 																					month: startMonth,
 																					day: startDay,
-																					timezone
-																				}
+																					timezone,
+																				},
 																			},
 																			clipEnd: {
 																				$dateFromParts: {
-																					year: "$$clipEndYear",
+																					year: '$$clipEndYear',
 																					month: endMonth,
 																					day: endDay,
 																					hour: 23,
 																					minute: 59,
 																					second: 59,
-																					timezone
-																				}
-																			}
-																		},
-																in: {
-																	$let: {
-																		vars: {
-																			// Clip task times to boundaries
-																			effectiveStart: { $max: ["$$task.startTime", "$$clipStart"] },
-																			effectiveEnd: { $min: ["$$task.endTime", "$$clipEnd"] }
+																					timezone,
+																				},
+																			},
 																		},
 																		in: {
-																			// Only count duration if task overlaps with the month-day range
-																			$cond: {
-																				if: { $gte: ["$$effectiveEnd", "$$effectiveStart"] },
-																				then: {
-																					$divide: [
-																						{ $subtract: ["$$effectiveEnd", "$$effectiveStart"] },
-																						1000
-																					]
+																			$let: {
+																				vars: {
+																					// Clip task times to boundaries
+																					effectiveStart: {
+																						$max: [
+																							'$$task.startTime',
+																							'$$clipStart',
+																						],
+																					},
+																					effectiveEnd: {
+																						$min: [
+																							'$$task.endTime',
+																							'$$clipEnd',
+																						],
+																					},
 																				},
-																				else: 0
-																			}
-																		}
-																	}
-																}
-															}
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-						]
-					}
-				}
+																				in: {
+																					// Only count duration if task overlaps with the month-day range
+																					$cond: {
+																						if: {
+																							$gte: [
+																								'$$effectiveEnd',
+																								'$$effectiveStart',
+																							],
+																						},
+																						then: {
+																							$divide: [
+																								{
+																									$subtract: [
+																										'$$effectiveEnd',
+																										'$$effectiveStart',
+																									],
+																								},
+																								1000,
+																							],
+																						},
+																						else: 0,
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								],
+							},
+						},
+					},
+					else: '$tasks',
+				},
 			},
-			else: "$tasks"
-				}
-			}
-		}
+		},
 	});
 
 	pipeline.push({
 		$addFields: {
 			adjustedDuration: {
 				$cond: {
-					if: { $eq: ["$crossesMidnight", true] },
+					if: { $eq: ['$crossesMidnight', true] },
 					then: {
 						$reduce: {
-							input: "$adjustedTasks",
+							input: '$adjustedTasks',
 							initialValue: 0,
-							in: { $add: ["$$value", "$$this.duration"] }
-						}
+							in: { $add: ['$$value', '$$this.duration'] },
+						},
 					},
-					else: "$duration"
-				}
-			}
-		}
+					else: '$duration',
+				},
+			},
+		},
 	});
 
 	// Replace duration and tasks with adjusted versions
 	pipeline.push({
 		$addFields: {
-			duration: "$adjustedDuration",
-			tasks: "$adjustedTasks"
-		}
+			duration: '$adjustedDuration',
+			tasks: '$adjustedTasks',
+		},
 	});
 }

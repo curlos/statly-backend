@@ -1,10 +1,6 @@
 import express from 'express';
 import { verifyToken } from '../middleware/verifyToken';
-import {
-	getTodayFocus,
-	getStreakHistory,
-	getCombinedStreakHistory
-} from '../controllers/streaksController';
+import { getTodayFocus, getStreakHistory, getCombinedStreakHistory } from '../controllers/streaksController';
 
 const router = express.Router();
 

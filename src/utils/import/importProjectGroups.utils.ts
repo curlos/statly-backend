@@ -1,13 +1,16 @@
 import { Types } from 'mongoose';
-import ProjectGroupTickTick from "../../models/ProjectGroupModel";
-import type { ImportCategoryResult } from "./importBackup.utils";
+import ProjectGroupTickTick from '../../models/ProjectGroupModel';
+import type { ImportCategoryResult } from './importBackup.utils';
 import { ImportableProjectGroupDocument } from '../../types/import';
 import { executeBatchedBulkWrite } from '../bulkWrite.utils';
 
 /**
  * Validates a project group document against required fields
  */
-export function validateProjectGroup(doc: ImportableProjectGroupDocument, requiredFields: string[]): { valid: boolean; error?: string } {
+export function validateProjectGroup(
+	doc: ImportableProjectGroupDocument,
+	requiredFields: string[]
+): { valid: boolean; error?: string } {
 	for (const field of requiredFields) {
 		if (!(field in doc)) {
 			return { valid: false, error: `Missing required field: ${field}` };
@@ -20,7 +23,10 @@ export function validateProjectGroup(doc: ImportableProjectGroupDocument, requir
 /**
  * Imports project groups with validation
  */
-export async function importProjectGroups(projectGroups: ImportableProjectGroupDocument[], userId: Types.ObjectId): Promise<ImportCategoryResult> {
+export async function importProjectGroups(
+	projectGroups: ImportableProjectGroupDocument[],
+	userId: Types.ObjectId
+): Promise<ImportCategoryResult> {
 	const errors: string[] = [];
 
 	// Declare validation constants once for all project groups
@@ -60,7 +66,9 @@ export async function importProjectGroups(projectGroups: ImportableProjectGroupD
 			modified = result.modifiedCount;
 			matched = result.matchedCount - result.modifiedCount;
 		} catch (error) {
-			errors.push(`Bulk insert error for project groups: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			errors.push(
+				`Bulk insert error for project groups: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
 		}
 	}
 

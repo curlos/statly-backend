@@ -11,36 +11,36 @@ import settingsRouter from './routes/userSettingsRouter';
 import deleteRouter from './routes/deleteRouter';
 import streaksRouter from './routes/streaksRouter';
 import focusRecordsRouter from './routes/focusRecordsRouter';
-import tasksRouter from './routes/tasksRouter'
-import syncRouter from './routes/syncRouter'
-import projectsRouter from './routes/projectsRouter'
-import statsRouter from './routes/statsRouter'
-import importRouter from './routes/importRouter'
-import customImagesRouter from './routes/customImagesRouter'
-import customImageFoldersRouter from './routes/customImageFoldersRouter'
+import tasksRouter from './routes/tasksRouter';
+import syncRouter from './routes/syncRouter';
+import projectsRouter from './routes/projectsRouter';
+import statsRouter from './routes/statsRouter';
+import importRouter from './routes/importRouter';
+import customImagesRouter from './routes/customImagesRouter';
+import customImageFoldersRouter from './routes/customImageFoldersRouter';
 
 dotenv.config();
 
 const app = express();
 
 const allowedOrigins = [
-  'http://localhost:5173', // local frontend site
-  process.env.MOBILE_ORIGIN, // mobile testing (iPhone/iPad) - set in .env
-  'https://statly-pi.vercel.app' // deployed frontend site
+	'http://localhost:5173', // local frontend site
+	process.env.MOBILE_ORIGIN, // mobile testing (iPhone/iPad) - set in .env
+	'https://statly-pi.vercel.app', // deployed frontend site
 ].filter(Boolean); // Remove undefined/empty values
 
 // ✅ Dynamically allow based on origin
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true, // Optional if using cookies/auth headers
-  })
+	cors({
+		origin: (origin, callback) => {
+			if (!origin || allowedOrigins.includes(origin)) {
+				callback(null, true);
+			} else {
+				callback(new Error('Not allowed by CORS'));
+			}
+		},
+		credentials: true, // Optional if using cookies/auth headers
+	})
 );
 
 // ✅ Handle preflight
@@ -64,7 +64,7 @@ app.use(express.json()); // Middleware to parse JSON bodies
 app.get('/health', (req, res) => {
 	res.status(200).json({
 		status: 'ok',
-		timestamp: new Date().toISOString()
+		timestamp: new Date().toISOString(),
 	});
 });
 

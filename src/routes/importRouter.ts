@@ -18,7 +18,14 @@ import { IUserSettings } from '../models/UserSettingsModel';
 import { ICustomImage } from '../models/CustomImageModel';
 import { ICustomImageFolder } from '../models/CustomImageFolderModel';
 
-type ImportableDocument = IFocusRecord | ITask | IProject | IProjectGroup | IUserSettings | ICustomImage | ICustomImageFolder;
+type ImportableDocument =
+	| IFocusRecord
+	| ITask
+	| IProject
+	| IProjectGroup
+	| IUserSettings
+	| ICustomImage
+	| ICustomImageFolder;
 
 const router = express.Router();
 
@@ -56,16 +63,22 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 				if (parsedData.response && Array.isArray(parsedData.response)) {
 					// Chunked backup format: { fileName, apiEndpointName, chunkInfo, response: [...] }
 					if (parsedData.response.length === 0) {
-						parseErrors.push(`File ${file.originalname}: Contains empty response array (no documents to import)`);
+						parseErrors.push(
+							`File ${file.originalname}: Contains empty response array (no documents to import)`
+						);
 					} else {
 						documents.push(...parsedData.response);
 					}
 				} else {
 					// Invalid format - skip this file
-					parseErrors.push(`File ${file.originalname}: Invalid format. Expected chunked backup format with 'response' array.`);
+					parseErrors.push(
+						`File ${file.originalname}: Invalid format. Expected chunked backup format with 'response' array.`
+					);
 				}
 			} catch (error) {
-				parseErrors.push(`File ${file.originalname}: ${error instanceof Error ? error.message : 'Parse error'}`);
+				parseErrors.push(
+					`File ${file.originalname}: ${error instanceof Error ? error.message : 'Parse error'}`
+				);
 			}
 		}
 
@@ -113,15 +126,27 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 						customImageFolders.push(doc as ICustomImageFolder);
 						break;
 					default:
-						parseErrors.push(`Document at index ${index}: Unknown source type: ${(doc as { source?: string }).source || 'missing'}`);
+						parseErrors.push(
+							`Document at index ${index}: Unknown source type: ${(doc as { source?: string }).source || 'missing'}`
+						);
 				}
 			} catch (error) {
-				parseErrors.push(`Document at index ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+				parseErrors.push(
+					`Document at index ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`
+				);
 			}
 		});
 
 		// Import each category in parallel
-		const [focusRecordsResult, tasksResult, projectsResult, projectGroupsResult, userSettingsResult, customImagesResult, customImageFoldersResult] = await Promise.all([
+		const [
+			focusRecordsResult,
+			tasksResult,
+			projectsResult,
+			projectGroupsResult,
+			userSettingsResult,
+			customImagesResult,
+			customImageFoldersResult,
+		] = await Promise.all([
 			importFocusRecords(focusRecords, userId),
 			importTasks(tasks, userId),
 			importProjects(projects, userId),
@@ -171,8 +196,13 @@ router.post('/backup', verifyToken, upload.array('fileToImport'), async (req: Cu
 			customImageFoldersResult.matched;
 
 		const totalFailed =
-			focusRecordsResult.failed + tasksResult.failed + projectsResult.failed + projectGroupsResult.failed +
-			userSettingsResult.failed + customImagesResult.failed + customImageFoldersResult.failed;
+			focusRecordsResult.failed +
+			tasksResult.failed +
+			projectsResult.failed +
+			projectGroupsResult.failed +
+			userSettingsResult.failed +
+			customImagesResult.failed +
+			customImageFoldersResult.failed;
 
 		// Combine all errors
 		const allErrors = [

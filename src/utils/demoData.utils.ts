@@ -28,28 +28,32 @@ export const shiftUserDates = async (userId: Types.ObjectId, days: number, sessi
 	const ms = days * MS_PER_DAY;
 
 	// The native collection is used since Mongoose would try to cast these date expressions to dates.
-	await FocusRecord.collection.updateMany({ userId }, [
-		{
-			$set: {
-				...shiftedFields(FOCUS_RECORD_DATE_FIELDS, ms),
-				tasks: {
-					$map: {
-						input: { $ifNull: ['$tasks', []] },
-						as: 'task',
-						in: {
-							$mergeObjects: [
-								'$$task',
-								{
-									startTime: shiftedDate('$$task.startTime', ms),
-									endTime: shiftedDate('$$task.endTime', ms),
-								},
-							],
+	await FocusRecord.collection.updateMany(
+		{ userId },
+		[
+			{
+				$set: {
+					...shiftedFields(FOCUS_RECORD_DATE_FIELDS, ms),
+					tasks: {
+						$map: {
+							input: { $ifNull: ['$tasks', []] },
+							as: 'task',
+							in: {
+								$mergeObjects: [
+									'$$task',
+									{
+										startTime: shiftedDate('$$task.startTime', ms),
+										endTime: shiftedDate('$$task.endTime', ms),
+									},
+								],
+							},
 						},
 					},
 				},
 			},
-		},
-	], { session });
+		],
+		{ session }
+	);
 
 	await Task.collection.updateMany({ userId }, [{ $set: shiftedFields(TASK_DATE_FIELDS, ms) }], { session });
 };
@@ -127,7 +131,11 @@ export const replaceUserDocuments = async (source: Collection, target: Collectio
 	const documents = await source.find({ userId }).toArray();
 
 	if (documents.length > 0) {
-		await target.bulkWrite(documents.map((document) => ({ replaceOne: { filter: { _id: document._id }, replacement: document, upsert: true } })));
+		await target.bulkWrite(
+			documents.map((document) => ({
+				replaceOne: { filter: { _id: document._id }, replacement: document, upsert: true },
+			}))
+		);
 	}
 
 	await target.deleteMany({ userId, _id: { $nin: documents.map((document) => document._id) } });
@@ -140,6 +148,8 @@ export const assertNoSavedCookie = async (userSettings: Collection, userId: Type
 	const settings = await userSettings.findOne({ userId });
 
 	if (settings?.tickTickCookie) {
-		throw new Error('The demo account still has a TickTick cookie saved. Run setupDemoAccount.ts to clear it. Nothing was copied.');
+		throw new Error(
+			'The demo account still has a TickTick cookie saved. Run setupDemoAccount.ts to clear it. Nothing was copied.'
+		);
 	}
 };
