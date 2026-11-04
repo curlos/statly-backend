@@ -8,6 +8,14 @@ import { upload } from '../middleware/multer';
 import { verifyToken } from '../middleware/verifyToken';
 import { CustomRequest } from '../interfaces/CustomRequest';
 import { shiftDemoDataIfStale } from '../utils/demoData.utils';
+import FocusRecord from '../models/FocusRecord';
+import Task from '../models/TaskModel';
+import Project from '../models/ProjectModel';
+import ProjectGroupTickTick from '../models/ProjectGroupModel';
+import SyncMetadata from '../models/SyncMetadataModel';
+import CustomImage from '../models/CustomImageModel';
+import CustomImageFolder from '../models/CustomImageFolderModel';
+import ApiCallStatus from '../models/ApiCallStatusModel';
 
 // Email validation regex
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -435,6 +443,60 @@ router.put('/update-password', verifyToken, async (req: CustomRequest, res) => {
 		res.status(500).json({
 			message: 'Server error',
 			error: error instanceof Error ? error.message : 'Failed to update password',
+		});
+	}
+});
+
+// Permanently deletes the user's account, all of their data and their Cloudinary images after checking their password
+router.delete('/delete-account', verifyToken, async (req: CustomRequest, res) => {
+	try {
+		const userId = req.user?.userId;
+		const { password } = req.body || {};
+
+		if (!userId) {
+			return res.status(401).json({ message: 'Unauthorized' });
+		}
+
+		if (!password) {
+			return res.status(400).json({ message: 'Password is required' });
+		}
+
+		const user = await User.findById(userId);
+		if (!user) {
+			return res.status(404).json({ message: 'User not found' });
+		}
+
+		const isPasswordValid = await bcrypt.compare(password, user.password);
+		if (!isPasswordValid) {
+			return res.status(401).json({ message: 'Incorrect password' });
+		}
+
+		await Promise.all([
+			FocusRecord.deleteMany({ userId }),
+			Task.deleteMany({ userId }),
+			Project.deleteMany({ userId }),
+			ProjectGroupTickTick.deleteMany({ userId }),
+			SyncMetadata.deleteMany({ userId }),
+			UserSettings.deleteMany({ userId }),
+			CustomImage.deleteMany({ userId }),
+			CustomImageFolder.deleteMany({ userId }),
+			ApiCallStatus.deleteMany({ userId }),
+		]);
+
+		// A Cloudinary failure shouldn't stop the account from being deleted
+		try {
+			await cloudinary.api.delete_resources_by_prefix(`Statly/users/${userId}/`);
+		} catch (error) {
+			console.error('Failed to delete user images from Cloudinary:', error);
+		}
+
+		await User.deleteOne({ _id: userId });
+
+		res.json({ message: 'Account deleted successfully' });
+	} catch (error) {
+		res.status(500).json({
+			message: 'Server error',
+			error: error instanceof Error ? error.message : 'Failed to delete account',
 		});
 	}
 });
