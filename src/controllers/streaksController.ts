@@ -6,6 +6,7 @@ import {
 	getCombinedStreakHistoryForAllRings
 } from '../services/streaksService';
 import { parseBaseQueryParams } from '../utils/queryParams.utils';
+import { getGuestRingsOverride } from '../utils/guestSettings.utils';
 
 /**
  * GET /api/streaks/today
@@ -15,7 +16,7 @@ export async function getTodayFocus(req: CustomRequest, res: Response) {
 	try {
 		const userId = req.user!.userId;
 		const params = parseBaseQueryParams(req);
-		const result = await getTodayFocusDataForAllRings(params, userId);
+		const result = await getTodayFocusDataForAllRings(params, userId, getGuestRingsOverride(req));
 		res.json(result);
 	} catch (error) {
 		console.error('Error in getTodayFocus:', error);
@@ -32,7 +33,7 @@ export async function getStreakHistory(req: CustomRequest, res: Response) {
 	try {
 		const userId = req.user!.userId;
 		const params = parseBaseQueryParams(req);
-		const result = await getStreakHistoryForAllRings(params, userId);
+		const result = await getStreakHistoryForAllRings(params, userId, getGuestRingsOverride(req));
 		res.json(result);
 	} catch (error) {
 		console.error('Error in getStreakHistory:', error);
@@ -50,7 +51,7 @@ export async function getCombinedStreakHistory(req: CustomRequest, res: Response
 	try {
 		const userId = req.user!.userId;
 		const params = parseBaseQueryParams(req);
-		const result = await getCombinedStreakHistoryForAllRings(params, userId);
+		const result = await getCombinedStreakHistoryForAllRings(params, userId, getGuestRingsOverride(req));
 		res.json(result);
 	} catch (error: unknown) {
 		console.error('Error in getCombinedStreakHistory:', error);

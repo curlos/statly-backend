@@ -55,8 +55,8 @@ export type StreaksQueryParams = BaseQueryParams;
 /**
  * Get all active rings from user settings
  */
-function getActiveRings(userSettings: UserSettingsData): UserSettingsRing[] {
-	const rings = userSettings?.pages?.focusHoursGoal?.rings;
+function getActiveRings(userSettings: UserSettingsData, ringsOverride?: UserSettingsRing[]): UserSettingsRing[] {
+	const rings = ringsOverride ?? userSettings?.pages?.focusHoursGoal?.rings;
 
 	if (!rings || !Array.isArray(rings)) {
 		return [];
@@ -524,10 +524,11 @@ export async function getStreakHistoryForRing(
  */
 export async function getTodayFocusDataForAllRings(
 	params: StreaksQueryParams,
-	userId: Types.ObjectId
+	userId: Types.ObjectId,
+	ringsOverride?: UserSettingsRing[]
 ) {
 	const userSettings = await UserSettings.findOne({ userId });
-	const activeRings = getActiveRings((userSettings || {}) as UserSettingsData);
+	const activeRings = getActiveRings((userSettings || {}) as UserSettingsData, ringsOverride);
 
 	if (activeRings.length === 0) {
 		return { rings: [] };
@@ -551,10 +552,11 @@ export async function getTodayFocusDataForAllRings(
  */
 export async function getStreakHistoryForAllRings(
 	params: StreaksQueryParams,
-	userId: Types.ObjectId
+	userId: Types.ObjectId,
+	ringsOverride?: UserSettingsRing[]
 ) {
 	const userSettings = await UserSettings.findOne({ userId });
-	const activeRings = getActiveRings((userSettings || {}) as UserSettingsData);
+	const activeRings = getActiveRings((userSettings || {}) as UserSettingsData, ringsOverride);
 
 	if (activeRings.length === 0) {
 		return { rings: [] };
@@ -684,7 +686,8 @@ function calculateCombinedStreaks(
  */
 export async function getCombinedStreakHistoryForAllRings(
 	params: StreaksQueryParams,
-	userId: Types.ObjectId
+	userId: Types.ObjectId,
+	ringsOverride?: UserSettingsRing[]
 ) {
 	const userSettings = await UserSettings.findOne({ userId });
 	const emptyValue = {
@@ -697,11 +700,12 @@ export async function getCombinedStreakHistoryForAllRings(
 			rings: []
 		}
 
-	if (!userSettings) {
+	// A guest's own rings are enough even when the account has no saved settings
+	if (!userSettings && !ringsOverride) {
 		return emptyValue;
 	}
 
-	const activeRings = getActiveRings(userSettings as UserSettingsData);
+	const activeRings = getActiveRings((userSettings || {}) as UserSettingsData, ringsOverride);
 
 	if (activeRings.length === 0) {
 		return emptyValue;

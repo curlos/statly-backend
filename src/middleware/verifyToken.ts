@@ -15,7 +15,12 @@ export const verifyToken = (req: CustomRequest, res: Response, next: NextFunctio
 
 	try {
 		const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-		
+
+		// Guests share one demo account so they can only ever read from it
+		if (decoded.isGuest && req.method !== 'GET') {
+			return res.status(403).json({ message: 'Not available in guest mode' });
+		}
+
 		// Convert userId string to ObjectId for MongoDB queries
 		req.user = {
 			...decoded,

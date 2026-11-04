@@ -25,7 +25,10 @@ router.get('/', verifyToken, async (req: CustomRequest, res) => {
 				name: 'GENERAL',
 				sortOrder: 0
 			});
-			await generalFolder.save();
+			// A guest shares the demo account, so looking at the folders never saves anything for them. The folder is just included in what they get back.
+			if (!req.user?.isGuest) {
+				await generalFolder.save();
+			}
 			folders.unshift(generalFolder);
 		}
 

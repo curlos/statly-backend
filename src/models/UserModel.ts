@@ -7,6 +7,9 @@ interface IUser extends Document {
 	password: string;
 	name?: string;
 	profilePic?: string;
+	isDemo?: boolean;
+	demoOriginalNewestFocusAt?: Date;
+	demoDaysShifted?: number;
 	createdAt: Date;
 	updatedAt: Date;
 	isModified(path: string): boolean;
@@ -42,6 +45,20 @@ const userSchema = new Schema<IUser>({
 	profilePic: {
 		type: String,
 		trim: true,
+	},
+	// The shared account behind guest mode
+	isDemo: {
+		type: Boolean,
+		default: false,
+	},
+	// The newest focus record's start time before any shifting. Used to work out how far to move the demo data's dates.
+	demoOriginalNewestFocusAt: {
+		type: Date,
+	},
+	// How many days the demo data's dates have been moved forward. 0 means they're the original dates.
+	demoDaysShifted: {
+		type: Number,
+		default: 0,
 	},
 }, {
 	timestamps: true

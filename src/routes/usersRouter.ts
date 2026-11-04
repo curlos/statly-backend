@@ -7,6 +7,7 @@ import cloudinary from '../config/cloudinary';
 import { upload } from '../middleware/multer';
 import { verifyToken } from '../middleware/verifyToken';
 import { CustomRequest } from '../interfaces/CustomRequest';
+import { shiftDemoDataIfStale } from '../utils/demoData.utils';
 
 // Email validation regex
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -60,12 +61,17 @@ router.get('/logged-in-user', async (req, res) => {
 			return res.status(404).json({ message: 'User not found' });
 		}
 
+		if (decoded.isGuest) {
+			await shiftDemoDataIfStale(user);
+		}
+
 		res.json({
 			_id: user._id,
 			email: user.email,
 			name: user.name,
 			profilePic: user.profilePic,
 			createdAt: user.createdAt,
+			isGuest: !!decoded.isGuest,
 		});
 	} catch (error) {
 		if (typeof error === 'string') {
@@ -244,6 +250,43 @@ router.post('/login', async (req, res) => {
 		res.status(500).json({
 			message: 'Server error',
 			error: error instanceof Error ? error.message : 'An error logging in user',
+		});
+	}
+});
+
+router.post('/guest', async (req, res) => {
+	try {
+		const user = await User.findOne({ isDemo: true });
+		if (!user) {
+			return res.status(404).json({ message: 'Guest mode is not available right now' });
+		}
+
+		// Nobody gets in while the dates are half moved, and the next try will work
+		const isUpToDate = await shiftDemoDataIfStale(user);
+		if (!isUpToDate) {
+			return res.status(503).json({ message: 'The demo is updating right now. Please try again in a moment.' });
+		}
+
+		const token = jwt.sign(
+			{ userId: user._id, isGuest: true },
+			process.env.JWT_SECRET || '',
+			{ expiresIn: '24h' }
+		);
+
+		res.json({
+			token,
+			user: {
+				_id: user._id,
+				email: user.email,
+				name: user.name,
+				profilePic: user.profilePic,
+				createdAt: user.createdAt,
+			},
+		});
+	} catch (error) {
+		res.status(500).json({
+			message: 'Server error',
+			error: error instanceof Error ? error.message : 'An error logging in as a guest',
 		});
 	}
 });
