@@ -1,5 +1,6 @@
 import mongoose, { ClientSession, Types } from 'mongoose';
 import type { Collection } from 'mongodb';
+import { formatInTimeZone } from 'date-fns-tz';
 import FocusRecord from '../models/FocusRecord';
 import Task from '../models/TaskModel';
 import User from '../models/UserModel';
@@ -17,9 +18,15 @@ const shiftedDate = (fieldPath: string, ms: number) => ({
 const shiftedFields = (fields: string[], ms: number) =>
 	Object.fromEntries(fields.map((field) => [field, shiftedDate(`$${field}`, ms)]));
 
-// How many whole days the demo data needs to move so its newest focus record is as recent as possible without being in the future.
+// Guests share one set of data, so "today" for the demo is today in this time zone
+const DEMO_TIME_ZONE = 'America/New_York';
+
+// The calendar day a moment falls on in the demo's time zone, as midnight UTC of that date
+const demoDay = (date: Date) => new Date(formatInTimeZone(date, DEMO_TIME_ZONE, 'yyyy-MM-dd')).getTime();
+
+// How many whole days the demo data needs to move so its newest day of focus records is today, even if some of today's records start later in the day.
 export const getDemoDaysToShift = (originalNewestFocusAt: Date, daysAlreadyShifted: number, now: Date) => {
-	const daysBehind = Math.floor((now.getTime() - originalNewestFocusAt.getTime()) / MS_PER_DAY);
+	const daysBehind = Math.round((demoDay(now) - demoDay(originalNewestFocusAt)) / MS_PER_DAY);
 	return Math.max(daysBehind - daysAlreadyShifted, 0);
 };
 
