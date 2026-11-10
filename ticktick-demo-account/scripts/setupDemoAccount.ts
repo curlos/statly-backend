@@ -34,8 +34,11 @@ const main = async () => {
 		{ $set: { completedTime: newestFocusAt } }
 	);
 
-	// Syncing would bring back the old dates so the account shouldn't be able to sync
-	await UserSettings.updateOne({ userId }, { $set: { tickTickCookie: '', autoSyncEnabled: false } });
+	// Syncing would bring back the old dates so the account shouldn't be able to sync, and guests start on the default Warzone theme
+	await UserSettings.updateOne(
+		{ userId },
+		{ $set: { tickTickCookie: '', autoSyncEnabled: false, 'theme.uiTheme': 'warzone' } }
+	);
 
 	// Guests can't run the analysis themselves so the emotion tags need to be there already
 	const { analyzeNoteEmotionsCore } = await import('../../src/controllers/sentimentBatchController');

@@ -122,7 +122,7 @@ const UserSettingsSchema = new Schema(
 			customColor: { type: String, default: '#3b82f6' },
 			useCustomColor: { type: Boolean, default: false },
 			favoriteCustomColors: { type: [String], default: [] },
-			uiTheme: { type: String, default: 'default' },
+			uiTheme: { type: String, default: 'warzone' },
 		},
 		tickTickCookie: { type: String, default: '' },
 		tickTickInboxProjectId: { type: String, default: '' },
